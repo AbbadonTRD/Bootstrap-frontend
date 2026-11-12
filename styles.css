@@ -1,0 +1,45 @@
+/* Bootstrap CSS Custom Properties — empfohlene Methode laut Bootstrap Blog */
+:root {
+  --bs-body-bg: #f8f9fa;
+  --bs-primary: #0d6efd;
+  --bs-card-border-radius: 0.75rem;
+}
+
+/* Hero-Bereich */
+.hero {
+  background: linear-gradient(135deg, var(--bs-dark) 0%, #343a40 100%);
+  color: #fff;
+}
+
+.hero .lead {
+  color: rgba(255, 255, 255, 0.65) !important;
+}
+
+/* Platzhalter-Boxen für noch nicht implementierte Features */
+.placeholder-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  width: 100%;
+  background-color: var(--bs-gray-100);
+  border: 2px dashed var(--bs-gray-300);
+  border-radius: var(--bs-card-border-radius);
+  padding: 1.5rem;
+}
+
+/* Cards etwas aufwerten */
+.card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Navbar-Brand Icon */
+.navbar-brand i {
+  color: var(--bs-primary);
+}

@@ -5,194 +5,277 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bootstrap Frontend</title>
 
-  <!-- Bootstrap 5.3 CSS -->
+  <!-- Gespeichertes Theme sofort setzen (verhindert Aufblitzen) -->
+  <script>
+    try { var t = localStorage.getItem('theme'); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+
+  <!-- Schrift -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Hauptschrift: Ubuntu (Google Fonts) -->
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap 5.3 CSS (Grid & Utilities) -->
   <link
     href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
     rel="stylesheet"
     integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
     crossorigin="anonymous"
   />
-
-  <!-- Bootstrap Icons -->
-  <link
-    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-    <div class="container">
-      <a class="navbar-brand fw-bold" href="#">
-        <i class="bi bi-grid-3x3-gap-fill me-2"></i>Dashboard
+  <!-- Header (Navigation Menu) -->
+  <header class="ui-header">
+    <div class="container ui-header-inner">
+      <a class="ui-logo" href="#">
+        <span class="ui-logo-mark"><i class="bi bi-grid-fill"></i></span>Dashboard
       </a>
-    </div>
-  </nav>
-
-  <!-- Hero -->
-  <header class="hero text-center py-5">
-    <div class="container">
-      <h1 class="display-5 fw-bold">Bootstrap Frontend</h1>
-      <p class="lead text-muted">Katzen · Bitcoin · Wetter · Ladestationen · Karte</p>
+      <nav class="ui-nav d-none d-md-flex" aria-label="Bereiche">
+        <a href="#card-cat">Katzen</a>
+        <a href="#card-btc">Bitcoin</a>
+        <a href="#card-weather">Wetter</a>
+        <a href="#card-ev">Laden</a>
+        <a href="#card-map">Karte</a>
+      </nav>
+      <div class="ui-header-actions">
+        <button id="btn-theme" class="ui-btn ui-btn-ghost ui-btn-icon" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten">
+          <i class="bi bi-sun theme-icon-light"></i><i class="bi bi-moon theme-icon-dark"></i>
+        </button>
+      </div>
     </div>
   </header>
 
-  <main class="container py-4">
+  <main class="container py-4 py-md-5">
+
+    <!-- Hero mit Wolken (nur HTML + CSS) -->
+    <section class="hero mb-4">
+      <div class="sky-sun" aria-hidden="true"></div>
+      <div class="sky-clouds" aria-hidden="true">
+        <div class="cloud-track" style="--y:8%;  --s:0.9;  --dur:95s;  --delay:-20s"><div class="cloud"></div></div>
+        <div class="cloud-track" style="--y:42%; --s:1.25; --dur:120s; --delay:-75s"><div class="cloud"></div></div>
+        <div class="cloud-track" style="--y:62%; --s:0.7;  --dur:80s;  --delay:-5s"><div class="cloud"></div></div>
+        <div class="cloud-track" style="--y:18%; --s:1.05; --dur:110s; --delay:-55s"><div class="cloud"></div></div>
+        <div class="cloud-track" style="--y:70%; --s:1.4;  --dur:140s; --delay:-110s"><div class="cloud"></div></div>
+        <div class="cloud-track" style="--y:30%; --s:0.6;  --dur:70s;  --delay:-40s"><div class="cloud"></div></div>
+      </div>
+      <div class="hero-content">
+        <h1>Bootstrap Frontend</h1>
+        <p>Katzen · Bitcoin · Wetter · Ladestationen · Karte</p>
+      </div>
+      <span class="ui-badge ui-badge-glass"><span class="live-dot"></span>Live Data · 5 APIs</span>
+
+      <!-- SVG-Filter (HTML-Markup) für die ausgefransten Wolkenränder -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <filter id="cloud-fluff" x="-50%" y="-50%" width="200%" height="200%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4" seed="7" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="45" xChannelSelector="R" yChannelSelector="G" />
+          <feGaussianBlur stdDeviation="2.5" />
+        </filter>
+      </svg>
+    </section>
+
     <div class="row g-4">
 
-      <!-- Feature 1: Zufälliges Katzenbild -->
+      <!-- a) Zufälliges Katzenbild -->
       <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 shadow-sm">
-          <div class="card-header d-flex align-items-center gap-2">
-            <i class="bi bi-emoji-smile fs-5"></i>
-            <span class="fw-semibold">Zufälliges Katzenbild</span>
-          </div>
-          <div class="card-body d-flex flex-column align-items-center justify-content-center">
-            <!-- Platzhalter – wird per JS ersetzt -->
-            <div id="cat-placeholder" class="placeholder-box mb-3">
-              <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
-              <p class="text-muted mt-2 mb-0">Bild erscheint hier</p>
+        <section id="card-cat" class="ui-card">
+          <div class="ui-card-header">
+            <span class="ui-card-icon"><i class="bi bi-image"></i></span>
+            <div>
+              <h2 class="ui-card-title">Zufälliges Katzenbild</h2>
+              <p class="ui-card-description">Ein neues Bild von The Cat API.</p>
             </div>
-            <img id="cat-image" src="" alt="Zufälliges Katzenbild" class="img-fluid rounded d-none mb-3" />
-            <button id="btn-cat" class="btn btn-primary w-100">
-              <i class="bi bi-arrow-clockwise me-1"></i>Neues Katzenbild laden
+          </div>
+          <div class="ui-card-content">
+            <div id="cat-placeholder" class="ui-empty">
+              <span class="ui-empty-icon"><i class="bi bi-image"></i></span>
+              <p class="ui-empty-title">Noch kein Bild</p>
+              <p class="ui-empty-description">Klicke auf den Button, um ein Katzenbild zu laden.</p>
+            </div>
+            <div id="cat-frame" class="cat-frame d-none">
+              <div class="ui-skeleton"></div>
+              <img id="cat-image" src="" alt="Zufälliges Katzenbild" />
+            </div>
+            <div id="cat-error" class="ui-alert d-none" role="alert"><i class="bi bi-exclamation-circle"></i><span></span></div>
+          </div>
+          <div class="ui-card-footer">
+            <button id="btn-cat" class="ui-btn ui-btn-default ui-btn-block" type="button">
+              <i class="bi bi-arrow-clockwise"></i>Neues Katzenbild laden
             </button>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- Feature 2: Bitcoin-Preis -->
+      <!-- b) Bitcoin-Preis -->
       <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 shadow-sm">
-          <div class="card-header d-flex align-items-center gap-2">
-            <i class="bi bi-currency-bitcoin fs-5"></i>
-            <span class="fw-semibold">Bitcoin-Preis</span>
+        <!-- Bitcoin im Stil der Phantom Wallet -->
+        <section id="card-btc" class="ui-card wallet">
+          <div class="wallet-top">
+            <span class="wallet-account">
+              <span class="wallet-coin"><i class="bi bi-currency-bitcoin"></i></span>
+              Bitcoin-Preis
+            </span>
+            <span class="wallet-pair">BTC</span>
           </div>
-          <div class="card-body d-flex flex-column align-items-center justify-content-center">
-            <!-- Platzhalter – wird per JS ersetzt -->
-            <div id="btc-placeholder" class="placeholder-box mb-3">
-              <i class="bi bi-graph-up text-muted" style="font-size: 3rem;"></i>
-              <p class="text-muted mt-2 mb-0">Preis erscheint hier</p>
+
+          <div class="wallet-balance">
+            <span id="btc-usd" class="wallet-amount value">$ ––––</span>
+            <span class="wallet-sub">
+              <span id="btc-chf" class="wallet-pill value">CHF ––––</span>
+            </span>
+          </div>
+
+          <div class="wallet-actions">
+            <button id="btn-btc" class="wallet-btn" type="button">
+              <i class="bi bi-arrow-clockwise"></i>Preis abrufen
+            </button>
+          </div>
+
+          <div class="wallet-list">
+            <div class="wallet-row">
+              <span class="wallet-row-icon btc"><i class="bi bi-currency-bitcoin"></i></span>
+              <span class="wallet-row-main">
+                <span class="wallet-row-title">Bitcoin</span>
+                <span class="wallet-row-sub">1 BTC · USD &amp; CHF</span>
+              </span>
+              <span class="wallet-row-end">
+                <span class="wallet-row-title">CoinGecko</span>
+                <span id="btc-time" class="wallet-row-sub">Noch nicht abgerufen</span>
+              </span>
             </div>
-            <div id="btc-result" class="d-none w-100 mb-3">
-              <div class="d-flex justify-content-between align-items-center border rounded p-3 mb-2">
-                <span class="text-muted">USD</span>
-                <span id="btc-usd" class="fw-bold fs-5">–</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- c) Aktuelles Wetter -->
+      <div class="col-12 col-xl-4">
+        <section id="card-weather" class="ui-card">
+          <div class="ui-card-header">
+            <span class="ui-card-icon"><i class="bi bi-cloud-sun"></i></span>
+            <div>
+              <h2 class="ui-card-title">Aktuelles Wetter</h2>
+              <p class="ui-card-description"><strong>Ort:</strong> <span id="weather-place">Zürich, CH</span></p>
+            </div>
+          </div>
+          <div class="ui-card-content">
+            <div class="ui-stats">
+              <div class="ui-stat"><span class="ui-stat-label">Tmax</span><span id="weather-tmax" class="ui-stat-value value">–</span></div>
+              <div class="ui-stat"><span class="ui-stat-label">Tmin</span><span id="weather-tmin" class="ui-stat-value value">–</span></div>
+              <div class="ui-stat"><span class="ui-stat-label">Niederschlag</span><span id="weather-rain" class="ui-stat-value value">–</span></div>
+            </div>
+            <!-- shadcn-Style Chart (Highcharts darunter) -->
+            <div id="weather-chart-card" class="ui-chart d-none">
+              <div class="ui-chart-header">
+                <h3 class="ui-chart-title">Temperatur &amp; Niederschlag</h3>
+                <p class="ui-chart-description">Stündlich · nächste 5 Tage · MeteoSwiss</p>
               </div>
-              <div class="d-flex justify-content-between align-items-center border rounded p-3">
-                <span class="text-muted">CHF</span>
-                <span id="btc-chf" class="fw-bold fs-5">–</span>
+              <div id="weather-chart" class="chart-box" role="img" aria-label="Temperatur und Niederschlag der nächsten 5 Tage"></div>
+              <div class="ui-chart-legend">
+                <span><i class="ui-chart-dot" style="background:var(--chart-1)"></i>Temperatur</span>
+                <span><i class="ui-chart-dot" style="background:var(--chart-2)"></i>Niederschlag</span>
+              </div>
+              <div class="ui-chart-footer">
+                <span id="weather-trend" class="ui-chart-trend"></span>
+                <span class="ui-muted">Zürich, 47.3769° N · 8.5417° E</span>
               </div>
             </div>
-            <button id="btn-btc" class="btn btn-warning w-100">
-              <i class="bi bi-arrow-clockwise me-1"></i>Preis abrufen
+          </div>
+          <div class="ui-card-footer">
+            <button id="btn-weather" class="ui-btn ui-btn-default ui-btn-block" type="button">
+              <i class="bi bi-arrow-clockwise"></i>Wetter laden
             </button>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- Feature 3: Wetter -->
-      <div class="col-12 col-md-6 col-xl-4">
-        <div class="card h-100 shadow-sm">
-          <div class="card-header d-flex align-items-center gap-2">
-            <i class="bi bi-cloud-sun fs-5"></i>
-            <span class="fw-semibold">Aktuelles Wetter</span>
-          </div>
-          <div class="card-body d-flex flex-column align-items-center justify-content-center">
-            <!-- Koordinaten fix hinterlegt (Zürich): 47.3769, 8.5417 -->
-            <!-- Platzhalter – wird per JS ersetzt -->
-            <div id="weather-placeholder" class="placeholder-box mb-3">
-              <i class="bi bi-thermometer-half text-muted" style="font-size: 3rem;"></i>
-              <p class="text-muted mt-2 mb-0">Wetterdaten erscheinen hier</p>
+      <!-- d) Strom-Tankstellen -->
+      <div class="col-12 col-lg-6">
+        <section id="card-ev" class="ui-card">
+          <div class="ui-card-header">
+            <span class="ui-card-icon"><i class="bi bi-ev-station"></i></span>
+            <div>
+              <h2 class="ui-card-title">Nächste Strom-Tankstellen</h2>
+              <p class="ui-card-description">Die 5 nächsten öffentlichen Ladestationen.</p>
             </div>
-            <div id="weather-result" class="d-none w-100 mb-3">
-              <p class="text-center mb-1 text-muted small">Zürich (47.3769° N, 8.5417° E)</p>
-              <div class="d-flex justify-content-around text-center">
-                <div>
-                  <div id="weather-temp" class="fs-3 fw-bold">–</div>
-                  <div class="text-muted small">Temperatur</div>
-                </div>
-                <div>
-                  <div id="weather-desc" class="fs-5">–</div>
-                  <div class="text-muted small">Beschreibung</div>
-                </div>
-                <div>
-                  <div id="weather-wind" class="fs-5 fw-bold">–</div>
-                  <div class="text-muted small">Wind km/h</div>
-                </div>
+            <span id="ev-origin" class="ui-badge ui-badge-secondary">Winterthur</span>
+          </div>
+          <div class="ui-card-content">
+            <div class="ui-field">
+              <label class="ui-label" for="ev-plz">Postleitzahl</label>
+              <div class="ui-input-row">
+                <input id="ev-plz" class="ui-input" type="text" inputmode="numeric" maxlength="4" placeholder="z.B. 8400" autocomplete="postal-code" />
+                <button id="btn-ev-plz" class="ui-btn ui-btn-outline" type="button"><i class="bi bi-search"></i>Suchen</button>
               </div>
             </div>
-            <button id="btn-weather" class="btn btn-info w-100 text-white">
-              <i class="bi bi-arrow-clockwise me-1"></i>Wetter laden
+            <div id="ev-placeholder" class="ui-empty grow">
+              <span class="ui-empty-icon"><i class="bi bi-plug"></i></span>
+              <p class="ui-empty-title">Keine Stationen geladen</p>
+              <p class="ui-empty-description">Lade die Stationen bei Winterthur oder suche nach einer PLZ.</p>
+            </div>
+            <div id="ev-table" class="ui-table-wrap d-none">
+              <table class="ui-table">
+                <thead><tr><th class="cell-rank">#</th><th>Station</th><th class="num">Distanz</th></tr></thead>
+                <tbody id="ev-list"></tbody>
+              </table>
+            </div>
+            <p id="ev-hint" class="ui-muted d-none"><i class="bi bi-cursor"></i> Klicke auf eine Station, um sie auf der Karte zu zeigen.</p>
+          </div>
+          <div class="ui-card-footer">
+            <button id="btn-ev" class="ui-btn ui-btn-default ui-btn-block" type="button">
+              <i class="bi bi-arrow-clockwise"></i>Ladestationen laden (Winterthur)
             </button>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- Feature 4: Strom-Tankstellen -->
-      <div class="col-12 col-md-6 col-xl-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-header d-flex align-items-center gap-2">
-            <i class="bi bi-ev-station fs-5"></i>
-            <span class="fw-semibold">Nächste Strom-Tankstellen</span>
-          </div>
-          <div class="card-body d-flex flex-column">
-            <!-- Koordinaten fix hinterlegt (Zürich HB): 47.3779, 8.5403 -->
-            <!-- Platzhalter – wird per JS ersetzt -->
-            <div id="ev-placeholder" class="placeholder-box flex-grow-1 mb-3 w-100">
-              <i class="bi bi-plug text-muted" style="font-size: 3rem;"></i>
-              <p class="text-muted mt-2 mb-0">Liste erscheint hier</p>
+      <!-- e) Kartenausschnitt -->
+      <div class="col-12 col-lg-6">
+        <section id="card-map" class="ui-card">
+          <div class="ui-card-header">
+            <span class="ui-card-icon"><i class="bi bi-map"></i></span>
+            <div>
+              <h2 class="ui-card-title">Kartenausschnitt</h2>
+              <p class="ui-card-description">Landeskarte von swisstopo.</p>
             </div>
-            <ul id="ev-list" class="list-group d-none mb-3">
-              <!-- 5 Einträge werden per JS eingefügt -->
-            </ul>
-            <button id="btn-ev" class="btn btn-success w-100">
-              <i class="bi bi-arrow-clockwise me-1"></i>Ladestationen laden
+          </div>
+          <div class="ui-card-content">
+            <div class="ui-field">
+              <label class="ui-label" for="map-place">Ort</label>
+              <div class="ui-input-row">
+                <input id="map-place" class="ui-input" type="text" placeholder="z.B. Luzern" />
+                <button id="btn-map-place" class="ui-btn ui-btn-outline" type="button"><i class="bi bi-search"></i>Suchen</button>
+              </div>
+            </div>
+            <div id="map-container" class="map-box"></div>
+          </div>
+          <div class="ui-card-footer">
+            <button id="btn-map" class="ui-btn ui-btn-default ui-btn-block" type="button">
+              <i class="bi bi-geo-alt"></i>Karte anzeigen (Zürich)
             </button>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- Feature 5: Kartenausschnitt -->
-      <div class="col-12 col-xl-6">
-        <div class="card h-100 shadow-sm">
-          <div class="card-header d-flex align-items-center gap-2">
-            <i class="bi bi-map fs-5"></i>
-            <span class="fw-semibold">Kartenausschnitt</span>
-          </div>
-          <div class="card-body d-flex flex-column">
-            <!-- Koordinaten fix hinterlegt (Zürich): 47.3769, 8.5417 -->
-            <!-- Platzhalter – wird per JS ersetzt -->
-            <div id="map-placeholder" class="placeholder-box flex-grow-1 mb-3 w-100">
-              <i class="bi bi-geo-alt text-muted" style="font-size: 3rem;"></i>
-              <p class="text-muted mt-2 mb-0">Karte erscheint hier</p>
-            </div>
-            <div id="map-container" class="d-none mb-3" style="height: 300px; border-radius: 0.5rem; overflow: hidden;">
-              <!-- Leaflet-Karte wird hier eingebettet -->
-            </div>
-            <button id="btn-map" class="btn btn-secondary w-100">
-              <i class="bi bi-arrow-clockwise me-1"></i>Karte anzeigen
-            </button>
-          </div>
-        </div>
-      </div>
-
-    </div><!-- /row -->
+    </div>
   </main>
 
-  <footer class="text-center text-muted py-4 mt-4 border-top">
-    <small>&copy; <span id="year"></span> Bootstrap Frontend · Tiago Cevallos</small>
+  <footer class="ui-footer py-4">
+    <div class="container">&copy; <span id="year"></span> Bootstrap Frontend · Tiago Cevallos</div>
   </footer>
 
-  <!-- Bootstrap 5.3 JS Bundle -->
-  <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmLBuA9pFPQAcVB8nAE2kBSuBfyB"
-    crossorigin="anonymous"
-  ></script>
+  <!-- Toast für Fehlermeldungen -->
+  <div id="toast" class="ui-toast" role="status" aria-live="polite"><i class="bi bi-exclamation-circle"></i><span></span></div>
+
+  <!-- Libraries -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://code.highcharts.com/11.4.8/highcharts.js"></script>
 
   <script src="app.js"></script>
 </body>

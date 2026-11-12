@@ -123,8 +123,8 @@ body {
 .ui-btn:active:not(:disabled) { transform: scale(0.97); }
 .ui-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring); }
 .ui-btn:disabled { opacity: 0.5; pointer-events: none; }
-.ui-btn i { font-size: 15px; line-height: 1; }
-.ui-btn.is-loading i { animation: spin 700ms linear infinite; }
+.ui-btn .ic { width: 15px; height: 15px; }
+.ui-btn.is-loading .ic { animation: spin 700ms linear infinite; }
 .ui-btn-block { width: 100%; }
 
 .ui-btn-default     { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 1px 2px rgba(0,0,0,.05); }
@@ -314,7 +314,41 @@ body {
 .wallet-btn:active:not(:disabled) { transform: scale(0.97); }
 .wallet-btn:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--w-bg), 0 0 0 4px var(--w-lavender); }
 .wallet-btn:disabled { opacity: .6; cursor: progress; }
-.wallet-btn.is-loading i { animation: spin 700ms linear infinite; }
+.wallet-btn.is-loading .ic { animation: spin 700ms linear infinite; }
+
+/* Kursverlauf (Phantom-Stil): nur wenn genug Platz da ist */
+.wallet-chart { display: none; flex-direction: column; gap: 10px; flex: 1; min-height: 230px; }
+@media (min-width: 768px) { .wallet-chart { display: flex; } }
+.wallet-change {
+  display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+  font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; min-height: 24px;
+}
+.wallet-delta { color: var(--w-muted); }
+.wallet-delta.up { color: #2ec08b; }
+.wallet-delta.down { color: #eb5757; }
+.wallet-delta-pill { padding: 2px 8px; border-radius: 6px; font-size: 13px; }
+.wallet-delta-pill.up   { color: #2ec08b; background: rgba(46,192,139,.14); }
+.wallet-delta-pill.down { color: #eb5757; background: rgba(235,87,87,.14); }
+.wallet-delta-label { font-size: 13px; font-weight: 400; color: var(--w-muted); }
+.wallet-chart-box { position: relative; flex: 1; min-height: 150px; margin: 0 -20px; }
+.wallet-chart-box.is-loading { opacity: .45; transition: opacity 200ms; }
+.wallet-chart-empty {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-size: 44px; color: rgba(255,255,255,.08);
+  background: linear-gradient(transparent calc(50% - 1px), rgba(255,255,255,.08) calc(50% - 1px), rgba(255,255,255,.08) 50%, transparent 50%);
+  background-size: 100% 100%;
+}
+.wallet-ranges { display: flex; gap: 4px; }
+.wallet-range {
+  flex: 1; height: 32px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--w-muted);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  transition: background-color 150ms, color 150ms, transform 160ms var(--ease-out);
+}
+.wallet-range:hover { background: rgba(255,255,255,.06); color: var(--w-text); }
+.wallet-range:active { transform: scale(0.95); }
+.wallet-range:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--w-lavender); }
+.wallet-range.is-active { background: rgba(171,159,242,.18); color: #d4ccff; }
 
 .wallet-list { display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
 .wallet-row {
@@ -331,6 +365,153 @@ body {
 .wallet-row-title { font-size: 15px; font-weight: 500; }
 .wallet-row-sub { font-size: 13px; color: var(--w-muted); font-variant-numeric: tabular-nums; }
 .wallet-row-end .wallet-row-sub { color: #c9c0ff; }
+
+/* ── Wetter im Stil der MeteoSwiss-App ─────────────────────────────────────── */
+.mw {
+  --mw-top: #55677d;
+  --mw-bottom: #a7b6c6;
+  --mw-red: #e0353b;
+  --mw-blue: #1f3bff;
+  position: relative; overflow: hidden; isolation: isolate;
+  padding: 24px 20px 20px; gap: 16px;
+  color: #fff;
+  border-color: color-mix(in srgb, var(--mw-top) 60%, var(--border));
+  background: linear-gradient(180deg, var(--mw-top) 0%, #7d8ea2 45%, var(--mw-bottom) 100%);
+}
+:root[data-theme="dark"] .mw { --mw-top: #2c3644; --mw-bottom: #5d6b7b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mw { --mw-top: #2c3644; --mw-bottom: #5d6b7b; } }
+
+.mw-mountains {
+  position: absolute; left: 0; right: 0; top: 120px; width: 100%; height: 110px; z-index: -1;
+  -webkit-mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 35%, transparent 100%);
+}
+.mw-mountains path { fill: rgba(255,255,255,.10); }
+.mw-cloud {
+  position: absolute; top: 34px; right: 14px; width: 150px; z-index: -1;
+  animation: mw-float 8s ease-in-out infinite alternate;
+}
+.mw-cloud .cloud { position: relative; right: auto; --w: 150px; --cloud-color: #ffffff; --cloud-shadow: #c9d2dd; }
+@keyframes mw-float { to { transform: translateX(-10px); } }
+
+.mw-head { position: relative; min-height: 132px; }
+.mw-place { font-size: 28px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+.mw-desc { font-size: 16px; margin: 4px 0 0; max-width: 60%; opacity: .95; }
+.mw-temp { font-size: 26px; margin: 14px 0 0; font-weight: 400; font-variant-numeric: tabular-nums; }
+.mw-today {
+  display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 6px 0 0;
+  font-size: 13px; color: rgba(255,255,255,.85);
+}
+.mw-today strong { font-weight: 500; color: #fff; }
+
+/* Stundenstreifen: minimal – nur Kurve, Werte und feine Regenbalken */
+.mw-hourly {
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.28);
+  background: rgba(30,38,50,.32);
+  padding: 10px 4px 2px;
+}
+.mw-hourly-chart { height: 118px; }
+
+/* Kleine Überschrift-Zeile über beiden Ansichten */
+.mw-caption {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  margin: 0; padding: 0 10px; font-size: 12px; color: rgba(255,255,255,.72);
+}
+.mw-caption span:first-child { font-weight: 500; color: #fff; }
+.mw-caption-dark { color: inherit; opacity: 1; padding: 0 14px; }
+.mw-caption-dark span:last-child { opacity: .55; }
+.mw-caption-dark span:first-child { color: inherit; }
+
+/* 5-Tage-Prognose: kompakt, ein Tag klappt auf */
+.mw-days {
+  position: relative;
+  background: #fff; color: #1d1d1f;
+  border-radius: 14px; overflow: hidden;
+  padding-top: 12px;
+  box-shadow: 0 6px 18px rgba(30,40,55,.16);
+}
+:root[data-theme="dark"] .mw-days { background: #2a2f37; color: #f1f3f5; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mw-days { background: #2a2f37; color: #f1f3f5; } }
+.mw-days-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; padding: 8px 6px 8px; }
+.mw-day {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 8px 2px; text-align: center;
+  border: 0; border-radius: 10px; background: transparent; color: inherit; cursor: pointer;
+  transition: background-color 150ms, transform 160ms var(--ease-out);
+}
+.mw-day:hover { background: rgba(128,128,140,.12); }
+.mw-day:active { transform: scale(0.96); }
+.mw-day:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.mw-day[aria-expanded="true"] { background: rgba(171,159,242,.22); }
+.mw-day-name { font-size: 14px; font-weight: 500; }
+.mw-day-date { font-size: 11px; opacity: .6; margin-top: -3px; font-variant-numeric: tabular-nums; }
+.mw-day-icon { font-size: 26px; line-height: 1; height: 30px; display: grid; place-items: center; }
+.mw-day-temp { font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.mw-day-temp .sep { opacity: .45; margin: 0 2px; }
+
+/* Aufklapp-Bereich: weich über grid-template-rows */
+.mw-detail { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 360ms var(--ease-out); }
+.mw-detail.is-open { grid-template-rows: 1fr; }
+.mw-detail-inner { overflow: hidden; min-height: 0; }
+.mw-detail-title {
+  margin: 0; padding: 10px 14px 0; font-size: 13px; font-weight: 500;
+  border-top: 1px solid rgba(128,128,140,.2);
+  opacity: 0; transition: opacity 240ms 120ms;
+}
+.mw-detail-title small { font-weight: 400; opacity: .6; margin-left: 6px; }
+.mw-detail.is-open .mw-detail-title { opacity: 1; }
+.mw-days-chart { height: 150px; }
+
+/* Sanftes Einblenden nach dem Laden */
+.mw-reveal { animation: mw-in 460ms var(--ease-out) both; }
+.mw-days.mw-reveal { animation-delay: 90ms; }
+@keyframes mw-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Skeleton während des Ladens */
+.mw-skeleton { display: flex; flex-direction: column; gap: 12px; }
+.mw-skeleton.d-none { display: none; }
+.mw-sk { background: rgba(255,255,255,.2); border-radius: 14px; animation: pulse 1.6s ease-in-out infinite; }
+.mw-sk-strip { height: 140px; }
+.mw-sk-days { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.mw-sk-days .mw-sk { height: 104px; border-radius: 10px; }
+.mw-sk-days .mw-sk:nth-child(2) { animation-delay: .1s; }
+.mw-sk-days .mw-sk:nth-child(3) { animation-delay: .2s; }
+.mw-sk-days .mw-sk:nth-child(4) { animation-delay: .3s; }
+.mw-sk-days .mw-sk:nth-child(5) { animation-delay: .4s; }
+
+/* Wetter-Icons in den Originalfarben */
+.ic-sun   { color: #f7b500; }
+.ic-cloud { color: #8a8f98; }
+.ic-mix   { background: linear-gradient(135deg, #f7b500 40%, #9aa0a8 60%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.ic-rain  { color: #5c8fd6; }
+.ic-snow  { color: #8fb7e8; }
+
+.mw-empty {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 120px; border: 1.5px dashed rgba(255,255,255,.6); border-radius: 14px;
+  color: rgba(255,255,255,.9); font-size: 14px;
+}
+.mw-empty .ic { width: 22px; height: 22px; }
+
+.mw-foot { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: auto; }
+.mw-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; height: 42px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.55);
+  background: rgba(255,255,255,.18); color: #fff;
+  font-size: 15px; font-weight: 500; cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: background-color 150ms, transform 160ms var(--ease-out), opacity 150ms;
+}
+.mw-btn:hover { background: rgba(255,255,255,.28); }
+.mw-btn:active:not(:disabled) { transform: scale(0.97); }
+.mw-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.7); }
+.mw-btn:disabled { opacity: .6; cursor: progress; }
+.mw-btn.is-loading .ic { animation: spin 700ms linear infinite; }
+.mw-meta { font-size: 12px; color: rgba(29,29,31,.7); }
+:root[data-theme="dark"] .mw-meta { color: rgba(255,255,255,.7); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mw-meta { color: rgba(255,255,255,.7); } }
 
 /* ── Stat-Kacheln (Wetter) ─────────────────────────────────────────────────── */
 .ui-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -413,7 +594,7 @@ body {
   transform: translateY(12px); opacity: 0; pointer-events: none;
   transition: transform 250ms var(--ease-out), opacity 250ms var(--ease-out);
 }
-.ui-toast i { color: var(--destructive); }
+.ui-toast .ic { color: var(--destructive); }
 .ui-toast.is-visible { transform: none; opacity: 1; pointer-events: auto; }
 
 /* ── Hero mit Wolken (nur HTML + CSS) ──────────────────────────────────────── */
@@ -489,4 +670,445 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition-duration: 0ms !important; }
   .hero .cloud-track { animation: cloud-drift var(--dur, 100s) linear infinite var(--delay, 0s) paused !important; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Icons: Streamline Core Solid (SVG-Sprite in index.html)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.ic {
+  display: inline-block; flex: none;
+  width: 1em; height: 1em;            /* übernimmt die Schriftgrösse des Kontexts */
+  vertical-align: -0.125em;
+  fill: currentColor;
+}
+.ic.ic-mix   { background: none; -webkit-background-clip: border-box; background-clip: border-box; color: #e2a200; }
+.ic.ic-heavy { color: #3f6fc0; }
+.ui-header .ui-btn-icon .ic { width: 16px; height: 16px; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Karte als Content Card (inspiriert von Aceternity "Content Card")
+   ═════════════════════════════════════════════════════════════════════════════ */
+.content-card {
+  position: relative; isolation: isolate; overflow: hidden;
+  height: 100%; min-height: 560px;
+  border-radius: calc(var(--radius) + 8px);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(20, 20, 30, .18);
+  background: #2a2a2f; color: #fff;
+  scroll-margin-top: 72px;
+}
+.content-card-map { position: absolute; inset: 0; z-index: 0; }
+.content-card-shade {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0,0,0,.55) 0%, rgba(0,0,0,0) 26%, rgba(0,0,0,0) 48%, rgba(0,0,0,.8) 100%);
+}
+/* Overlay wird beim Hover dunkler – wie im Original, aber die Kartenmitte bleibt sichtbar */
+.content-card-shade::after {
+  content: ""; position: absolute; inset: 0; opacity: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,.25), rgba(0,0,0,.05) 40%, rgba(0,0,0,.35));
+  transition: opacity 300ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) { .content-card:hover .content-card-shade::after { opacity: 1; } }
+
+.content-card-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 2;
+  display: flex; align-items: center; gap: 12px;
+  padding: 20px; pointer-events: none;
+}
+.content-card-avatar {
+  display: grid; place-items: center; flex: none;
+  width: 42px; height: 42px; border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.85);
+  background: var(--primary); color: var(--primary-foreground); font-size: 18px;
+}
+.content-card-name { margin: 0; font-size: 16px; font-weight: 500; text-shadow: 0 1px 8px rgba(0,0,0,.4); }
+.content-card-meta { margin: 0; font-size: 13px; color: rgba(255,255,255,.78); text-shadow: 0 1px 8px rgba(0,0,0,.4); }
+
+.content-card-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  padding: 20px; pointer-events: none;
+}
+.content-card-title { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+.content-card-desc  { margin: 6px 0 14px; font-size: 14px; color: rgba(255,255,255,.82); font-variant-numeric: tabular-nums; }
+.content-card-search { display: flex; flex-wrap: wrap; gap: 8px; pointer-events: auto; }
+.content-input {
+  flex: 1 1 180px; min-width: 0; height: 40px; padding: 0 14px;
+  border-radius: 10px; border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.14); color: #fff; font-size: 14px;
+  backdrop-filter: blur(8px);
+  transition: border-color 150ms, box-shadow 150ms;
+}
+.content-input::placeholder { color: rgba(255,255,255,.72); }
+.content-input:focus-visible { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 45%, transparent); }
+.content-input[aria-invalid="true"] { border-color: #f87171; box-shadow: 0 0 0 3px rgba(248,113,113,.35); }
+.content-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 14px; white-space: nowrap;
+  border-radius: 10px; border: 1px solid rgba(255,255,255,.3);
+  background: rgba(255,255,255,.14); color: #fff;
+  font-size: 14px; font-weight: 500; cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: background-color 150ms, transform 160ms var(--ease-out), opacity 150ms;
+}
+.content-btn:hover { background: rgba(255,255,255,.24); }
+.content-btn:active:not(:disabled) { transform: scale(0.97); }
+.content-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.7); }
+.content-btn:disabled { opacity: .6; cursor: progress; }
+.content-btn.is-loading .ic { animation: spin 700ms linear infinite; }
+.content-btn-primary { background: var(--primary); color: var(--primary-foreground); border-color: transparent; }
+.content-btn-primary:hover { background: color-mix(in srgb, var(--primary) 88%, #fff); }
+.content-card .leaflet-top { top: 8px; }
+.content-card .leaflet-control-attribution { font-size: 10px; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Ladestationen als Expandable Cards (inspiriert von Aceternity)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.ev-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+.ev-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 8px; border-radius: 14px;
+  background: var(--card); border: 1px solid var(--border);
+  cursor: pointer; text-align: left;
+  transition: background-color 150ms, box-shadow 200ms, transform 160ms var(--ease-out), opacity 150ms;
+  animation: ev-in 360ms var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 45ms);
+}
+@keyframes ev-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (hover: hover) and (pointer: fine) {
+  .ev-card:not(.is-skeleton):hover { background: var(--muted); box-shadow: 0 6px 18px rgba(20,20,30,.08); }
+}
+.ev-card:active:not(.is-skeleton) { transform: scale(0.98); }
+.ev-card:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ev-card[aria-expanded="true"] { opacity: 0; }   /* "wandert" in den Dialog */
+.ev-card.is-skeleton { cursor: default; }
+.ev-card-media {
+  position: relative; aspect-ratio: 16 / 9; border-radius: 10px; overflow: hidden; background: var(--muted);
+}
+.ev-card-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ev-rank-pill {
+  position: absolute; top: 8px; left: 8px;
+  min-width: 24px; height: 24px; padding: 0 7px; border-radius: 999px;
+  display: grid; place-items: center;
+  background: rgba(255,255,255,.92); color: #18181b; font-size: 12px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ev-dist-pill {
+  position: absolute; right: 8px; bottom: 8px;
+  padding: 3px 8px; border-radius: 999px;
+  background: rgba(20,20,28,.66); color: #fff; font-size: 12px; font-weight: 500;
+  backdrop-filter: blur(6px); font-variant-numeric: tabular-nums;
+}
+.ev-card-body { padding: 2px 4px 4px; min-width: 0; }
+.ev-card-title {
+  margin: 0; font-size: 14px; font-weight: 500; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ev-card-sub { margin: 2px 0 0; font-size: 12px; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Overlay + Dialog */
+body.modal-open { overflow: hidden; }
+.ev-overlay {
+  position: fixed; inset: 0; z-index: 3000;
+  background: rgba(12, 12, 18, .55); backdrop-filter: blur(2px);
+}
+.ev-modal {
+  position: fixed; z-index: 3001; left: 50%; top: 50%;
+  translate: -50% -50%;
+  transform-origin: top left;
+  width: min(420px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px); overflow: auto;
+  background: var(--popover); color: var(--foreground);
+  border: 1px solid var(--border); border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.35);
+}
+.ev-modal-close {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  border: 0; background: rgba(255,255,255,.92); color: #18181b; font-size: 14px; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  transition: transform 160ms var(--ease-out);
+}
+.ev-modal-close:active { transform: scale(0.92); }
+.ev-modal-close:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ev-modal-media { position: relative; aspect-ratio: 16 / 10; background: var(--muted); }
+.ev-modal-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ev-modal-body { padding: 18px 20px 20px; }
+.ev-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ev-modal-title { margin: 0; font-size: 18px; font-weight: 500; line-height: 1.3; }
+.ev-modal-sub { margin: 4px 0 0; font-size: 13px; color: var(--muted-foreground); }
+.ev-facts { list-style: none; margin: 16px 0 0; padding: 0; }
+.ev-facts li {
+  display: grid; grid-template-columns: 18px auto 1fr; align-items: center; gap: 10px;
+  padding: 9px 0; border-top: 1px solid var(--border); font-size: 13px;
+  animation: ev-in 300ms var(--ease-out) both;
+  animation-delay: calc(180ms + var(--i, 0) * 30ms);   /* Inhalt erscheint nach der Karte */
+}
+.ev-facts li .ic { color: var(--brand); font-size: 15px; }
+.ev-facts .label { color: var(--muted-foreground); }
+.ev-facts .val { text-align: right; font-weight: 500; overflow-wrap: anywhere; }
+
+/* Theme-Toggle: SVG-Icons sicher ein-/ausblenden */
+.ic.theme-icon-dark { display: none; }
+:root[data-theme="dark"] .ic.theme-icon-light { display: none; }
+:root[data-theme="dark"] .ic.theme-icon-dark { display: inline-block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ic.theme-icon-light { display: none; }
+  :root:not([data-theme="light"]) .ic.theme-icon-dark { display: inline-block; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Hero: Split-Flap-Board (inspiriert von Aceternity "Text Flipping Board")
+   ═════════════════════════════════════════════════════════════════════════════ */
+.flip-hero {
+  position: relative; overflow: hidden;
+  padding: clamp(12px, 2.4vw, 28px);
+  border-radius: 24px;
+  border: 1px solid #2b2b31;
+  background: radial-gradient(120% 90% at 50% -10%, #2a2638 0%, #161618 60%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 18px 40px rgba(0,0,0,.18);
+  color: #fff;
+}
+.flipboard {
+  --cols: 20;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: clamp(2px, .45vw, 6px);
+  container-type: inline-size;
+}
+.flap {
+  position: relative; aspect-ratio: 4 / 5;
+  perspective: 400px;
+  font-family: "Ubuntu", system-ui, sans-serif; font-weight: 700;
+  font-size: calc((100cqw / var(--cols)) * .72);
+  color: #f4f4f5;
+}
+.flap > div { position: absolute; left: 0; right: 0; height: 50%; overflow: hidden; }
+.flap .t, .flap .f { top: 0; border-radius: 4px 4px 0 0; background: linear-gradient(#28282d, #222226); }
+.flap .b, .flap .k { bottom: 0; border-radius: 0 0 4px 4px; background: linear-gradient(#1e1e22, #19191c); }
+.flap span {
+  position: absolute; left: 0; right: 0; height: 200%;
+  display: grid; place-items: center; line-height: 1;
+}
+.flap .t span, .flap .f span { top: 0; }
+.flap .b span, .flap .k span { top: -100%; }
+/* Die zwei beweglichen Klappen (oben fällt nach unten, unten klappt auf) */
+.flap .f, .flap .k { z-index: 3; visibility: hidden; backface-visibility: hidden; }
+.flap .f { transform-origin: 50% 100%; }
+.flap .k { transform-origin: 50% 0; transform: rotateX(90deg); }
+.flap.is-flipping .f, .flap.is-flipping .k { visibility: visible; }
+/* Spalt in der Mitte jeder Kachel */
+.flap::after {
+  content: ""; position: absolute; left: 0; right: 0; top: calc(50% - .5px); height: 1px;
+  background: rgba(0,0,0,.6); z-index: 4;
+}
+.flip-hero-foot {
+  display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px;
+  margin-top: clamp(10px, 1.6vw, 18px);
+  font-size: 13px; color: rgba(255,255,255,.6);
+}
+.flip-hero-brand { display: inline-flex; align-items: center; gap: 8px; color: rgba(255,255,255,.88); font-weight: 500; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Liquid Glass (inspiriert von Aceternity "Liquid Glass")
+   Chromium: echte Lichtbrechung über SVG-Filter als backdrop-filter (per JS).
+   Andere Browser: mattes Glas (blur) als Fallback.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.liquid-glass {
+  --lg-tint: .16;
+  position: relative; isolation: isolate;
+  background: rgba(255,255,255,var(--lg-tint));
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+          backdrop-filter: blur(14px) saturate(1.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.6),        /* Lichtkante oben */
+    inset 0 -1px 0 rgba(255,255,255,.14),
+    inset 0 0 0 1px rgba(255,255,255,.22),     /* Rand */
+    0 10px 30px rgba(0,0,0,.16);
+}
+/* Glanzlicht über der Fläche */
+.liquid-glass::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,.32) 0%, rgba(255,255,255,0) 32%, rgba(255,255,255,0) 68%, rgba(255,255,255,.12) 100%);
+}
+:root[data-theme="dark"] .liquid-glass { --lg-tint: .07; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .liquid-glass { --lg-tint: .07; } }
+@media (prefers-reduced-transparency: reduce) {
+  .liquid-glass { background: var(--popover) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+
+/* Header als schwebende Glas-Leiste */
+.ui-header {
+  top: 10px; margin-top: 10px;
+  border-bottom: 0; background: transparent;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.ui-header-inner.liquid-glass { border-radius: 18px; padding-left: 16px; padding-right: 10px; }
+
+/* Glas-Chip und Glas-Suchleiste über der Karte */
+.content-card-chip.liquid-glass {
+  --lg-tint: .1;
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 6px 18px 6px 6px; border-radius: 999px;
+}
+.content-card-search.liquid-glass { --lg-tint: .1; padding: 6px; border-radius: 16px; }
+.content-card-search.liquid-glass .content-input {
+  background: rgba(0,0,0,.2); border-color: rgba(255,255,255,.22);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.content-card-search.liquid-glass .content-btn { -webkit-backdrop-filter: none; backdrop-filter: none; background: rgba(255,255,255,.12); }
+.content-card-search.liquid-glass .content-btn-primary { background: var(--primary); }
+
+/* Lesbarkeit: etwas mehr Tönung auf unruhigem Hintergrund */
+.ui-header-inner.liquid-glass { --lg-tint: .42; }
+:root[data-theme="dark"] .ui-header-inner.liquid-glass { background: rgba(26,26,30,.5); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ui-header-inner.liquid-glass { background: rgba(26,26,30,.5); } }
+.content-card-chip.liquid-glass, .content-card-search.liquid-glass { background: rgba(18,18,26,.32); }
+
+/* Bitcoin-Chart: Beschriftung aktueller Preis + Hoch/Tief */
+.btc-now-label { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.85); background: rgba(28,28,31,.85); border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 2px 8px; white-space: nowrap; }
+.btc-extreme { font-size: 11px; font-weight: 500; white-space: nowrap; text-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.btc-extreme.up { color: #2ec08b; }
+.btc-extreme.down { color: #eb5757; }
+
+/* Interaktiver Punkte-Hintergrund */
+.dot-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+
+/* Bitcoin: Hoch/Tief-Zeile unter dem Chart, Chart mit genug Höhe */
+.wallet-chart-box { min-height: 190px; }
+.wallet-extremes { display: flex; justify-content: space-between; gap: 8px; margin: 0; font-size: 12px; color: var(--w-muted); font-variant-numeric: tabular-nums; }
+.wallet-extremes b { font-weight: 500; color: var(--w-text); }
+.wallet-extremes em { font-style: normal; font-weight: 500; margin-left: 4px; }
+.wallet-extremes em.up { color: #2ec08b; }
+.wallet-extremes em.down { color: #eb5757; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Buttons als Liquid Glass – die violetten bleiben pastell-lavendel
+   ═════════════════════════════════════════════════════════════════════════════ */
+.liquid-glass.lg-primary {
+  background: linear-gradient(180deg, rgba(198,188,255,.78) 0%, rgba(160,146,240,.68) 100%) !important;
+  color: #1e1638 !important;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.85),          /* helle Lichtkante oben */
+    inset 0 -1px 0 rgba(255,255,255,.3),
+    inset 0 0 0 1px rgba(255,255,255,.38),         /* Glasrand */
+    inset 0 -10px 18px rgba(124,111,214,.28),      /* Tiefe unten */
+    0 6px 18px rgba(124,111,214,.28);
+  text-shadow: 0 1px 0 rgba(255,255,255,.35);
+}
+.liquid-glass.lg-primary::before {
+  /* Glanzlicht oben wie bei echtem Glas */
+  background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.08) 48%, rgba(255,255,255,0) 52%, rgba(255,255,255,.12) 100%);
+}
+.liquid-glass.lg-primary:hover {
+  background: linear-gradient(180deg, rgba(210,202,255,.86) 0%, rgba(172,158,246,.76) 100%) !important;
+}
+
+.liquid-glass.lg-btn {
+  --lg-tint: .22;
+  color: inherit;
+  border: 0 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.7),
+    inset 0 -1px 0 rgba(255,255,255,.18),
+    inset 0 0 0 1px rgba(255,255,255,.3),
+    0 4px 14px rgba(0,0,0,.1);
+}
+.liquid-glass.lg-btn:hover { --lg-tint: .32; }
+/* Auf hellen Flächen braucht klares Glas einen sichtbaren Rand */
+.ui-card .liquid-glass.lg-btn { box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset 0 0 0 1px rgba(120,120,135,.28), 0 2px 8px rgba(0,0,0,.06); }
+:root[data-theme="dark"] .ui-card .liquid-glass.lg-btn { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 0 1px rgba(255,255,255,.14), 0 2px 8px rgba(0,0,0,.25); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ui-card .liquid-glass.lg-btn { box-shadow: inset 0 1px 0 rgba(255,255,255,.25), inset 0 0 0 1px rgba(255,255,255,.14), 0 2px 8px rgba(0,0,0,.25); }
+}
+/* Pillenform für die Glas-Buttons */
+.ui-btn.liquid-glass, .content-btn.liquid-glass { border-radius: 999px; }
+.ui-btn-icon.liquid-glass, .ev-modal-close.liquid-glass { border-radius: 50%; }
+.liquid-glass:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ── Wetter: beide Bereiche als gleiches Liquid Glass ─────────────────────── */
+.mw-glass.liquid-glass {
+  background: rgba(30,38,50,.3) !important;
+  color: #fff !important;
+  border: 0 !important;
+  border-radius: 14px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 0 0 1px rgba(255,255,255,.26), inset 0 -1px 0 rgba(255,255,255,.1), 0 8px 24px rgba(20,28,40,.18) !important;
+}
+.mw-days.mw-glass { padding-top: 12px; }
+.mw-glass .mw-caption span:last-child { color: rgba(255,255,255,.72); opacity: 1; }
+.mw-glass .mw-day { color: #fff; }
+.mw-glass .mw-day:hover { background: rgba(255,255,255,.1); }
+.mw-glass .mw-day[aria-pressed="true"] { background: rgba(171,159,242,.32); box-shadow: inset 0 1px 0 rgba(255,255,255,.4), inset 0 0 0 1px rgba(255,255,255,.22); }
+.mw-glass .mw-day:focus-visible { outline: 2px solid rgba(255,255,255,.8); }
+.mw-glass .mw-day-date { opacity: .7; }
+/* Weicher Wechsel des oberen Streifens */
+.mw-hourly-chart { transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out); }
+.mw-hourly-chart.is-switching { opacity: 0; transform: translateY(4px); }
+
+/* ── Alle Buttons: reines, farbloses Liquid Glass ─────────────────────────── */
+.liquid-glass.lg-btn,
+.liquid-glass.lg-btn:hover {
+  background: rgba(255,255,255,var(--lg-tint)) !important;
+  color: var(--foreground) !important;
+  text-shadow: none;
+}
+.liquid-glass.lg-btn { --lg-tint: .18; }
+.liquid-glass.lg-btn:hover { --lg-tint: .28; }
+.liquid-glass.lg-btn::before { background: linear-gradient(135deg, rgba(255,255,255,.3) 0%, rgba(255,255,255,0) 35%, rgba(255,255,255,0) 70%, rgba(255,255,255,.1) 100%); }
+/* Auf dunklen oder bunten Flächen (Wallet, Wetter, Karte, Dialog-Bild) weisse Schrift */
+.wallet .liquid-glass.lg-btn, .mw .liquid-glass.lg-btn, .content-card .liquid-glass.lg-btn, .ev-modal-close.liquid-glass.lg-btn { color: #fff !important; }
+.ev-modal-close.liquid-glass.lg-btn { background: rgba(20,20,28,.35) !important; }
+.ev-modal-head .liquid-glass.lg-btn { color: var(--foreground) !important; }
+
+/* Wochenverlauf im unteren Glas-Panel (immer gleich) */
+.mw-week-chart { height: 96px; margin: 0 6px 8px; border-top: 1px solid rgba(255,255,255,.14); }
+.mw-caption-meta { color: rgba(255,255,255,.72); white-space: nowrap; }
+.mw-hourly-chart { height: 128px; }
+
+/* ── Katzenbild: füllt die Karte, mit Verlauf ─────────────────────────────── */
+.cat-frame { flex: 1; aspect-ratio: auto; min-height: 240px; }
+.cat-frame img { position: absolute; inset: 0; }
+.cat-meta {
+  position: absolute; left: 10px; bottom: 10px; z-index: 2;
+  padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; color: #fff;
+  background: rgba(20,20,28,.35); backdrop-filter: blur(10px) saturate(1.6); -webkit-backdrop-filter: blur(10px) saturate(1.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 0 0 1px rgba(255,255,255,.18);
+  font-variant-numeric: tabular-nums;
+}
+.cat-history-label { margin: 0 0 8px; font-size: 12px; color: var(--muted-foreground); font-weight: 500; }
+.cat-history { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cat-thumb {
+  position: relative; aspect-ratio: 1; padding: 0; border: 0; overflow: hidden; cursor: pointer;
+  border-radius: calc(var(--radius) + 2px); background: var(--muted);
+  opacity: .65; transition: opacity 150ms, transform 160ms var(--ease-out), box-shadow 150ms;
+}
+.cat-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cat-thumb:hover { opacity: 1; }
+.cat-thumb:active { transform: scale(0.95); }
+.cat-thumb:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.cat-thumb[aria-pressed="true"] { opacity: 1; box-shadow: 0 0 0 2px var(--card), 0 0 0 4px rgba(171,159,242,.8); }
+.cat-thumb.is-empty { cursor: default; opacity: 1; background: transparent; border: 1px dashed var(--border); }
+
+/* ── Stundenstreifen: seitlich wischbar ───────────────────────────────────── */
+.mw-scroll {
+  overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none; -ms-overflow-style: none;
+  overscroll-behavior-x: contain;
+  cursor: grab;
+  /* Ränder weich ausblenden: zeigt, dass es links/rechts weitergeht */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 18px, #000 calc(100% - 18px), transparent 100%);
+}
+.mw-scroll::-webkit-scrollbar { display: none; }
+.mw-scroll.is-dragging { cursor: grabbing; user-select: none; }
+.mw-scroll:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; border-radius: 10px; }
+.mw-scroll .mw-hourly-chart { max-width: none; }
+.mw-tick-day { color: #fff; font-weight: 500; }
+/* Klarere Trennung der Tage auch in der Tages-Leiste */
+.mw-glass .mw-days-grid { gap: 0; }
+.mw-glass .mw-day { position: relative; margin: 0 2px; }
+.mw-glass .mw-day:not(:last-child)::after {
+  content: ""; position: absolute; right: -3px; top: 14%; bottom: 14%; width: 1px;
+  background: rgba(255,255,255,.22); pointer-events: none;
 }

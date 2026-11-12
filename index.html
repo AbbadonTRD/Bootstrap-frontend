@@ -23,18 +23,50 @@
     integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
     crossorigin="anonymous"
   />
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-dashboard" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M1 0a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h4a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1zm7 1a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2.01a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1zm0 6a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1zm-8 3.99a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M9 0a7 7 0 0 0 0 14h.004a7.1 7.1 0 0 0 2.657-.538a.5.5 0 0 0 .061-.894A6.5 6.5 0 0 1 8.5 7a6.5 6.5 0 0 1 3.194-5.568a.5.5 0 0 0-.063-.893A7.1 7.1 0 0 0 9.006 0z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-light" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7 0a.75.75 0 0 1 .75.75v1a.75.75 0 0 1-1.5 0v-1A.75.75 0 0 1 7 0m2.25 7a2.25 2.25 0 1 1-4.5 0a2.25 2.25 0 0 1 4.5 0m-1.5 5.25a.75.75 0 0 0-1.5 0v1a.75.75 0 0 0 1.5 0zM11.5 7a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1A.75.75 0 0 1 11.5 7M.75 6.25a.75.75 0 0 0 0 1.5h1a.75.75 0 0 0 0-1.5zm1.3-4.2a.75.75 0 0 1 1.06 0l.862.86A.75.75 0 0 1 2.91 3.973l-.86-.861a.75.75 0 0 1 0-1.06m9.04 7.978a.75.75 0 1 0-1.062 1.06l.861.862a.75.75 0 0 0 1.06-1.061zm.86-7.978a.75.75 0 0 1 0 1.06l-.86.862a.75.75 0 0 1-1.062-1.061l.861-.86a.75.75 0 0 1 1.06 0M3.972 11.09a.75.75 0 1 0-1.061-1.06l-.86.86a.75.75 0 0 0 1.06 1.06z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-cat" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M1.777.053A.5.5 0 0 1 2.3.1l3.917 2.947a6.6 6.6 0 0 1 1.564 0L11.7.1a.5.5 0 0 1 .801.4v8.25h.748a.75.75 0 0 1 0 1.5h-.81a4.5 4.5 0 0 1-.479 1.391l1.376.688a.75.75 0 1 1-.67 1.342l-1.654-.827A4.48 4.48 0 0 1 8 14H6a4.48 4.48 0 0 1-3.011-1.156l-1.654.827a.75.75 0 1 1-.67-1.342l1.376-.688a4.5 4.5 0 0 1-.479-1.391h-.81a.75.75 0 0 1 0-1.5H1.5V.5a.5.5 0 0 1 .277-.447M9.124 7.75a.75.75 0 1 0 0-1.5a.75.75 0 0 0 0 1.5m-4.25 0a.75.75 0 1 0 0-1.5a.75.75 0 0 0 0 1.5m.897 1.605A.5.5 0 0 1 6.25 9h1.5a.5.5 0 0 1 .277.916l-.75.5a.5.5 0 0 1-.554 0l-.75-.5a.5.5 0 0 1-.202-.56" clip-rule="evenodd"/></symbol>
+    <symbol id="i-image" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M14 12.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 0 12.5v-11A1.5 1.5 0 0 1 1.5 0h11A1.5 1.5 0 0 1 14 1.5zM3.75 2a1.75 1.75 0 1 0 0 3.5a1.75 1.75 0 0 0 0-3.5m4.651 4.599L2.5 12.5h10v-4L9.69 6.492A1 1 0 0 0 8.4 6.6" clip-rule="evenodd"/></symbol>
+    <symbol id="i-reload" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M9.354.146A.5.5 0 0 0 8.5.5V2h-6A2.5 2.5 0 0 0 0 4.5V6a1 1 0 0 0 2 0V4.5a.5.5 0 0 1 .5-.5h6v1.5a.5.5 0 0 0 .854.354l2.5-2.5a.5.5 0 0 0 0-.708zM5.19 8.038a.5.5 0 0 1 .31.462V10h6a.5.5 0 0 0 .5-.5V8a1 1 0 1 1 2 0v1.5a2.5 2.5 0 0 1-2.5 2.5h-6v1.5a.5.5 0 0 1-.854.354l-2.5-2.5a.5.5 0 0 1 0-.708l2.5-2.5a.5.5 0 0 1 .545-.108" clip-rule="evenodd"/></symbol>
+    <symbol id="i-bitcoin" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M5.744 1.029a1 1 0 1 0-2 0v.604a1.74 1.74 0 0 0-.886 1.518v7.432a1.74 1.74 0 0 0 .886 1.518v.87a1 1 0 1 0 2 0v-.644h1.019v.644a1 1 0 1 0 2 0v-.805A3.416 3.416 0 0 0 9.99 6.353a3.05 3.05 0 0 0-1.227-4.725v-.6a1 1 0 1 0-2 0v.379h-1.02zm-.886 6.466v2.832h2.868a1.416 1.416 0 0 0 .02-2.832zm2.832-2H4.858V3.407h2.86a1.049 1.049 0 0 1-.028 2.088" clip-rule="evenodd"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7 0a.75.75 0 0 1 .75.75v1a.75.75 0 0 1-1.5 0v-1A.75.75 0 0 1 7 0m2.25 7a2.25 2.25 0 1 1-4.5 0a2.25 2.25 0 0 1 4.5 0m-1.5 5.25a.75.75 0 0 0-1.5 0v1a.75.75 0 0 0 1.5 0zM11.5 7a.75.75 0 0 1 .75-.75h1a.75.75 0 0 1 0 1.5h-1A.75.75 0 0 1 11.5 7M.75 6.25a.75.75 0 0 0 0 1.5h1a.75.75 0 0 0 0-1.5zm1.3-4.2a.75.75 0 0 1 1.06 0l.862.86A.75.75 0 0 1 2.91 3.973l-.86-.861a.75.75 0 0 1 0-1.06m9.04 7.978a.75.75 0 1 0-1.062 1.06l.861.862a.75.75 0 0 0 1.06-1.061zm.86-7.978a.75.75 0 0 1 0 1.06l-.86.862a.75.75 0 0 1-1.062-1.061l.861-.86a.75.75 0 0 1 1.06 0M3.972 11.09a.75.75 0 1 0-1.061-1.06l-.86.86a.75.75 0 0 0 1.06 1.06z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-suncloud" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M11 5.999A3 3 0 1 0 11 0a3 3 0 0 0 0 5.999m-9.682.32A4.5 4.5 0 0 1 4.5 5a4.45 4.45 0 0 1 4.46 4.11a.25.25 0 0 0 .14.19a.24.24 0 0 0 .23 0A2.45 2.45 0 0 1 10.5 9a2.5 2.5 0 0 1 0 5h-6a4.5 4.5 0 0 1-3.182-7.682" clip-rule="evenodd"/></symbol>
+    <symbol id="i-cloud" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M6.913 2.38A5 5 0 1 0 5 12h6a3 3 0 0 0 0-6v.5V6a3 3 0 0 0-1.065.196a5 5 0 0 0-3.022-3.815" clip-rule="evenodd"/></symbol>
+    <symbol id="i-rain" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M3.683.208a4.25 4.25 0 0 1 5.3 2.572a3 3 0 0 1 1.265-.28h.002a3 3 0 0 1 0 6H5A4.25 4.25 0 0 1 3.683.208M5.22 10.585a.75.75 0 1 0-1.342-.67l-.5 1a.75.75 0 1 0 1.342.67zM9.785 9.58a.75.75 0 0 1 .336 1.006l-.5 1a.75.75 0 1 1-1.342-.67l.5-1a.75.75 0 0 1 1.006-.336m-2.614 3.006a.75.75 0 1 0-1.342-.67l-.5 1a.75.75 0 1 0 1.342.67zM1.936 11.58a.75.75 0 0 1 .335 1.006l-.5 1a.75.75 0 1 1-1.342-.67l.5-1a.75.75 0 0 1 1.007-.336m10.135 1.006a.75.75 0 1 0-1.342-.67l-.5 1a.75.75 0 1 0 1.342.67z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-snow" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M5.53.22a.75.75 0 1 0-1.06 1.06l1.78 1.78v3.19H3.06L1.28 4.47A.75.75 0 0 0 .22 5.53L1.69 7L.22 8.47a.75.75 0 1 0 1.06 1.06l1.78-1.78h3.19v3.19l-1.78 1.78a.75.75 0 1 0 1.06 1.06L7 12.31l1.47 1.47a.75.75 0 0 0 1.06-1.06l-1.78-1.78V7.75h3.19l1.78 1.78a.75.75 0 1 0 1.06-1.06L12.31 7l1.47-1.47a.75.75 0 0 0-1.06-1.06l-1.78 1.78H7.75V3.06l1.78-1.78A.75.75 0 0 0 8.47.22L7 1.69zM2.97 2.97a.75.75 0 0 1 1.06 0l1 1a.75.75 0 0 1-1.06 1.06l-1-1a.75.75 0 0 1 0-1.06m2.06 7.06a.75.75 0 1 0-1.06-1.06l-1 1a.75.75 0 1 0 1.06 1.06zm6-7.06a.75.75 0 0 1 0 1.06l-1 1a.75.75 0 1 1-1.06-1.06l1-1a.75.75 0 0 1 1.06 0m-1 6a.75.75 0 1 0-1.06 1.06l1 1a.75.75 0 1 0 1.06-1.06z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-ev" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M1.5 2a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1.5h3V2a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5v1.5A1.5 1.5 0 0 1 14 5v7.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 0 12.5V5a1.5 1.5 0 0 1 1.5-1.5zm6.446 4.62a.625.625 0 0 0-.976-.781L5.137 8.13a.625.625 0 0 0 .488 1.016h1.582l-1.185 1.778a.625.625 0 1 0 1.04.694l1.833-2.75a.625.625 0 0 0-.52-.972h-1.45z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M5.25.813a.75.75 0 0 0-1.5 0V3.53H3a1 1 0 0 0-1 1v3a3 3 0 0 0 3 3h1.25v2.688a.75.75 0 0 0 1.5 0V10.53H9a3 3 0 0 0 3-3v-3a1 1 0 0 0-1-1h-.75V.813a.75.75 0 0 0-1.5 0V3.53h-3.5z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-search" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M2 6a4 4 0 1 1 8 0a4 4 0 0 1-8 0m4-6a6 6 0 1 0 3.476 10.89l2.817 2.817a1 1 0 0 0 1.414-1.414l-2.816-2.816A6 6 0 0 0 6 0" clip-rule="evenodd"/></symbol>
+    <symbol id="i-map" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="m8.875.865l-3.75-.75v13.02l3.75.75zm1.25 12.994l3.496-.874A.5.5 0 0 0 14 12.5V.5a.5.5 0 0 0-.621-.485l-3.254.813zM.379 1.015L3.875.14v13.03l-3.254.814A.5.5 0 0 1 0 13.5v-12a.5.5 0 0 1 .379-.485" clip-rule="evenodd"/></symbol>
+    <symbol id="i-pin" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7 0c2.622 0 4.806 2.184 4.806 4.805c0 .856-.294 1.7-.705 2.464c-.413.768-.959 1.484-1.501 2.094a16 16 0 0 1-1.521 1.49a9 9 0 0 1-.546.433a3 3 0 0 1-.195.13a1 1 0 0 1-.174.083a.54.54 0 0 1-.405-.03a1 1 0 0 1-.098-.053a3 3 0 0 1-.196-.133a9 9 0 0 1-.545-.435A16 16 0 0 1 4.4 9.352c-.542-.612-1.088-1.33-1.5-2.095c-.411-.762-.706-1.603-.706-2.452C2.194 2.184 4.378 0 7 0m0 6.24a1.435 1.435 0 1 1 0-2.87a1.435 1.435 0 0 1 0 2.87m3.1 3.916q.276-.31.55-.65h1.343c.2 0 .38.12.46.303l1.497 3.495a.5.5 0 0 1-.46.697H.51a.5.5 0 0 1-.46-.697l1.498-3.495a.5.5 0 0 1 .46-.303h1.355q.266.33.537.636c.662.746 1.33 1.376 1.85 1.821c.26.223.487.402.661.528q.13.095.232.157q.049.03.11.06q.03.014.079.03a.55.55 0 0 0 .414-.03q.06-.029.11-.059q.101-.061.231-.155c.174-.126.4-.304.661-.525c.52-.442 1.19-1.069 1.851-1.813" clip-rule="evenodd"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M6.218.226a1.5 1.5 0 0 1 2.117.596l.002.004l5.5 10.999A1.5 1.5 0 0 1 12.5 14h-11a1.5 1.5 0 0 1-1.336-2.174v-.001L5.664.826l.002-.004a1.5 1.5 0 0 1 .553-.596M7 4.125a.75.75 0 0 1 .75.75v3.25a.75.75 0 0 1-1.5 0v-3.25a.75.75 0 0 1 .75-.75m1 6.75a1 1 0 1 1-2 0a1 1 0 0 1 2 0" clip-rule="evenodd"/></symbol>
+    <symbol id="i-cursor" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M3.658.162a.75.75 0 0 1 .918.53l.449 1.673a.75.75 0 1 1-1.45.389L3.129 1.08a.75.75 0 0 1 .53-.919M.072 3.755a.75.75 0 0 0 .53.918l1.673.448a.75.75 0 1 0 .388-1.448L.99 3.224a.75.75 0 0 0-.918.53m4.4 1.965a1 1 0 0 1 1.264-1.265l7.12 2.375c.92.307.908 1.612-.018 1.902l-2.026.637l2.7 2.7a1 1 0 0 1-1.415 1.414l-2.706-2.707l-.642 2.046c-.29.925-1.596.937-1.903.017zM2.066 8.755a.75.75 0 1 1-1.061-1.06L2.231 6.47a.75.75 0 0 1 1.06 1.06zm6.46-6.591a.75.75 0 0 0-1.06-1.061L6.24 2.328a.75.75 0 0 0 1.061 1.06z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-close" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M1.707.293A1 1 0 0 0 .293 1.707L5.586 7L.293 12.293a1 1 0 1 0 1.414 1.414L7 8.414l5.293 5.293a1 1 0 0 0 1.414-1.414L8.414 7l5.293-5.293A1 1 0 0 0 12.293.293L7 5.586z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-flash" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M4.272 0a.5.5 0 0 0-.46.305l-2.25 5.31l-.002.005A1 1 0 0 0 2.48 7h2.13l-1.82 6.363a.5.5 0 0 0 .825.5l8.59-8.14l.003-.003A1 1 0 0 0 11.53 4H8.581L10.22.724A.5.5 0 0 0 9.772 0z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7 14A7 7 0 1 0 7 0a7 7 0 0 0 0 14m.625-9.5a.625.625 0 1 0-1.25 0V7c0 .146.051.288.145.4l2.5 3a.625.625 0 1 0 .96-.8L7.625 6.774z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-info" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7 14A7 7 0 1 0 7 0a7 7 0 0 0 0 14M5.5 9.375a.625.625 0 1 0 0 1.25h3a.625.625 0 1 0 0-1.25h-.875V6.5A.625.625 0 0 0 7 5.875H6a.625.625 0 1 0 0 1.25h.375v2.25zM8 4a1 1 0 1 1-2 0a1 1 0 0 1 2 0" clip-rule="evenodd"/></symbol>
+    <symbol id="i-target" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7.75.766a.75.75 0 0 0-1.5 0v1.223A5.07 5.07 0 0 0 1.99 6.25H.765a.75.75 0 0 0 0 1.5h1.223a5.07 5.07 0 0 0 4.261 4.26v1.224a.75.75 0 0 0 1.5 0v-1.223a5.07 5.07 0 0 0 4.26-4.261h1.224a.75.75 0 0 0 0-1.5H12.01a5.07 5.07 0 0 0-4.26-4.26zm2.816 6.228a3.566 3.566 0 1 0-3.572 3.572h.012a3.566 3.566 0 0 0 3.56-3.56zM5.77 7a1.23 1.23 0 1 1 2.46 0a1.23 1.23 0 0 1-2.46 0" clip-rule="evenodd"/></symbol>
+    <symbol id="i-thermo" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M4.75 2.25a2.25 2.25 0 0 1 4.5 0v5.569a3.5 3.5 0 1 1-4.5 0zM7 1.5a.75.75 0 0 0-.75.75v5.945a.75.75 0 0 1-.34.628a2 2 0 1 0 2.18 0a.75.75 0 0 1-.34-.628V2.25A.75.75 0 0 0 7 1.5" clip-rule="evenodd"/></symbol>
+    <symbol id="i-nav" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M13.96.695a.5.5 0 0 0-.655-.655l-13 5.5a.5.5 0 0 0-.029.907l4.851 2.426l2.426 4.85a.5.5 0 0 0 .907-.028z" clip-rule="evenodd"/></symbol>
+    <symbol id="i-building" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M4.521.138a.5.5 0 0 0-.69 0l-3.676 3.5A.5.5 0 0 0 0 4v9.5a.5.5 0 0 0 .5.5h2.676v-2a1 1 0 1 1 2 0v2h2.677a.5.5 0 0 0 .5-.5V4a.5.5 0 0 0-.156-.362zM9.77 6.5a.5.5 0 0 1 .5-.5h3.23a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-3.231a.5.5 0 0 1-.5-.5zM2.173 7.763c0-.345.28-.625.625-.625h2.757a.625.625 0 1 1 0 1.25H2.798a.625.625 0 0 1-.625-.625m.625-3.232a.625.625 0 1 0 0 1.25h2.757a.625.625 0 1 0 0-1.25z" clip-rule="evenodd"/></symbol>
+  </svg>
+
+  <!-- Interaktiver Punkte-Hintergrund (Canvas) -->
+  <canvas id="dot-bg" class="dot-bg" aria-hidden="true"></canvas>
 
   <!-- Header (Navigation Menu) -->
   <header class="ui-header">
-    <div class="container ui-header-inner">
+    <div class="container ui-header-inner liquid-glass" data-scale="40" data-bevel="18" data-aberration="3" data-frost="5">
       <a class="ui-logo" href="#">
-        <span class="ui-logo-mark"><i class="bi bi-grid-fill"></i></span>Dashboard
+        <span class="ui-logo-mark"><svg class="ic" aria-hidden="true"><use href="#i-dashboard"/></svg></span>Dashboard
       </a>
       <nav class="ui-nav d-none d-md-flex" aria-label="Bereiche">
         <a href="#card-cat">Katzen</a>
@@ -44,8 +76,8 @@
         <a href="#card-map">Karte</a>
       </nav>
       <div class="ui-header-actions">
-        <button id="btn-theme" class="ui-btn ui-btn-ghost ui-btn-icon" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten">
-          <i class="bi bi-sun theme-icon-light"></i><i class="bi bi-moon theme-icon-dark"></i>
+        <button id="btn-theme" class="ui-btn ui-btn-ghost ui-btn-icon liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten">
+          <svg class="ic theme-icon-light" aria-hidden="true"><use href="#i-light"/></svg><svg class="ic theme-icon-dark" aria-hidden="true"><use href="#i-moon"/></svg>
         </button>
       </div>
     </div>
@@ -53,24 +85,16 @@
 
   <main class="container py-4 py-md-5">
 
-    <!-- Hero mit Wolken (nur HTML + CSS) -->
-    <section class="hero mb-4">
-      <div class="sky-sun" aria-hidden="true"></div>
-      <div class="sky-clouds" aria-hidden="true">
-        <div class="cloud-track" style="--y:8%;  --s:0.9;  --dur:95s;  --delay:-20s"><div class="cloud"></div></div>
-        <div class="cloud-track" style="--y:42%; --s:1.25; --dur:120s; --delay:-75s"><div class="cloud"></div></div>
-        <div class="cloud-track" style="--y:62%; --s:0.7;  --dur:80s;  --delay:-5s"><div class="cloud"></div></div>
-        <div class="cloud-track" style="--y:18%; --s:1.05; --dur:110s; --delay:-55s"><div class="cloud"></div></div>
-        <div class="cloud-track" style="--y:70%; --s:1.4;  --dur:140s; --delay:-110s"><div class="cloud"></div></div>
-        <div class="cloud-track" style="--y:30%; --s:0.6;  --dur:70s;  --delay:-40s"><div class="cloud"></div></div>
+    <!-- Hero: Split-Flap-Board (inspiriert von Aceternity "Text Flipping Board") -->
+    <section class="flip-hero mb-4" aria-labelledby="hero-title">
+      <h1 id="hero-title" class="sr-only">Bootstrap Frontend – Unterricht Oberle, designed by Tiago</h1>
+      <div id="flipboard" class="flipboard" aria-hidden="true"></div>
+      <div class="flip-hero-foot">
+        <span class="flip-hero-brand"><span class="live-dot"></span>Live Data · 5 APIs</span>
+        <span class="flip-hero-sub">Katzen · Bitcoin · Wetter · Ladestationen · Karte</span>
       </div>
-      <div class="hero-content">
-        <h1>Bootstrap Frontend</h1>
-        <p>Katzen · Bitcoin · Wetter · Ladestationen · Karte</p>
-      </div>
-      <span class="ui-badge ui-badge-glass"><span class="live-dot"></span>Live Data · 5 APIs</span>
 
-      <!-- SVG-Filter (HTML-Markup) für die ausgefransten Wolkenränder -->
+      <!-- SVG-Filter für die ausgefransten Wolkenränder (Wetter-Karte) -->
       <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
         <filter id="cloud-fluff" x="-50%" y="-50%" width="200%" height="200%">
           <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="4" seed="7" result="noise" />
@@ -86,27 +110,33 @@
       <div class="col-12 col-md-6 col-xl-4">
         <section id="card-cat" class="ui-card">
           <div class="ui-card-header">
-            <span class="ui-card-icon"><i class="bi bi-image"></i></span>
             <div>
               <h2 class="ui-card-title">Zufälliges Katzenbild</h2>
               <p class="ui-card-description">Ein neues Bild von The Cat API.</p>
             </div>
           </div>
           <div class="ui-card-content">
-            <div id="cat-placeholder" class="ui-empty">
-              <span class="ui-empty-icon"><i class="bi bi-image"></i></span>
+            <div id="cat-placeholder" class="ui-empty grow">
+              <span class="ui-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-image"/></svg></span>
               <p class="ui-empty-title">Noch kein Bild</p>
               <p class="ui-empty-description">Klicke auf den Button, um ein Katzenbild zu laden.</p>
             </div>
+            <!-- Bild füllt die ganze Kartenhöhe -->
             <div id="cat-frame" class="cat-frame d-none">
               <div class="ui-skeleton"></div>
               <img id="cat-image" src="" alt="Zufälliges Katzenbild" />
+              <span id="cat-meta" class="cat-meta d-none"></span>
             </div>
-            <div id="cat-error" class="ui-alert d-none" role="alert"><i class="bi bi-exclamation-circle"></i><span></span></div>
+            <!-- Verlauf: die letzten Katzen, antippen zeigt sie wieder -->
+            <div class="cat-history-wrap d-none" id="cat-history-wrap">
+              <p class="cat-history-label">Zuletzt geladen</p>
+              <div id="cat-history" class="cat-history" role="group" aria-label="Zuletzt geladene Katzenbilder"></div>
+            </div>
+            <div id="cat-error" class="ui-alert d-none" role="alert"><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg><span></span></div>
           </div>
           <div class="ui-card-footer">
-            <button id="btn-cat" class="ui-btn ui-btn-default ui-btn-block" type="button">
-              <i class="bi bi-arrow-clockwise"></i>Neues Katzenbild laden
+            <button id="btn-cat" class="ui-btn ui-btn-default ui-btn-block liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+              <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Neues Katzenbild laden
             </button>
           </div>
         </section>
@@ -118,7 +148,7 @@
         <section id="card-btc" class="ui-card wallet">
           <div class="wallet-top">
             <span class="wallet-account">
-              <span class="wallet-coin"><i class="bi bi-currency-bitcoin"></i></span>
+              <span class="wallet-coin"><svg class="ic" aria-hidden="true"><use href="#i-bitcoin"/></svg></span>
               Bitcoin-Preis
             </span>
             <span class="wallet-pair">BTC</span>
@@ -132,14 +162,34 @@
           </div>
 
           <div class="wallet-actions">
-            <button id="btn-btc" class="wallet-btn" type="button">
-              <i class="bi bi-arrow-clockwise"></i>Preis abrufen
+            <button id="btn-btc" class="wallet-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+              <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Preis abrufen
             </button>
+          </div>
+
+          <!-- Kursverlauf wie in der Phantom-App (nur bei genug Platz sichtbar) -->
+          <div id="btc-chart-wrap" class="wallet-chart" aria-label="Bitcoin-Kursverlauf">
+            <div class="wallet-change" aria-live="polite">
+              <span id="btc-change" class="wallet-delta">Kursverlauf</span>
+              <span id="btc-change-pct" class="wallet-delta-pill d-none"></span>
+              <span id="btc-change-label" class="wallet-delta-label">nach dem Abrufen</span>
+            </div>
+            <div id="btc-chart" class="wallet-chart-box" role="img" aria-label="Bitcoin-Preis in USD über die gewählte Zeitspanne">
+              <div class="wallet-chart-empty"><svg class="ic" aria-hidden="true"><use href="#i-bitcoin"/></svg></div>
+            </div>
+            <p id="btc-extremes" class="wallet-extremes d-none"></p>
+            <div class="wallet-ranges" role="group" aria-label="Zeitspanne">
+              <button type="button" class="wallet-range" data-range="1h">1S</button>
+              <button type="button" class="wallet-range is-active" data-range="1" aria-pressed="true">1T</button>
+              <button type="button" class="wallet-range" data-range="7">1W</button>
+              <button type="button" class="wallet-range" data-range="30">1M</button>
+              <button type="button" class="wallet-range" data-range="365">1J</button>
+            </div>
           </div>
 
           <div class="wallet-list">
             <div class="wallet-row">
-              <span class="wallet-row-icon btc"><i class="bi bi-currency-bitcoin"></i></span>
+              <span class="wallet-row-icon btc"><svg class="ic" aria-hidden="true"><use href="#i-bitcoin"/></svg></span>
               <span class="wallet-row-main">
                 <span class="wallet-row-title">Bitcoin</span>
                 <span class="wallet-row-sub">1 BTC · USD &amp; CHF</span>
@@ -155,42 +205,62 @@
 
       <!-- c) Aktuelles Wetter -->
       <div class="col-12 col-xl-4">
-        <section id="card-weather" class="ui-card">
-          <div class="ui-card-header">
-            <span class="ui-card-icon"><i class="bi bi-cloud-sun"></i></span>
-            <div>
-              <h2 class="ui-card-title">Aktuelles Wetter</h2>
-              <p class="ui-card-description"><strong>Ort:</strong> <span id="weather-place">Zürich, CH</span></p>
+        <!-- Wetter im Stil der MeteoSwiss-App -->
+        <section id="card-weather" class="ui-card mw">
+          <!-- Bergsilhouette + Wolke im Hintergrund -->
+          <svg class="mw-mountains" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 120 L0 88 L30 80 L55 62 L72 70 L95 46 L118 58 L140 40 L162 52 L190 30 L214 48 L236 42 L262 60 L290 50 L318 68 L346 58 L372 74 L400 66 L400 120 Z" />
+          </svg>
+          <div class="mw-cloud" aria-hidden="true"><div class="cloud"></div></div>
+
+          <!-- Kopf: Ort, Beschreibung, Temperatur -->
+          <header class="mw-head">
+            <h2 class="mw-place" id="weather-place">Zürich</h2>
+            <p class="mw-desc" id="weather-desc">Wetter noch nicht geladen</p>
+            <p class="mw-temp"><span id="weather-tmax" class="value">–</span></p>
+            <p class="mw-today">
+              <span>Tmax <strong id="weather-tmax-label" class="value">–</strong></span>
+              <span>Tmin <strong id="weather-tmin" class="value">–</strong></span>
+              <span>Niederschlag <strong id="weather-rain" class="value">–</strong></span>
+            </p>
+          </header>
+
+          <!-- Stundenstreifen: bewusst minimal -->
+          <div id="weather-hourly-wrap" class="mw-hourly mw-glass liquid-glass mw-reveal d-none" data-scale="30" data-bevel="14" data-frost="2">
+            <p class="mw-caption" aria-live="polite"><span id="weather-strip-title">Heute</span><span class="mw-caption-meta"><span id="weather-hourly-day">–</span> · <span id="weather-strip-rain">–</span></span></p>
+            <!-- Seitlich wischen/ziehen: Stundenverlauf über alle 5 Tage -->
+            <div id="weather-scroll" class="mw-scroll" tabindex="0" aria-label="Stundenverlauf – seitlich wischen oder mit den Pfeiltasten verschieben">
+              <div id="weather-hourly" class="mw-hourly-chart" role="img" aria-label="Temperatur und Niederschlag pro Stunde"></div>
             </div>
           </div>
-          <div class="ui-card-content">
-            <div class="ui-stats">
-              <div class="ui-stat"><span class="ui-stat-label">Tmax</span><span id="weather-tmax" class="ui-stat-value value">–</span></div>
-              <div class="ui-stat"><span class="ui-stat-label">Tmin</span><span id="weather-tmin" class="ui-stat-value value">–</span></div>
-              <div class="ui-stat"><span class="ui-stat-label">Niederschlag</span><span id="weather-rain" class="ui-stat-value value">–</span></div>
-            </div>
-            <!-- shadcn-Style Chart (Highcharts darunter) -->
-            <div id="weather-chart-card" class="ui-chart d-none">
-              <div class="ui-chart-header">
-                <h3 class="ui-chart-title">Temperatur &amp; Niederschlag</h3>
-                <p class="ui-chart-description">Stündlich · nächste 5 Tage · MeteoSwiss</p>
-              </div>
-              <div id="weather-chart" class="chart-box" role="img" aria-label="Temperatur und Niederschlag der nächsten 5 Tage"></div>
-              <div class="ui-chart-legend">
-                <span><i class="ui-chart-dot" style="background:var(--chart-1)"></i>Temperatur</span>
-                <span><i class="ui-chart-dot" style="background:var(--chart-2)"></i>Niederschlag</span>
-              </div>
-              <div class="ui-chart-footer">
-                <span id="weather-trend" class="ui-chart-trend"></span>
-                <span class="ui-muted">Zürich, 47.3769° N · 8.5417° E</span>
-              </div>
+
+          <!-- 5-Tage-Prognose: gleiches Glas wie oben, ein Tag steuert den Streifen oben -->
+          <div id="weather-chart-card" class="mw-days mw-glass liquid-glass mw-reveal d-none" data-scale="30" data-bevel="14" data-frost="2">
+            <p class="mw-caption"><span>5-Tage-Prognose</span><span>Tag wählen</span></p>
+            <div id="weather-days" class="mw-days-grid" role="group" aria-label="Tag für den Verlauf oben wählen"></div>
+            <!-- Wochenverlauf: bleibt immer gleich, egal welcher Tag gewählt ist -->
+            <div id="weather-week" class="mw-week-chart" role="img" aria-label="Temperatur und Niederschlag der nächsten 5 Tage"></div>
+          </div>
+
+          <!-- Skeleton während des Ladens -->
+          <div id="weather-skeleton" class="mw-skeleton d-none" aria-hidden="true">
+            <div class="mw-sk mw-sk-strip"></div>
+            <div class="mw-sk-days">
+              <div class="mw-sk"></div><div class="mw-sk"></div><div class="mw-sk"></div><div class="mw-sk"></div><div class="mw-sk"></div>
             </div>
           </div>
-          <div class="ui-card-footer">
-            <button id="btn-weather" class="ui-btn ui-btn-default ui-btn-block" type="button">
-              <i class="bi bi-arrow-clockwise"></i>Wetter laden
+
+          <div id="weather-empty" class="mw-empty">
+            <svg class="ic" aria-hidden="true"><use href="#i-suncloud"/></svg>
+            <span>Prognose für die nächsten 5 Tage</span>
+          </div>
+
+          <footer class="mw-foot">
+            <button id="btn-weather" class="mw-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+              <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Wetter laden
             </button>
-          </div>
+            <span id="weather-trend" class="mw-meta">47.3769° N · 8.5417° E · Open-Meteo</span>
+          </footer>
         </section>
       </div>
 
@@ -198,7 +268,6 @@
       <div class="col-12 col-lg-6">
         <section id="card-ev" class="ui-card">
           <div class="ui-card-header">
-            <span class="ui-card-icon"><i class="bi bi-ev-station"></i></span>
             <div>
               <h2 class="ui-card-title">Nächste Strom-Tankstellen</h2>
               <p class="ui-card-description">Die 5 nächsten öffentlichen Ladestationen.</p>
@@ -210,25 +279,21 @@
               <label class="ui-label" for="ev-plz">Postleitzahl</label>
               <div class="ui-input-row">
                 <input id="ev-plz" class="ui-input" type="text" inputmode="numeric" maxlength="4" placeholder="z.B. 8400" autocomplete="postal-code" />
-                <button id="btn-ev-plz" class="ui-btn ui-btn-outline" type="button"><i class="bi bi-search"></i>Suchen</button>
+                <button id="btn-ev-plz" class="ui-btn ui-btn-outline liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
               </div>
             </div>
             <div id="ev-placeholder" class="ui-empty grow">
-              <span class="ui-empty-icon"><i class="bi bi-plug"></i></span>
+              <span class="ui-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-plug"/></svg></span>
               <p class="ui-empty-title">Keine Stationen geladen</p>
               <p class="ui-empty-description">Lade die Stationen bei Winterthur oder suche nach einer PLZ.</p>
             </div>
-            <div id="ev-table" class="ui-table-wrap d-none">
-              <table class="ui-table">
-                <thead><tr><th class="cell-rank">#</th><th>Station</th><th class="num">Distanz</th></tr></thead>
-                <tbody id="ev-list"></tbody>
-              </table>
-            </div>
-            <p id="ev-hint" class="ui-muted d-none"><i class="bi bi-cursor"></i> Klicke auf eine Station, um sie auf der Karte zu zeigen.</p>
+            <!-- Expandable Cards (inspiriert von Aceternity "Expandable Card On Click") -->
+            <div id="ev-list" class="ev-grid d-none" role="list"></div>
+            <p id="ev-hint" class="ui-muted d-none"><svg class="ic" aria-hidden="true"><use href="#i-cursor"/></svg> Klicke auf eine Station für Details – die Karte zentriert sich darauf.</p>
           </div>
           <div class="ui-card-footer">
-            <button id="btn-ev" class="ui-btn ui-btn-default ui-btn-block" type="button">
-              <i class="bi bi-arrow-clockwise"></i>Ladestationen laden (Winterthur)
+            <button id="btn-ev" class="ui-btn ui-btn-default ui-btn-block liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+              <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Ladestationen laden (Winterthur)
             </button>
           </div>
         </section>
@@ -236,28 +301,30 @@
 
       <!-- e) Kartenausschnitt -->
       <div class="col-12 col-lg-6">
-        <section id="card-map" class="ui-card">
-          <div class="ui-card-header">
-            <span class="ui-card-icon"><i class="bi bi-map"></i></span>
-            <div>
-              <h2 class="ui-card-title">Kartenausschnitt</h2>
-              <p class="ui-card-description">Landeskarte von swisstopo.</p>
-            </div>
-          </div>
-          <div class="ui-card-content">
-            <div class="ui-field">
-              <label class="ui-label" for="map-place">Ort</label>
-              <div class="ui-input-row">
-                <input id="map-place" class="ui-input" type="text" placeholder="z.B. Luzern" />
-                <button id="btn-map-place" class="ui-btn ui-btn-outline" type="button"><i class="bi bi-search"></i>Suchen</button>
+        <!-- Karte als Content Card (inspiriert von Aceternity "Content Card") -->
+        <section id="card-map" class="content-card">
+          <div id="map-container" class="content-card-map"></div>
+          <div class="content-card-shade" aria-hidden="true"></div>
+
+          <div class="content-card-top">
+            <div class="content-card-chip liquid-glass" data-scale="44" data-bevel="14" data-frost="3">
+              <span class="content-card-avatar"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg></span>
+              <div>
+                <p class="content-card-name">Kartenausschnitt</p>
+                <p id="map-meta" class="content-card-meta">swisstopo · Landeskarte</p>
               </div>
             </div>
-            <div id="map-container" class="map-box"></div>
           </div>
-          <div class="ui-card-footer">
-            <button id="btn-map" class="ui-btn ui-btn-default ui-btn-block" type="button">
-              <i class="bi bi-geo-alt"></i>Karte anzeigen (Zürich)
-            </button>
+
+          <div class="content-card-bottom">
+            <h2 id="map-title" class="content-card-title">Zürich</h2>
+            <p id="map-desc" class="content-card-desc">47.3769° N · 8.5417° E · Ziehen, zoomen oder nach einem Ort suchen.</p>
+            <div class="content-card-search liquid-glass" data-scale="48" data-bevel="16" data-frost="3">
+              <label class="sr-only" for="map-place">Ort</label>
+              <input id="map-place" class="content-input" type="text" placeholder="Ort suchen, z.B. Luzern" />
+              <button id="btn-map-place" class="content-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
+              <button id="btn-map" class="content-btn content-btn-primary liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>Karte anzeigen (Zürich)</button>
+            </div>
           </div>
         </section>
       </div>
@@ -266,16 +333,40 @@
   </main>
 
   <footer class="ui-footer py-4">
-    <div class="container">&copy; <span id="year"></span> Bootstrap Frontend · Tiago Cevallos</div>
+    <div class="container d-flex flex-wrap justify-content-between gap-2">
+      <span>&copy; <span id="year"></span> Bootstrap Frontend · Tiago Cevallos</span>
+      <span>Icons: <a href="https://www.streamlinehq.com/icons/core-solid" target="_blank" rel="noopener">Streamline Core Solid</a> (CC BY 4.0)</span>
+    </div>
   </footer>
 
+  <!-- Expandable Card: Overlay + Dialog für eine Ladestation -->
+  <div id="ev-overlay" class="ev-overlay" hidden></div>
+  <div id="ev-modal" class="ev-modal" role="dialog" aria-modal="true" aria-labelledby="ev-modal-title" hidden>
+    <button id="ev-modal-close" class="ev-modal-close liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button" aria-label="Schliessen"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+    <div class="ev-modal-media">
+      <img id="ev-modal-img" alt="" />
+      <span id="ev-modal-rank" class="ev-rank-pill"></span>
+    </div>
+    <div class="ev-modal-body">
+      <div class="ev-modal-head">
+        <div>
+          <h3 id="ev-modal-title" class="ev-modal-title"></h3>
+          <p id="ev-modal-sub" class="ev-modal-sub"></p>
+        </div>
+        <button id="ev-modal-map" class="ui-btn ui-btn-default liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg>Karte</button>
+      </div>
+      <ul id="ev-modal-facts" class="ev-facts"></ul>
+    </div>
+  </div>
+
   <!-- Toast für Fehlermeldungen -->
-  <div id="toast" class="ui-toast" role="status" aria-live="polite"><i class="bi bi-exclamation-circle"></i><span></span></div>
+  <div id="toast" class="ui-toast" role="status" aria-live="polite"><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg><span></span></div>
 
   <!-- Libraries -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://code.highcharts.com/11.4.8/highcharts.js"></script>
+  <script src="https://code.highcharts.com/11.4.8/highcharts-more.js"></script>
 
   <script src="app.js"></script>
 </body>

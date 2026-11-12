@@ -527,11 +527,11 @@ function renderWeatherStrip() {
       plotLines: [
         ...midnights.map((t) => ({ value: t, color: 'rgba(255,255,255,.45)', width: 1, dashStyle: 'Dash' })),
         { value: nowT, color: 'rgba(255,107,107,.6)', width: 1, dashStyle: 'Dot', zIndex: 2,
-          label: { text: 'Jetzt', rotation: 0, align: 'left', x: 4, y: 12, style: { color: '#ff9b9b', fontSize: '10px', fontWeight: '500' } } },
+          label: { text: 'Jetzt', rotation: 0, align: 'left', verticalAlign: 'bottom', x: 4, y: -6, style: { color: '#ff9b9b', fontSize: '10px', fontWeight: '500' } } },
       ],
     },
     yAxis: [
-      { visible: false, maxPadding: 0.45, minPadding: 0.25, startOnTick: false, endOnTick: false },
+      { visible: false, maxPadding: 0.18, minPadding: 0.04, startOnTick: false, endOnTick: false },
       { visible: false, min: 0, max: Math.max(3, rainMax * 1.6) },
     ],
     tooltip: weatherTooltip(),
@@ -645,9 +645,8 @@ function renderWeekChart() {
     title: { text: null }, credits: { enabled: false }, legend: { enabled: false },
     xAxis: {
       type: 'datetime', min: dayStart, max: dayEnd, lineWidth: 0, tickLength: 0, labels: { enabled: false }, gridLineWidth: 0,
-      // Deutliche Tagestrenner + jeder zweite Tag leicht hinterlegt
+      // Deutliche Tagestrenner
       plotLines: weatherDays.slice(1).map((_, i) => ({ value: dayStart + (i + 1) * 864e5, color: 'rgba(255,255,255,.4)', width: 1.5, zIndex: 3 })),
-      plotBands: weatherDays.map((_, i) => (i % 2 ? { from: dayStart + i * 864e5, to: dayStart + (i + 1) * 864e5, color: 'rgba(255,255,255,.05)' } : null)).filter(Boolean),
       crosshair: { color: 'rgba(255,255,255,.3)', width: 1 },
     },
     yAxis: [

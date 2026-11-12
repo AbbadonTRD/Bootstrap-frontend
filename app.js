@@ -1578,7 +1578,9 @@ $(function () {
 // ═════════════════════════════════════════════════════════════════════════════
 //  Befehlspalette (Ctrl+K / Cmd+K) – Zusatzfeature
 // ═════════════════════════════════════════════════════════════════════════════
-const cmdk = { items: [], active: 0, lastFocus: null };
+const cmdk = { items: [], active: 0, lastFocus: null, pointer: '', mouse: '' };
+// Letzte Mausposition merken: beim Öffnen gilt sie als "nicht bewegt"
+window.addEventListener('mousemove', (e) => { cmdk.mouse = `${e.screenX},${e.screenY}`; }, { passive: true, capture: true });
 
 // Zu einer Karte scrollen und sie kurz hervorheben
 function goToCard(id) {
@@ -1668,6 +1670,7 @@ function openCmdk() {
   if (!dlg.hidden) return;
   cmdk.lastFocus = document.activeElement;
   cmdk.active = 0;
+  cmdk.pointer = cmdk.mouse;
   $('#cmdk-input').val('');
   renderCmdk();
   dlg.hidden = false;
@@ -1710,17 +1713,38 @@ $(function () {
   });
   $('#btn-cmdk').on('click', openCmdk);
   $('#cmdk-overlay').on('click', () => closeCmdk());
-  $('#cmdk-input')
-    .on('input', () => { cmdk.active = 0; renderCmdk(); })
-    .on('keydown', (e) => {
-      if (e.key === 'ArrowDown') { e.preventDefault(); setCmdkActive(cmdk.active + 1); }
-      else if (e.key === 'ArrowUp') { e.preventDefault(); setCmdkActive(cmdk.active - 1); }
-      else if (e.key === 'Enter') { e.preventDefault(); runCmdk(cmdk.active); }
-      else if (e.key === 'Escape') { e.preventDefault(); closeCmdk(); }
-      else if (e.key === 'Tab') { e.preventDefault(); setCmdkActive(cmdk.active + (e.shiftKey ? -1 : 1)); }
-    });
+  $('#cmdk-input').on('input', () => { cmdk.active = 0; renderCmdk(); });
+
+  // Tastatur-Navigation: gilt, solange die Palette offen ist – egal wo der Fokus
+  // gerade liegt (Capture-Phase, damit nichts anderes die Pfeiltasten "schluckt")
+  window.addEventListener('keydown', (e) => {
+    if (document.getElementById('cmdk').hidden) return;
+    const keys = { ArrowDown: 1, ArrowUp: -1, Tab: e.shiftKey ? -1 : 1 };
+    if (e.key in keys) {
+      e.preventDefault(); e.stopPropagation();
+      setCmdkActive(cmdk.active + keys[e.key]);
+    } else if (e.key === 'Enter') {
+      e.preventDefault(); e.stopPropagation();
+      runCmdk(cmdk.active);
+      return;
+    } else if (e.key === 'Escape') {
+      e.preventDefault(); e.stopPropagation();
+      closeCmdk();
+      return;
+    }
+    // Tippen landet immer im Suchfeld
+    if (document.activeElement !== document.getElementById('cmdk-input')) $('#cmdk-input').trigger('focus');
+  }, true);
+
+  // Maus wählt nur aus, wenn sie sich wirklich bewegt (nicht wenn die Liste
+  // beim Pfeiltasten-Scrollen unter dem stehenden Mauszeiger durchrutscht)
   $('#cmdk-list')
-    .on('mousemove', '.cmdk-item', function () { if ($(this).data('i') !== cmdk.active) setCmdkActive($(this).data('i')); })
+    .on('mousemove', '.cmdk-item', function (e) {
+      const pos = `${e.screenX},${e.screenY}`;
+      if (pos === cmdk.pointer) return;
+      cmdk.pointer = pos;
+      if ($(this).data('i') !== cmdk.active) setCmdkActive($(this).data('i'));
+    })
     .on('click', '.cmdk-item', function () { runCmdk($(this).data('i')); });
   // Auf Mac "⌘ K" statt "Ctrl K" anzeigen
   if (/Mac|iPhone|iPad/.test(navigator.platform)) $('#btn-cmdk .cmdk-kbd').text('⌘ K');

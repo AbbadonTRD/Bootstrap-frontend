@@ -12,6 +12,9 @@ Ein Bootstrap 5.3 Frontend-Projekt mit 5 interaktiven Features, die offene APIs 
 | d | 5 nächste Strom-Tankstellen (Winterthur) + Suche nach PLZ | data.geo.admin.ch, api3.geo.admin.ch | ✅ |
 | e | Kartenausschnitt + Suche nach Ort | Leaflet, swisstopo | ✅ |
 | Advanced | Klick auf Tankstelle zentriert die Karte | – | ✅ |
+| Extra | Live-Abfahrten öffentlicher Verkehr mit Countdown + Haltestellensuche | transport.opendata.ch | ✅ |
+| Extra | Befehlspalette (Ctrl+K / Cmd+K / „/“) | – | ✅ |
+| Extra | Scroll-Animationen und hochzählende Zahlen | GSAP 3 + ScrollTrigger | ✅ |
 
 ## Verwendete Technologien
 
@@ -19,6 +22,7 @@ Ein Bootstrap 5.3 Frontend-Projekt mit 5 interaktiven Features, die offene APIs 
 - [jQuery 3.7](https://jquery.com/)
 - [Leaflet 1.9](https://leafletjs.com/)
 - [Highcharts 11](https://www.highcharts.com/)
+- [GSAP 3](https://gsap.com/) + ScrollTrigger
 - Hero: Split-Flap-Board (inspiriert von Aceternity „Text Flipping Board“), nur HTML/CSS + jQuery
 - Liquid Glass (inspiriert von Aceternity): SVG-Filter als backdrop-filter, Fallback mattes Glas
 - Design im Stil von [shadcn/ui](https://ui.shadcn.com/) – umgesetzt mit Bootstrap-Grid + eigenen CSS-Variablen (Hell/Dunkel), ohne React/Tailwind

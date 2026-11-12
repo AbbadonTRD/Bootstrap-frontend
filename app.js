@@ -58,6 +58,16 @@ function swapValue($el, text) {
   setTimeout(() => $el.text(text).removeClass('is-updating'), 150);
 }
 
+// Zahl mit GSAP hoch-/runterzählen (Fallback: sanfter Austausch)
+function rollNumber($el, to, format) {
+  const from = Number($el.data('value'));
+  $el.data('value', to);
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!window.gsap || reduce || !isFinite(from)) { swapValue($el, format(to)); return; }
+  const o = { v: from };
+  gsap.to(o, { v: to, duration: 0.9, ease: 'power3.out', onUpdate: () => $el.text(format(o.v)) });
+}
+
 // Distanz zwischen zwei Koordinaten in km (Haversine)
 function distanceKm(lat1, lon1, lat2, lon2) {
   const toRad = (d) => (d * Math.PI) / 180;
@@ -170,8 +180,8 @@ function loadBitcoin() {
   $.getJSON(BTC_API)
     .done((data) => {
       btcUsd = data.bitcoin.usd;
-      swapValue($('#btc-usd'), fmtUSD.format(data.bitcoin.usd));
-      swapValue($('#btc-chf'), fmtCHF.format(data.bitcoin.chf));
+      rollNumber($('#btc-usd'), data.bitcoin.usd, (v) => fmtUSD.format(v));
+      rollNumber($('#btc-chf'), data.bitcoin.chf, (v) => fmtCHF.format(v));
       const time = new Date().toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       $('#btc-time').text(`Stand ${time}`);
       // Kursverlauf nur laden, wenn er auf diesem Bildschirm sichtbar ist
@@ -352,10 +362,10 @@ function loadWeather() {
     const d = data.daily;
     const tmax = Math.round(d.temperature_2m_max[0]);
     const rain = d.precipitation_sum[0];
-    swapValue($('#weather-tmax'), `${tmax}°C`);
-    swapValue($('#weather-tmax-label'), `${tmax} °C`);
-    swapValue($('#weather-tmin'), `${Math.round(d.temperature_2m_min[0])} °C`);
-    swapValue($('#weather-rain'), `${rain.toFixed(1)} mm`);
+    rollNumber($('#weather-tmax'), tmax, (v) => `${Math.round(v)}°C`);
+    rollNumber($('#weather-tmax-label'), tmax, (v) => `${Math.round(v)} °C`);
+    rollNumber($('#weather-tmin'), d.temperature_2m_min[0], (v) => `${Math.round(v)} °C`);
+    rollNumber($('#weather-rain'), rain, (v) => `${v.toFixed(1)} mm`);
     swapValue($('#weather-desc'), describeDay(rain, tmax));
   });
 
@@ -1410,4 +1420,308 @@ $(function () {
   dotBg.init();
   // Farben beim Hell/Dunkel-Umschalten nachziehen
   $('#btn-theme').on('click', () => setTimeout(dotBg.refresh, 0));
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Zusatzfeature: Live-Abfahrten öffentlicher Verkehr (transport.opendata.ch)
+// ═════════════════════════════════════════════════════════════════════════════
+const SBB_API = 'https://transport.opendata.ch/v1';
+const sbb = { id: '8503000', name: 'Zürich HB', rows: [], ticker: 0, refresher: 0, visible: true };
+
+// Linien-Typ → Farbe des Badges
+function lineKind(cat) {
+  if (/^(IC|ICE|IR|EC|RE|TGV|RJX?|EN|NJ|PE)$/i.test(cat)) return 'long';
+  if (/^S/i.test(cat)) return 'sbahn';
+  if (/^(T|TRAM)$/i.test(cat)) return 'tram';
+  if (/^(B|BUS|NFB|EXB)$/i.test(cat)) return 'bus';
+  if (/^(BAT|FAE|SCH)$/i.test(cat)) return 'boat';
+  return 'other';
+}
+
+const fmtHM = (ts) => new Date(ts * 1000).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' });
+
+// "in 4 Min." / "jetzt" – wird alle 15 s aktualisiert
+function countdownText(ts) {
+  const min = Math.round((ts * 1000 - Date.now()) / 60000);
+  if (min <= 0) return 'jetzt';
+  if (min < 60) return `in ${min} Min.`;
+  return fmtHM(ts);
+}
+
+// Linienname: "S 3", "T 11" – bei Fernzügen ist "number" die Zugnummer → nur Kategorie
+function lineLabel(e) {
+  const num = String(e.number || '').replace(/^0+/, '');
+  if (!num || num === e.category || num.length > 3 || lineKind(e.category) === 'long') return e.category;
+  return `${e.category} ${num}`;
+}
+
+function renderDepartures(list, animate) {
+  const $b = $('#sbb-board').empty();
+  sbb.rows = list.slice(0, 10).map((e) => {
+    const delay = Number(e.stop.delay) || 0;
+    const planned = e.stop.departureTimestamp;
+    const real = planned + delay * 60;
+    const platform = (e.stop.prognosis && e.stop.prognosis.platform) || e.stop.platform || '';
+    const changed = e.stop.prognosis && e.stop.prognosis.platform && e.stop.prognosis.platform !== e.stop.platform;
+    const kind = lineKind(e.category);
+    const $row = $(`
+      <li class="sbb-row">
+        <span class="sbb-time">
+          <span class="sbb-hm">${fmtHM(planned)}</span>
+          ${delay > 0 ? `<span class="sbb-delay">+${delay}'</span>` : ''}
+        </span>
+        <span class="sbb-line sbb-${kind}">${esc(lineLabel(e))}</span>
+        <span class="sbb-to">${esc(e.to)}</span>
+        <span class="sbb-platform${changed ? ' is-changed' : ''}">${platform ? `Gl. ${esc(platform)}` : ''}</span>
+        <span class="sbb-count" data-ts="${real}">${countdownText(real)}</span>
+      </li>`).appendTo($b);
+    return { $row, real };
+  });
+
+  $('#sbb-placeholder').addClass('d-none');
+  $b.removeClass('d-none');
+  $('#sbb-meta').removeClass('d-none').text(`Aktualisiert ${new Date().toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} · aktualisiert sich jede Minute`);
+
+  // Zeilen gestaffelt einblenden (GSAP, falls vorhanden)
+  if (animate && window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    gsap.from($b.children().get(), { y: 8, opacity: 0, duration: 0.35, ease: 'power2.out', stagger: 0.035 });
+  }
+}
+
+// Countdown laufen lassen; abgefahrene Verbindungen ausblenden
+function tickDepartures() {
+  sbb.rows.forEach((r) => {
+    if (r.real * 1000 < Date.now() - 60000) { r.$row.addClass('is-gone'); return; }
+    r.$row.find('.sbb-count').text(countdownText(r.real));
+  });
+}
+
+function loadDepartures(animate = true) {
+  const $btn = $('#btn-sbb');
+  setLoading($btn, true);
+  return $.getJSON(`${SBB_API}/stationboard`, { id: sbb.id, limit: 10 })
+    .done((d) => {
+      if (d.station && d.station.name) { sbb.name = d.station.name; $('#sbb-station').text(sbb.name); }
+      $('#btn-sbb').contents().last()[0].textContent = `Abfahrten laden (${sbb.name})`;
+      if (!d.stationboard || !d.stationboard.length) {
+        $('#sbb-board').addClass('d-none');
+        $('#sbb-placeholder').removeClass('d-none').find('.ui-empty-title').text('Keine Abfahrten gefunden');
+        return;
+      }
+      renderDepartures(d.stationboard, animate);
+      startDepartureTimers();
+    })
+    .fail(() => showToast('Abfahrten sind gerade nicht verfügbar.'))
+    .always(() => setLoading($btn, false));
+}
+
+// Haltestelle suchen → erste passende Station übernehmen
+function searchStation(text) {
+  const q = (text != null ? text : $('#sbb-query').val()).trim();
+  if (!q) { showToast('Bitte eine Haltestelle eingeben.'); $('#sbb-query').attr('aria-invalid', 'true').trigger('focus'); return; }
+  $('#sbb-query').removeAttr('aria-invalid');
+  const $btn = $('#btn-sbb-search');
+  setLoading($btn, true);
+  $.getJSON(`${SBB_API}/locations`, { query: q, type: 'station' })
+    .done((d) => {
+      const st = (d.stations || []).find((s) => s.id);
+      if (!st) { $('#sbb-query').attr('aria-invalid', 'true'); showToast(`«${q}» wurde nicht gefunden.`); return; }
+      sbb.id = st.id;
+      sbb.name = st.name;
+      $('#sbb-station').text(st.name);
+      loadDepartures(true);
+    })
+    .fail(() => showToast('Haltestellensuche fehlgeschlagen.'))
+    .always(() => setLoading($btn, false));
+}
+
+// Countdown alle 15 s, neue Daten jede Minute – nur wenn sichtbar
+function startDepartureTimers() {
+  clearInterval(sbb.ticker);
+  clearInterval(sbb.refresher);
+  sbb.ticker = setInterval(tickDepartures, 15000);
+  sbb.refresher = setInterval(() => { if (sbb.visible && !document.hidden) loadDepartures(false); }, 60000);
+}
+
+$(function () {
+  $('#btn-sbb').on('click', () => loadDepartures(true));
+  $('#btn-sbb-search').on('click', () => searchStation());
+  $('#sbb-query').on('keydown', (e) => { if (e.key === 'Enter') searchStation(); });
+  $('#sbb-query').on('input', function () { $(this).removeAttr('aria-invalid'); });
+  const card = document.getElementById('card-sbb');
+  if (card) new IntersectionObserver(([e]) => { sbb.visible = e.isIntersecting; }).observe(card);
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  GSAP: Einblenden beim Scrollen (Zusatzfeature)
+// ═════════════════════════════════════════════════════════════════════════════
+$(function () {
+  if (!window.gsap || !window.ScrollTrigger) return;
+  gsap.registerPlugin(ScrollTrigger);
+  const mm = gsap.matchMedia();
+  // Nur wenn keine reduzierte Bewegung gewünscht ist
+  mm.add('(prefers-reduced-motion: no-preference)', () => {
+    gsap.from('.ui-header-inner', { y: -18, opacity: 0, duration: 0.7, ease: 'power3.out', clearProps: 'transform,opacity' });
+
+    const items = gsap.utils.toArray('.flip-hero, #card-cat, #card-btc, #card-weather, #card-ev, #card-map, #card-sbb');
+    gsap.set(items, { y: 28, opacity: 0 });
+    ScrollTrigger.batch(items, {
+      start: 'top 92%',
+      once: true,
+      onEnter: (batch) => gsap.to(batch, {
+        y: 0, opacity: 1, duration: 0.75, ease: 'power3.out', stagger: 0.09, clearProps: 'transform,opacity',
+      }),
+    });
+  });
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Befehlspalette (Ctrl+K / Cmd+K) – Zusatzfeature
+// ═════════════════════════════════════════════════════════════════════════════
+const cmdk = { items: [], active: 0, lastFocus: null };
+
+// Zu einer Karte scrollen und sie kurz hervorheben
+function goToCard(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  el.classList.remove('is-pinged');
+  void el.offsetWidth;
+  el.classList.add('is-pinged');
+}
+
+// Feste Befehle (Gruppe, Icon, Text, Suchbegriffe, Aktion)
+const CMDK_STATIC = [
+  { group: 'Springen zu', icon: 'image', label: 'Katzenbild', keys: 'katze cat bild', run: () => goToCard('card-cat') },
+  { group: 'Springen zu', icon: 'bitcoin', label: 'Bitcoin-Preis', keys: 'btc krypto preis kurs', run: () => goToCard('card-btc') },
+  { group: 'Springen zu', icon: 'suncloud', label: 'Wetter', keys: 'wetter zürich prognose regen', run: () => goToCard('card-weather') },
+  { group: 'Springen zu', icon: 'ev', label: 'Ladestationen', keys: 'laden strom tankstelle ev auto', run: () => goToCard('card-ev') },
+  { group: 'Springen zu', icon: 'map', label: 'Karte', keys: 'karte map ort', run: () => goToCard('card-map') },
+  { group: 'Springen zu', icon: 'train', label: 'Abfahrten', keys: 'öv sbb zug tram bus abfahrt', run: () => goToCard('card-sbb') },
+  { group: 'Aktionen', icon: 'reload', label: 'Neues Katzenbild laden', keys: 'katze cat', run: () => { goToCard('card-cat'); loadCat(); } },
+  { group: 'Aktionen', icon: 'reload', label: 'Bitcoin-Preis abrufen', keys: 'btc preis', run: () => { goToCard('card-btc'); loadBitcoin(); } },
+  { group: 'Aktionen', icon: 'reload', label: 'Wetter laden', keys: 'wetter', run: () => { goToCard('card-weather'); loadWeather(); } },
+  { group: 'Aktionen', icon: 'reload', label: 'Ladestationen laden (Winterthur)', keys: 'laden strom winterthur', run: () => { goToCard('card-ev'); loadStations(); } },
+  { group: 'Aktionen', icon: 'reload', label: 'Abfahrten laden', keys: 'öv sbb zug abfahrt', run: () => { goToCard('card-sbb'); loadDepartures(true); } },
+  { group: 'Aktionen', icon: 'pin', label: 'Karte: Zürich anzeigen', keys: 'karte zürich', run: () => { goToCard('card-map'); showMap(); } },
+  { group: 'Aktionen', icon: 'light', label: 'Hell/Dunkel umschalten', keys: 'theme dark light modus farbe', run: () => $('#btn-theme').trigger('click') },
+];
+
+const norm = (t) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+// Aus dem eingegebenen Text passende "Such-Befehle" ableiten
+function dynamicCommands(q) {
+  const out = [];
+  if (/^\d{4}$/.test(q)) {
+    out.push({ group: 'Suchen', icon: 'ev', label: `Ladestationen bei PLZ ${q}`, run: () => { goToCard('card-ev'); $('#ev-plz').val(q); searchStationsByPlz(); } });
+  }
+  if (q.length >= 2) {
+    out.push({ group: 'Suchen', icon: 'pin', label: `«${q}» auf der Karte zeigen`, run: () => { goToCard('card-map'); $('#map-place').val(q); searchPlace(); } });
+    out.push({ group: 'Suchen', icon: 'train', label: `Abfahrten ab «${q}»`, run: () => { goToCard('card-sbb'); $('#sbb-query').val(q); searchStation(q); } });
+  }
+  return out;
+}
+
+function renderCmdk() {
+  const q = $('#cmdk-input').val().trim();
+  const nq = norm(q);
+  const words = nq.split(/\s+/).filter(Boolean);
+  const matches = CMDK_STATIC.filter((c) => {
+    const hay = norm(`${c.group} ${c.label} ${c.keys || ''}`);
+    return words.every((w) => hay.includes(w));
+  });
+  // Treffer bei festen Befehlen zuerst, danach die Such-Vorschläge
+  cmdk.items = matches.length && q ? matches.concat(dynamicCommands(q)) : dynamicCommands(q).concat(matches);
+  cmdk.active = Math.min(cmdk.active, Math.max(0, cmdk.items.length - 1));
+
+  const $list = $('#cmdk-list').empty();
+  if (!cmdk.items.length) {
+    $list.append('<li class="cmdk-empty">Nichts gefunden – versuche einen Ort, eine PLZ oder eine Haltestelle.</li>');
+    $('#cmdk-input').attr('aria-activedescendant', '');
+    return;
+  }
+  let group = '';
+  cmdk.items.forEach((c, i) => {
+    if (c.group !== group) {
+      group = c.group;
+      $list.append(`<li class="cmdk-group" role="presentation">${group}</li>`);
+    }
+    $(`<li id="cmdk-opt-${i}" class="cmdk-item" role="option">${icon(c.icon)}<span>${esc(c.label)}</span></li>`)
+      .attr('aria-selected', i === cmdk.active)
+      .data('i', i)
+      .appendTo($list);
+  });
+  $('#cmdk-input').attr('aria-activedescendant', `cmdk-opt-${cmdk.active}`);
+}
+
+function setCmdkActive(i) {
+  if (!cmdk.items.length) return;
+  cmdk.active = (i + cmdk.items.length) % cmdk.items.length;
+  $('#cmdk-list .cmdk-item').each(function () { $(this).attr('aria-selected', $(this).data('i') === cmdk.active); });
+  $('#cmdk-input').attr('aria-activedescendant', `cmdk-opt-${cmdk.active}`);
+  const el = document.getElementById(`cmdk-opt-${cmdk.active}`);
+  if (el) el.scrollIntoView({ block: 'nearest' });
+}
+
+function openCmdk() {
+  const dlg = document.getElementById('cmdk');
+  if (!dlg.hidden) return;
+  cmdk.lastFocus = document.activeElement;
+  cmdk.active = 0;
+  $('#cmdk-input').val('');
+  renderCmdk();
+  dlg.hidden = false;
+  document.getElementById('cmdk-overlay').hidden = false;
+  document.body.classList.add('modal-open');
+  if (window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    gsap.fromTo(dlg, { opacity: 0, y: -10, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'power3.out', clearProps: 'transform,opacity' });
+    gsap.fromTo('#cmdk-overlay', { opacity: 0 }, { opacity: 1, duration: 0.2 });
+  }
+  setTimeout(() => $('#cmdk-input').trigger('focus'), 0);
+}
+
+function closeCmdk(restoreFocus = true) {
+  const dlg = document.getElementById('cmdk');
+  if (dlg.hidden) return;
+  dlg.hidden = true;
+  document.getElementById('cmdk-overlay').hidden = true;
+  document.body.classList.remove('modal-open');
+  if (restoreFocus && cmdk.lastFocus && cmdk.lastFocus.focus) cmdk.lastFocus.focus();
+}
+
+function runCmdk(i) {
+  const c = cmdk.items[i];
+  if (!c) return;
+  closeCmdk(false);
+  c.run();
+}
+
+$(function () {
+  // Ctrl+K / Cmd+K öffnet bzw. schliesst; "/" öffnet, wenn man nicht gerade tippt
+  $(document).on('keydown', (e) => {
+    const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName);
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      if (document.getElementById('cmdk').hidden) openCmdk(); else closeCmdk();
+    } else if (e.key === '/' && !typing && document.getElementById('cmdk').hidden) {
+      e.preventDefault();
+      openCmdk();
+    }
+  });
+  $('#btn-cmdk').on('click', openCmdk);
+  $('#cmdk-overlay').on('click', () => closeCmdk());
+  $('#cmdk-input')
+    .on('input', () => { cmdk.active = 0; renderCmdk(); })
+    .on('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); setCmdkActive(cmdk.active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setCmdkActive(cmdk.active - 1); }
+      else if (e.key === 'Enter') { e.preventDefault(); runCmdk(cmdk.active); }
+      else if (e.key === 'Escape') { e.preventDefault(); closeCmdk(); }
+      else if (e.key === 'Tab') { e.preventDefault(); setCmdkActive(cmdk.active + (e.shiftKey ? -1 : 1)); }
+    });
+  $('#cmdk-list')
+    .on('mousemove', '.cmdk-item', function () { if ($(this).data('i') !== cmdk.active) setCmdkActive($(this).data('i')); })
+    .on('click', '.cmdk-item', function () { runCmdk($(this).data('i')); });
+  // Auf Mac "⌘ K" statt "Ctrl K" anzeigen
+  if (/Mac|iPhone|iPad/.test(navigator.platform)) $('#btn-cmdk .cmdk-kbd').text('⌘ K');
 });

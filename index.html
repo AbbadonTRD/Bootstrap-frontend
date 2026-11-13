@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- Hauptschrift: Ubuntu (Google Fonts) -->
-  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Ubuntu+Mono:wght@400;700&display=swap" rel="stylesheet" />
 
   <!-- Bootstrap 5.3 CSS (Grid & Utilities) -->
   <link
@@ -338,34 +338,42 @@
 
       <!-- f) Live-Abfahrten (öffentlicher Verkehr) – Zusatzfeature -->
       <div class="col-12">
-        <section id="card-sbb" class="ui-card">
-          <div class="ui-card-header">
-            <div>
-              <h2 class="ui-card-title">Abfahrten</h2>
-              <p class="ui-card-description">Live-Abfahrtstafel des öffentlichen Verkehrs (transport.opendata.ch).</p>
-            </div>
-            <span id="sbb-station" class="ui-badge ui-badge-secondary">Zürich HB</span>
+        <!-- Live-Abfahrten im Look eines Terminals -->
+        <section id="card-sbb" class="term" aria-labelledby="sbb-title">
+          <div class="term-bar">
+            <span class="term-mark" aria-hidden="true"></span>
+            <h2 id="sbb-title" class="term-title">abfahrten <span class="term-sep">/</span> <span id="sbb-station">Zürich HB</span></h2>
+            <span id="sbb-status" class="term-status">bereit</span>
           </div>
-          <div class="ui-card-content">
-            <div class="ui-field">
-              <label class="ui-label" for="sbb-query">Haltestelle</label>
-              <div class="ui-input-row">
-                <input id="sbb-query" class="ui-input" type="text" placeholder="z.B. Winterthur, Bern, Bellevue" autocomplete="off" />
-                <button id="btn-sbb-search" class="ui-btn ui-btn-outline liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
+
+          <div class="term-body">
+            <p class="term-line term-cmdline" aria-hidden="true"><span class="term-ps1">~/sbb</span> <span class="term-dollar">$</span> <span id="sbb-cmd" class="term-cmd">departures --station "Zürich HB" --limit 10</span></p>
+
+            <div id="sbb-placeholder" class="term-empty">
+              <p class="term-line term-dim">› Noch keine Abfahrten geladen.</p>
+              <p class="term-line term-dim">› Tippe unten eine Haltestelle ein oder starte mit „neu laden“ ab Zürich HB.</p>
+            </div>
+
+            <div id="sbb-table" class="term-table d-none">
+              <div class="term-row term-head" aria-hidden="true">
+                <span>ZEIT</span><span>LINIE</span><span>RICHTUNG</span><span class="term-col-gl">GLEIS</span><span class="term-col-in">IN</span>
               </div>
+              <ol id="sbb-board" class="sbb-board" aria-live="polite"></ol>
             </div>
-            <div id="sbb-placeholder" class="ui-empty">
-              <span class="ui-empty-icon"><svg class="ic" aria-hidden="true"><use href="#i-train"/></svg></span>
-              <p class="ui-empty-title">Noch keine Abfahrten</p>
-              <p class="ui-empty-description">Lade die Abfahrten ab Zürich HB oder suche eine Haltestelle.</p>
-            </div>
-            <ol id="sbb-board" class="sbb-board d-none" aria-live="polite"></ol>
-            <p id="sbb-meta" class="ui-muted d-none"></p>
+
+            <p id="sbb-meta" class="term-line term-dim d-none"></p>
+
+            <!-- Prompt = Suchfeld -->
+            <label class="term-prompt" for="sbb-query">
+              <span class="term-ps1">~/sbb</span> <span class="term-dollar">$</span> <span class="term-prefix">station</span>
+              <span class="term-caret" aria-hidden="true"></span>
+              <input id="sbb-query" class="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="Winterthur, Bern, Bellevue …" aria-label="Haltestelle suchen" />
+            </label>
           </div>
-          <div class="ui-card-footer">
-            <button id="btn-sbb" class="ui-btn ui-btn-default ui-btn-block liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
-              <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Abfahrten laden (Zürich HB)
-            </button>
+
+          <div class="term-actions">
+            <button id="btn-sbb-search" class="term-btn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>suchen</button>
+            <button id="btn-sbb" class="term-btn term-btn-primary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg><span id="sbb-btn-label">neu laden · Zürich HB</span></button>
           </div>
         </section>
       </div>

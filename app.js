@@ -1444,8 +1444,30 @@ const fmtHM = (ts) => new Date(ts * 1000).toLocaleTimeString('de-CH', { hour: '2
 function countdownText(ts) {
   const min = Math.round((ts * 1000 - Date.now()) / 60000);
   if (min <= 0) return 'jetzt';
-  if (min < 60) return `in ${min} Min.`;
+  if (min < 60) return `${min}'`;
   return fmtHM(ts);
+}
+
+// Farbe des Countdowns: grün kurz vor Abfahrt, blinkend bei "jetzt"
+function countdownClass(ts) {
+  const min = Math.round((ts * 1000 - Date.now()) / 60000);
+  return min <= 0 ? 'is-now' : min <= 3 ? 'is-soon' : '';
+}
+
+// Befehlszeile oben wie getippt aktualisieren
+let sbbTypeTimer = 0;
+function typeCommand(station) {
+  const text = `departures --station "${station}" --limit 10`;
+  const $c = $('#sbb-cmd');
+  clearInterval(sbbTypeTimer);
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { $c.text(text); return; }
+  let i = 0;
+  $c.text('');
+  sbbTypeTimer = setInterval(() => {
+    i += 2;
+    $c.text(text.slice(0, i));
+    if (i >= text.length) clearInterval(sbbTypeTimer);
+  }, 18);
 }
 
 // Linienname: "S 3", "T 11" – bei Fernzügen ist "number" die Zugnummer → nur Kategorie
@@ -1465,26 +1487,26 @@ function renderDepartures(list, animate) {
     const changed = e.stop.prognosis && e.stop.prognosis.platform && e.stop.prognosis.platform !== e.stop.platform;
     const kind = lineKind(e.category);
     const $row = $(`
-      <li class="sbb-row">
-        <span class="sbb-time">
-          <span class="sbb-hm">${fmtHM(planned)}</span>
-          ${delay > 0 ? `<span class="sbb-delay">+${delay}'</span>` : ''}
-        </span>
+      <li class="sbb-row term-row">
+        <span class="sbb-time"><span class="sbb-hm">${fmtHM(planned)}</span>${delay > 0 ? `<span class="sbb-delay">+${delay}'</span>` : ''}</span>
         <span class="sbb-line sbb-${kind}">${esc(lineLabel(e))}</span>
         <span class="sbb-to">${esc(e.to)}</span>
-        <span class="sbb-platform${changed ? ' is-changed' : ''}">${platform ? `Gl. ${esc(platform)}` : ''}</span>
-        <span class="sbb-count" data-ts="${real}">${countdownText(real)}</span>
+        <span class="sbb-platform${changed ? ' is-changed' : ''}">${platform ? esc(platform) : '–'}${changed ? '!' : ''}</span>
+        <span class="sbb-count ${countdownClass(real)}" data-ts="${real}">${countdownText(real)}</span>
       </li>`).appendTo($b);
     return { $row, real };
   });
 
   $('#sbb-placeholder').addClass('d-none');
-  $b.removeClass('d-none');
-  $('#sbb-meta').removeClass('d-none').text(`Aktualisiert ${new Date().toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' })} · aktualisiert sich jede Minute`);
+  $('#sbb-table').removeClass('d-none');
+  const now = new Date().toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  $('#sbb-meta').removeClass('d-none').text(`› ${sbb.rows.length} abfahrten · aktualisiert sich jede minute`);
+  $('#sbb-status').text(`live · ${now.slice(0, 5)}`);
 
-  // Zeilen gestaffelt einblenden (GSAP, falls vorhanden)
-  if (animate && window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    gsap.from($b.children().get(), { y: 8, opacity: 0, duration: 0.35, ease: 'power2.out', stagger: 0.035 });
+  // Zeilen wie Konsolenausgabe nacheinander erscheinen lassen (reines CSS:
+  // endet garantiert sichtbar, auch wenn der Browser Frames auslässt)
+  if (animate) {
+    $b.children().each(function (i) { this.style.setProperty('--row', i); this.classList.add('is-typed'); });
   }
 }
 
@@ -1492,20 +1514,22 @@ function renderDepartures(list, animate) {
 function tickDepartures() {
   sbb.rows.forEach((r) => {
     if (r.real * 1000 < Date.now() - 60000) { r.$row.addClass('is-gone'); return; }
-    r.$row.find('.sbb-count').text(countdownText(r.real));
+    r.$row.find('.sbb-count').text(countdownText(r.real)).removeClass('is-now is-soon').addClass(countdownClass(r.real));
   });
 }
 
 function loadDepartures(animate = true) {
   const $btn = $('#btn-sbb');
   setLoading($btn, true);
+  if (animate) $('#sbb-status').text('lädt …');
   return $.getJSON(`${SBB_API}/stationboard`, { id: sbb.id, limit: 10 })
     .done((d) => {
       if (d.station && d.station.name) { sbb.name = d.station.name; $('#sbb-station').text(sbb.name); }
-      $('#btn-sbb').contents().last()[0].textContent = `Abfahrten laden (${sbb.name})`;
+      $('#sbb-btn-label').text(`neu laden · ${sbb.name}`);
+      if (animate) typeCommand(sbb.name);
       if (!d.stationboard || !d.stationboard.length) {
-        $('#sbb-board').addClass('d-none');
-        $('#sbb-placeholder').removeClass('d-none').find('.ui-empty-title').text('Keine Abfahrten gefunden');
+        $('#sbb-table').addClass('d-none');
+        $('#sbb-placeholder').removeClass('d-none').html('<p class="term-line term-dim">› Keine Abfahrten gefunden.</p>');
         return;
       }
       renderDepartures(d.stationboard, animate);
@@ -1568,9 +1592,11 @@ $(function () {
     ScrollTrigger.batch(items, {
       start: 'top 92%',
       once: true,
-      onEnter: (batch) => gsap.to(batch, {
-        y: 0, opacity: 1, duration: 0.75, ease: 'power3.out', stagger: 0.09, clearProps: 'transform,opacity',
-      }),
+      onEnter: (batch) => {
+        gsap.to(batch, { y: 0, opacity: 1, duration: 0.75, ease: 'power3.out', stagger: 0.09, clearProps: 'transform,opacity' });
+        // Sicherheitsnetz: falls der Browser Frames auslässt, Karten trotzdem sichtbar machen
+        setTimeout(() => gsap.set(batch, { clearProps: 'transform,opacity' }), 1600);
+      },
     });
   });
 });

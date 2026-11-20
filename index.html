@@ -326,9 +326,9 @@
           <div class="content-card-bottom">
             <h2 id="map-title" class="content-card-title">Zürich</h2>
             <p id="map-desc" class="content-card-desc">47.3769° N · 8.5417° E · Ziehen, zoomen oder nach einem Ort suchen.</p>
-            <div class="content-card-search liquid-glass" data-scale="48" data-bevel="16">
+            <div class="content-card-search">
               <label class="sr-only" for="map-place">Ort</label>
-              <input id="map-place" class="content-input" type="text" placeholder="Ort suchen, z.B. Luzern" />
+              <input id="map-place" class="content-input liquid-glass lg-btn" data-scale="40" type="text" placeholder="Ort suchen, z.B. Luzern" />
               <button id="btn-map-place" class="content-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
               <button id="btn-map" class="content-btn content-btn-primary liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>Karte anzeigen (Zürich)</button>
             </div>
@@ -338,42 +338,24 @@
 
       <!-- f) Live-Abfahrten (öffentlicher Verkehr) – Zusatzfeature -->
       <div class="col-12">
-        <!-- Live-Abfahrten im Look eines Terminals -->
-        <section id="card-sbb" class="term" aria-labelledby="sbb-title">
-          <div class="term-bar">
-            <span class="term-mark" aria-hidden="true"></span>
-            <h2 id="sbb-title" class="term-title">abfahrten <span class="term-sep">/</span> <span id="sbb-station">Zürich HB</span></h2>
-            <span id="sbb-status" class="term-status">bereit</span>
+        <!-- Live-Abfahrten: Schritt 1 = PowerShell-Fenster (uiverse.io / mihocsaszilard, MIT) -->
+        <section id="card-sbb" class="ps-window" aria-labelledby="sbb-entry-title">
+          <div class="ps-titlebar">
+            <span class="ps-title"><span class="tui-ps-icon" aria-hidden="true">&gt;_</span><h2 id="sbb-entry-title">sbb · Abfahrten &amp; Ankünfte</h2></span>
+            <span class="ps-controls" aria-hidden="true"><span>–</span><span>□</span><span>×</span></span>
           </div>
-
-          <div class="term-body">
-            <p class="term-line term-cmdline" aria-hidden="true"><span class="term-ps1">~/sbb</span> <span class="term-dollar">$</span> <span id="sbb-cmd" class="term-cmd">departures --station "Zürich HB" --limit 10</span></p>
-
-            <div id="sbb-placeholder" class="term-empty">
-              <p class="term-line term-dim">› Noch keine Abfahrten geladen.</p>
-              <p class="term-line term-dim">› Tippe unten eine Haltestelle ein oder starte mit „neu laden“ ab Zürich HB.</p>
-            </div>
-
-            <div id="sbb-table" class="term-table d-none">
-              <div class="term-row term-head" aria-hidden="true">
-                <span>ZEIT</span><span>LINIE</span><span>RICHTUNG</span><span class="term-col-gl">GLEIS</span><span class="term-col-in">IN</span>
-              </div>
-              <ol id="sbb-board" class="sbb-board" aria-live="polite"></ol>
-            </div>
-
-            <p id="sbb-meta" class="term-line term-dim d-none"></p>
-
-            <!-- Prompt = Suchfeld -->
-            <label class="term-prompt" for="sbb-query">
-              <span class="term-ps1">~/sbb</span> <span class="term-dollar">$</span> <span class="term-prefix">station</span>
-              <span class="term-caret" aria-hidden="true"></span>
-              <input id="sbb-query" class="term-input" type="text" autocomplete="off" spellcheck="false" placeholder="Winterthur, Bern, Bellevue …" aria-label="Haltestelle suchen" />
+          <div class="ps-body">
+            <p>sbb-tui · Live-Daten des öffentlichen Verkehrs (transport.opendata.ch)</p>
+            <p class="ps-dim">Abfahrten, Ankünfte und Zuganzeige für jede Haltestelle der Schweiz.</p>
+            <p>&nbsp;</p>
+            <p><span class="ps-dim">PS C:\sbb&gt;</span> help</p>
+            <p class="ps-out">  Haltestelle eintippen und Enter drücken · leer lassen öffnet Zürich HB</p>
+            <p>&nbsp;</p>
+            <label class="ps-prompt" for="sbb-query">
+              <span class="ps-dim">PS C:\sbb&gt;</span> <span class="ps-cmd">sbb</span>
+              <span class="ps-caret" aria-hidden="true"></span>
+              <input id="sbb-query" class="ps-input" type="text" autocomplete="off" spellcheck="false" placeholder="Zürich HB" aria-label="Haltestelle – Enter öffnet die Abfahrtstafel" />
             </label>
-          </div>
-
-          <div class="term-actions">
-            <button id="btn-sbb-search" class="term-btn" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>suchen</button>
-            <button id="btn-sbb" class="term-btn term-btn-primary" type="button"><svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg><span id="sbb-btn-label">neu laden · Zürich HB</span></button>
           </div>
         </section>
       </div>
@@ -410,6 +392,56 @@
 
   <!-- Toast für Fehlermeldungen -->
   <div id="toast" class="ui-toast" role="status" aria-live="polite"><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg><span></span></div>
+
+  <!-- Schritt 2: grosses Terminal (sbb-tui) · Schritt 3: SBB-Perronanzeige -->
+  <div id="tui-overlay" class="tui-overlay" hidden></div>
+  <div id="tui" class="tui" role="dialog" aria-modal="true" aria-labelledby="tui-name" hidden>
+    <div class="tui-titlebar">
+      <span class="tui-title"><span class="tui-ps-icon" aria-hidden="true">&gt;_</span><span id="tui-name" class="tui-name">sbb-tui · Abfahrtstafel</span></span>
+      <span class="tui-controls">
+        <span aria-hidden="true">–</span><span aria-hidden="true">□</span>
+        <button id="tui-close" class="tui-x" type="button" aria-label="Schliessen (Esc)">×</button>
+      </span>
+    </div>
+    <div class="tui-bar">
+      <label class="tui-field tui-field-station"><span class="tui-caret-sym" aria-hidden="true">▸</span>
+        <input id="tui-station" class="tui-input" type="text" autocomplete="off" spellcheck="false" aria-label="Haltestelle" />
+      </label>
+      <div class="tui-seg" role="group" aria-label="Tafel">
+        <button id="tui-dep" class="tui-btn is-on" type="button" aria-pressed="true">abfahrt</button>
+        <button id="tui-arr" class="tui-btn" type="button" aria-pressed="false">ankunft</button>
+      </div>
+      <span class="tui-field tui-dim"><span aria-hidden="true">▸</span> <span id="tui-date">–</span></span>
+      <span class="tui-field tui-dim"><span aria-hidden="true">▸</span> <span id="tui-time">–</span></span>
+      <button id="tui-search" class="tui-btn tui-icon" type="button" aria-label="Suchen"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg></button>
+    </div>
+    <div class="tui-main">
+      <div id="tui-list" class="tui-pane tui-list" role="listbox" aria-label="Züge" tabindex="0"></div>
+      <div id="tui-detail" class="tui-pane tui-detail" aria-live="polite"></div>
+    </div>
+    <div class="tui-foot">
+      <span><kbd>↕</kbd> züge</span><span><kbd>↵</kbd> anzeige</span><span><kbd>⇥</kbd> navigieren</span><span><kbd>esc</kbd> zurück</span>
+      <span id="tui-status" class="tui-status"></span>
+    </div>
+
+    <!-- Schritt 3: Perronanzeige -->
+    <div id="tui-board" class="tui-board" hidden>
+      <div class="sbb-display" role="img" aria-labelledby="sbbd-sr">
+        <p id="sbbd-sr" class="sr-only"></p>
+        <div class="sbbd-left">
+          <div class="sbbd-top"><span id="sbbd-line" class="sbbd-line"></span><span id="sbbd-time" class="sbbd-time"></span><span id="sbbd-delay" class="sbbd-delay"></span></div>
+          <div id="sbbd-dest" class="sbbd-dest"></div>
+          <div id="sbbd-via" class="sbbd-via"></div>
+          <div id="sbbd-strip" class="sbbd-strip"></div>
+        </div>
+        <div class="sbbd-right">
+          <div class="sbbd-plat"><span>Gleis</span><b id="sbbd-plat"></b></div>
+          <ol id="sbbd-stops" class="sbbd-stops"></ol>
+        </div>
+      </div>
+      <p class="tui-board-hint"><kbd>esc</kbd> zurück zur tafel</p>
+    </div>
+  </div>
 
   <!-- Befehlspalette (Ctrl+K) – Zusatzfeature -->
   <div id="cmdk-overlay" class="cmdk-overlay" hidden></div>

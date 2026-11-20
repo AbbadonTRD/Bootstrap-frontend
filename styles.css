@@ -1539,3 +1539,493 @@ body.modal-open { overflow: hidden; }
 }
 .wallet-ranges.liquid-glass .wallet-range.is-active { box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), inset 1.5px 1.5px 0 rgba(255,255,255,.45), inset 0 0 10px rgba(255,255,255,.15); }
 @media (prefers-reduced-transparency: reduce) { .liquid-glass { box-shadow: none !important; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Glasmorphism: farbige Aurora + durchscheinende Karten + Farbe unter Buttons
+   ═════════════════════════════════════════════════════════════════════════════ */
+.aurora { position: fixed; inset: 0; z-index: -2; overflow: hidden; pointer-events: none; }
+.aurora i {
+  position: absolute; width: 52vmax; height: 52vmax; border-radius: 50%;
+  filter: blur(70px); opacity: .55;
+  animation: aurora-drift 26s ease-in-out infinite alternate;
+}
+.aurora i:nth-child(1) { background: #ab9ff2; left: -12vmax; top: -10vmax; }
+.aurora i:nth-child(2) { background: #f5a3c7; right: -14vmax; top: 18vh; animation-duration: 32s; animation-delay: -8s; }
+.aurora i:nth-child(3) { background: #7cc4ff; left: 18vw; bottom: -18vmax; animation-duration: 29s; animation-delay: -14s; }
+.aurora i:nth-child(4) { background: #8ee6c9; right: 10vw; bottom: -10vmax; width: 34vmax; height: 34vmax; opacity: .4; animation-duration: 35s; animation-delay: -20s; }
+@keyframes aurora-drift {
+  0%   { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(6vmax, 4vmax) scale(1.08); }
+  100% { transform: translate(-4vmax, 7vmax) scale(.95); }
+}
+:root[data-theme="dark"] .aurora i { opacity: .32; }
+:root[data-theme="dark"] .aurora i:nth-child(4) { opacity: .22; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .aurora i { opacity: .32; }
+  :root:not([data-theme="light"]) .aurora i:nth-child(4) { opacity: .22; }
+}
+@media (prefers-reduced-motion: reduce) { .aurora i { animation: none; } }
+
+/* Karten leicht durchscheinend → die Aurora schimmert durch (Glasmorphism) */
+.ui-card:not(.wallet):not(.mw) {
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+          backdrop-filter: blur(24px) saturate(1.4);
+  border-color: color-mix(in srgb, var(--border) 70%, rgba(255,255,255,.25));
+}
+.flip-hero { background: radial-gradient(120% 90% at 50% -10%, rgba(42,38,56,.88) 0%, rgba(22,22,24,.86) 60%); -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px); }
+
+/* Farbiger Schimmer unter den Glas-Buttons in den Karten-Fusszeilen,
+   damit die Lichtbrechung am Rand sichtbar wird */
+.ui-card-footer { position: relative; }
+.ui-card-footer::before {
+  content: ""; position: absolute; left: 24px; right: 24px; top: -6px; bottom: 18px;
+  border-radius: 999px; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(60% 120% at 15% 50%, rgba(171,159,242,.55), transparent 70%),
+    radial-gradient(50% 120% at 55% 50%, rgba(245,163,199,.45), transparent 70%),
+    radial-gradient(55% 120% at 90% 50%, rgba(124,196,255,.5), transparent 70%);
+  filter: blur(10px);
+}
+.ui-card-footer > * { position: relative; z-index: 1; }
+
+/* Glas noch klarer: dünnere Tönung, kräftigere Lichtkante */
+.liquid-glass.lg-btn { --lg-tint: .06; }
+.liquid-glass.lg-btn:hover { --lg-tint: .14; }
+.liquid-glass {
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.22),
+    inset 1.5px 1.5px 0 rgba(255,255,255,.65),
+    inset -1px -1px 0 rgba(255,255,255,.12),
+    inset 0 0 16px rgba(255,255,255,.22),
+    0 10px 34px rgba(0,0,0,.22) !important;
+}
+:root:not([data-theme="dark"]) .ui-card .liquid-glass.lg-btn {
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.08), inset 1.5px 1.5px 0 rgba(255,255,255,.9), inset 0 0 16px rgba(255,255,255,.4), 0 8px 24px rgba(80,60,160,.16) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ui-card .liquid-glass.lg-btn {
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), inset 1.5px 1.5px 0 rgba(255,255,255,.65), inset 0 0 16px rgba(255,255,255,.22), 0 10px 34px rgba(0,0,0,.22) !important;
+  }
+}
+/* Header: etwas weniger Tönung, damit die Aurora durchkommt */
+.ui-header-inner.liquid-glass { --lg-tint: .4; }
+:root[data-theme="dark"] .ui-header-inner.liquid-glass { background: rgba(22,22,26,.5) !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ui-header-inner.liquid-glass { background: rgba(22,22,26,.5) !important; } }
+@media (prefers-reduced-transparency: reduce) {
+  .aurora { display: none; }
+  .ui-card:not(.wallet):not(.mw) { background: var(--card); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .ui-card-footer::before { display: none; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Alle Buttons wirklich als Glas: Farbe darunter + kein Glas-im-Glas mehr
+   ═════════════════════════════════════════════════════════════════════════════ */
+/* Gemeinsamer Farbschimmer unter Glas-Buttons auf ruhigen Flächen */
+.wallet-actions, .mw-foot, .term-actions { position: relative; }
+.wallet-actions::before, .mw-foot::before {
+  content: ""; position: absolute; left: 6%; right: 6%; top: -4px; height: 54px;
+  border-radius: 999px; pointer-events: none; z-index: 0; filter: blur(12px);
+  background:
+    radial-gradient(55% 120% at 15% 50%, rgba(171,159,242,.6), transparent 70%),
+    radial-gradient(45% 120% at 55% 50%, rgba(245,163,199,.5), transparent 70%),
+    radial-gradient(50% 120% at 90% 50%, rgba(124,196,255,.55), transparent 70%);
+}
+.wallet-actions > *, .mw-foot > * { position: relative; z-index: 1; }
+
+/* Karte: Suchleiste ist kein Glas mehr → Eingabe und Buttons brechen direkt die Karte */
+.content-card-search { background: none !important; box-shadow: none !important; padding: 0; }
+.content-card .content-input.liquid-glass {
+  border: 0 !important; color: #fff !important;
+  background: rgba(20,20,28,.18) !important;
+}
+.content-card .content-input.liquid-glass::placeholder { color: rgba(255,255,255,.8); }
+.content-card .content-input.liquid-glass:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.content-card .content-btn.liquid-glass { background: rgba(20,20,28,.14) !important; }
+
+/* Terminal: klares Glas + SBB-rotes Glas, mit rotem Schimmer darunter */
+.term-actions::before {
+  content: ""; position: absolute; right: 18px; top: 4px; width: min(420px, 70%); height: 40px;
+  border-radius: 999px; pointer-events: none; z-index: 0; filter: blur(14px);
+  background:
+    radial-gradient(60% 120% at 80% 50%, rgba(235,0,0,.55), transparent 70%),
+    radial-gradient(40% 120% at 20% 50%, rgba(255,255,255,.18), transparent 70%);
+}
+.term-actions > * { position: relative; z-index: 1; }
+.term .term-btn.liquid-glass { border: 0 !important; border-radius: 999px; padding: 7px 14px; color: var(--t-text) !important; }
+.term .term-btn.lg-btn { background: rgba(255,255,255,.06) !important; }
+.liquid-glass.lg-red {
+  background: rgba(235,0,0,.55) !important; color: #fff !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.22),
+    inset 1.5px 1.5px 0 rgba(255,255,255,.6),
+    inset 0 0 14px rgba(255,255,255,.18),
+    0 8px 24px rgba(235,0,0,.25) !important;
+}
+.liquid-glass.lg-red:hover { background: rgba(255,31,31,.65) !important; }
+
+@media (prefers-reduced-transparency: reduce) {
+  .wallet-actions::before, .mw-foot::before, .term-actions::before { display: none; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   ÖV Schritt 1: Einstieg mit Terminal-Karte (nach uiverse.io / ilkhoeri, MIT)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.sbb-entry {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 560px);
+  align-items: center; gap: 24px 40px;
+  padding: 28px;
+  border-radius: calc(var(--radius) + 4px);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, rgba(255,255,255,.25));
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4); backdrop-filter: blur(24px) saturate(1.4);
+  scroll-margin-top: 72px;
+}
+.sbb-entry-title { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; font-size: 20px; font-weight: 500; }
+.sbb-entry-mark { width: 12px; height: 12px; border-radius: 3px; background: #eb0000; flex: none; }
+.sbb-entry-desc { margin: 0; color: var(--muted-foreground); font-size: 14px; max-width: 46ch; }
+.sbb-entry .term-key { font-family: "Ubuntu Mono", ui-monospace, monospace; border: 1px solid var(--border); border-radius: 4px; padding: 0 5px; font-size: 12px; }
+@media (max-width: 767px) { .sbb-entry { grid-template-columns: 1fr; padding: 20px; } }
+
+/* Original-Komponente, nur ans Projekt angepasst */
+.uv-card {
+  padding: 1rem; overflow: hidden;
+  border: 1px solid #c5c5c5; border-radius: 12px;
+  background-color: #d9d9d92f;
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  min-width: 0;
+}
+:root[data-theme="dark"] .uv-card { border-color: rgba(197,197,197,.35); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .uv-card { border-color: rgba(197,197,197,.35); } }
+.uv-wrap { display: flex; flex-direction: column; gap: 1rem; position: relative; z-index: 10; border: .5px solid #525252; border-radius: 8px; overflow: hidden; }
+.uv-terminal { display: flex; flex-direction: column; font-family: "Ubuntu Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+.uv-head {
+  display: flex; align-items: center; justify-content: space-between; overflow: hidden;
+  min-height: 40px; padding-inline: 12px; background-color: #202425;
+}
+.uv-title {
+  display: flex; align-items: center; gap: 8px; height: 2.5rem; margin: 0;
+  user-select: none; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: #8e8e8e;
+}
+.uv-title > svg { height: 18px; width: 18px; margin-top: 2px; color: #eb0000; }
+.uv-copy {
+  display: flex; align-items: center; justify-content: center; padding: .25rem;
+  border: .65px solid #c1c2c5; margin-left: auto; border-radius: 6px;
+  background-color: #202425; color: #8e8e8e; cursor: pointer;
+}
+.uv-copy > svg { width: 20px; height: 20px; }
+.uv-copy:hover { color: #fff; }
+.uv-copy:focus-visible { outline: 2px solid #eb0000; outline-offset: 2px; }
+.uv-copy.is-copied > svg > path { animation: uv-clipboard-check 500ms linear forwards; }
+.uv-body {
+  display: flex; flex-direction: column; gap: 6px; position: relative;
+  overflow-x: auto; padding: 1rem; line-height: 19px;
+  color: white; background-color: black; white-space: nowrap;
+}
+.uv-pre { display: flex; flex-direction: row; align-items: center; margin: 0; font-size: 16px; cursor: text; }
+.uv-pre code { font-family: inherit; }
+.uv-dash { color: #575757; }
+.uv-bin { color: #ff4d4d; }
+.uv-cmd-wrap { position: relative; flex: 1; min-width: 0; height: 19px; display: flex; align-items: center; }
+.uv-input {
+  width: 100%; border: 0; outline: 0; padding: 0; background: transparent;
+  font: inherit; font-size: 16px; color: #fff; caret-color: #ff4d4d;
+}
+/* Getippte Animation wie im Original – nur solange das Feld leer & nicht fokussiert ist */
+.uv-cmd { position: absolute; left: 0; top: 0; height: 19px; display: none; align-items: center; pointer-events: none; color: #fff; }
+.uv-cmd-wrap:has(.uv-input:placeholder-shown:not(:focus)) .uv-cmd { display: flex; }
+.uv-cmd::before {
+  content: attr(data-cmd); position: relative; display: block; white-space: nowrap; overflow: hidden;
+  animation: uv-inputs 8s steps(9) infinite;
+}
+.uv-cmd::after {
+  content: ""; position: relative; display: block; height: 100%;
+  border-right: .15em solid #ff4d4d;
+  animation: uv-cursor .5s step-end infinite alternate, uv-blinking .5s infinite;
+}
+.uv-hint { margin: 0; font-size: 12px; color: #575757; }
+@keyframes uv-blinking { 20%, 80% { transform: scaleY(1); } 50% { transform: scaleY(0); } }
+@keyframes uv-cursor { 50% { border-right-color: transparent; } }
+@keyframes uv-inputs { 0%, 100% { width: 0; } 10%, 90% { width: 0; } 30%, 70% { width: 9ch; max-width: max-content; } }
+@keyframes uv-clipboard-check {
+  100% { color: #fff; d: path("M 9 5 H 7 a 2 2 0 0 0 -2 2 v 12 a 2 2 0 0 0 2 2 h 10 a 2 2 0 0 0 2 -2 V 7 a 2 2 0 0 0 -2 -2 h -2 M 9 5 a 2 2 0 0 0 2 2 h 2 a 2 2 0 0 0 2 -2 M 9 5 a 2 2 0 0 1 2 -2 h 2 a 2 2 0 0 1 2 2 m -6 9 l 2 2 l 4 -4"); }
+}
+@media (prefers-reduced-motion: reduce) { .uv-cmd::before { animation: none; width: 9ch; } .uv-cmd::after { animation: none; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   ÖV Schritt 2: grosses Terminal im Stil von sbb-tui
+   ═════════════════════════════════════════════════════════════════════════════ */
+.tui-overlay { position: fixed; inset: 0; z-index: 3200; background: rgba(8,8,10,.6); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.tui {
+  --tui-red: #e5242b; --tui-red-dim: #7a1418; --tui-line: #2a2a2e; --tui-text: #ececec; --tui-dim: #8a8a8f; --tui-navy: #2d327d;
+  position: fixed; z-index: 3201; left: 50%; top: 50%; translate: -50% -50%;
+  width: min(1100px, calc(100vw - 24px)); height: min(720px, calc(100dvh - 24px));
+  display: flex; flex-direction: column;
+  background: #000; color: var(--tui-text);
+  border: 1px solid #1d1d20; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  font-family: "Ubuntu Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 14.5px;
+}
+.tui[hidden], .tui-overlay[hidden], .tui-board[hidden] { display: none !important; }
+.tui-titlebar { display: flex; align-items: center; gap: 10px; padding: 10px 16px 6px; color: var(--tui-dim); font-size: 13px; }
+.tui-keys { opacity: .7; }
+.tui-name { color: var(--tui-text); }
+.tui-x { margin-left: auto; font: inherit; font-size: 12px; color: var(--tui-dim); background: none; border: 1px solid var(--tui-line); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
+.tui-x:hover { color: #fff; border-color: #555; }
+
+.tui-bar { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 16px 12px; }
+.tui-field {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 36px; padding: 0 12px; border: 1px solid #333; border-radius: 3px; white-space: nowrap;
+}
+.tui-field-station { flex: 1 1 260px; border-color: var(--tui-red-dim); }
+.tui-field-station:focus-within { border-color: var(--tui-red); }
+.tui-input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; color: var(--tui-text); caret-color: var(--tui-red); }
+.tui-dim { color: #5c5c62; }
+.tui-seg { display: inline-flex; border: 1px solid #333; border-radius: 3px; overflow: hidden; }
+.tui-btn { font: inherit; color: var(--tui-dim); background: transparent; border: 0; padding: 0 14px; height: 34px; cursor: pointer; }
+.tui-btn + .tui-btn { border-left: 1px solid #333; }
+.tui-btn.is-on { background: var(--tui-red); color: #fff; }
+.tui-btn:focus-visible, .tui-x:focus-visible { outline: 2px solid var(--tui-red); outline-offset: 2px; }
+.tui-icon { height: 36px; border: 1px solid #333; border-radius: 3px; display: grid; place-items: center; }
+.tui-icon .ic { width: 14px; height: 14px; }
+
+.tui-main {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 12px;
+  margin: 0 16px; padding: 12px; border: 1px solid var(--tui-red-dim); border-radius: 3px;
+}
+.tui-pane { min-height: 0; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #333 transparent; }
+.tui-list { display: flex; flex-direction: column; gap: 10px; padding-right: 4px; outline: none; }
+.tui-detail { border: 1px solid var(--tui-red-dim); border-radius: 3px; padding: 18px 22px; }
+
+/* Zug-Karte links */
+.tui-train {
+  display: grid; gap: 8px; text-align: left;
+  padding: 12px 16px; border: 1px solid #333; border-radius: 3px;
+  background: transparent; color: inherit; font: inherit; cursor: pointer;
+}
+.tui-train:hover { border-color: #555; }
+.tui-train.is-sel { border-color: var(--tui-red); }
+.tui-train:focus-visible { outline: 2px solid var(--tui-red); outline-offset: 2px; }
+.tui-row1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tui-mode { display: inline-grid; place-items: center; width: 22px; height: 16px; background: var(--tui-navy); color: #fff; font-size: 11px; border-radius: 1px; }
+.tui-line { background: var(--tui-red); color: #fff; padding: 0 5px; font-weight: 700; white-space: nowrap; }
+.tui-op { background: #fff; color: #000; padding: 0 4px; font-size: 12px; white-space: nowrap; }
+.tui-to { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tui-row2 { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; font-weight: 700; }
+.tui-track { position: relative; height: 10px; }
+.tui-track::before { content: ""; position: absolute; left: 4px; right: 4px; top: 50%; height: 1px; background: #bbb; }
+.tui-track i { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: #000; border: 1.5px solid #ddd; }
+.tui-track i.is-end { background: #fff; border-color: #fff; }
+.tui-row3 { display: flex; justify-content: space-between; color: var(--tui-dim); font-size: 13px; }
+.tui-delay { color: var(--tui-red); font-weight: 700; margin-left: 4px; }
+
+/* Verlauf rechts */
+.tui-detail-head { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.tui-stops { list-style: none; margin: 0; padding: 0; }
+.tui-stop { display: grid; grid-template-columns: 56px 18px minmax(0, 1fr) auto; gap: 12px; align-items: start; min-height: 40px; }
+.tui-stop time { font-weight: 700; }
+.tui-stop .rail { position: relative; align-self: stretch; }
+.tui-stop .rail::before { content: ""; position: absolute; left: 8px; top: 12px; bottom: -4px; width: 1px; background: #bbb; }
+.tui-stop:last-child .rail::before { display: none; }
+.tui-stop .rail i { position: absolute; left: 4px; top: 4px; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid #ddd; background: #000; }
+.tui-stop.is-first .rail i, .tui-stop:last-child .rail i { background: #fff; border-color: #fff; }
+.tui-stop.is-first span.name { font-weight: 700; }
+.tui-stop .pl { color: var(--tui-dim); white-space: nowrap; }
+.tui-empty { color: var(--tui-dim); padding: 8px 4px; }
+.tui-skel { height: 92px; border: 1px solid #222; border-radius: 3px; background: linear-gradient(90deg, #0a0a0b, #141416, #0a0a0b); background-size: 200% 100%; animation: tui-shimmer 1.2s linear infinite; }
+@keyframes tui-shimmer { to { background-position: -200% 0; } }
+
+.tui-foot { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 16px 12px; color: var(--tui-dim); font-size: 13px; }
+.tui-foot kbd { font: inherit; background: #222; color: #ccc; padding: 0 5px; border-radius: 2px; margin-right: 4px; }
+.tui-status { margin-left: auto; }
+
+@media (max-width: 767px) {
+  .tui { font-size: 13.5px; }
+  .tui-main { grid-template-columns: 1fr; }
+  .tui-detail { display: none; }
+  .tui-bar .tui-dim { display: none; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   ÖV Schritt 3: SBB-Perronanzeige
+   ═════════════════════════════════════════════════════════════════════════════ */
+.tui-board {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: 24px;
+  background: radial-gradient(120% 90% at 50% 0%, #2b2b30 0%, #111114 70%);
+}
+.sbb-display {
+  --sbbd-blue: #1f3ea8;
+  width: min(940px, 100%);
+  display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  background: var(--sbbd-blue);
+  border: 10px solid #1a339a; border-radius: 4px;
+  box-shadow: inset 0 0 0 2px #2c4cc0, 0 30px 60px rgba(0,0,0,.55);
+  color: #fff;
+  font-family: "Helvetica Neue", Arial, "Ubuntu", sans-serif;
+}
+.sbbd-left { display: flex; flex-direction: column; gap: 6px; padding: 20px 22px 0; border-right: 6px solid #13277a; min-height: 260px; }
+.sbbd-top { display: flex; align-items: center; gap: 12px; }
+.sbbd-line { background: #eb0000; color: #fff; font-weight: 700; font-style: italic; padding: 2px 10px; border-radius: 2px; font-size: 20px; letter-spacing: .02em; }
+.sbbd-line.is-sbahn { background: #fff; color: var(--sbbd-blue); font-style: normal; }
+.sbbd-time { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.sbbd-delay { font-size: 18px; font-weight: 700; color: #ffd54a; }
+.sbbd-dest { font-size: 40px; font-weight: 700; line-height: 1.1; margin-top: 6px; }
+.sbbd-via { font-size: 18px; opacity: .95; line-height: 1.4; }
+.sbbd-strip {
+  margin: auto -22px 0; padding: 6px 22px;
+  background: #fff; color: var(--sbbd-blue); font-size: 13px; font-weight: 700;
+  display: flex; flex-wrap: wrap; gap: 6px 14px;
+}
+.sbbd-strip .cap { display: inline-flex; gap: 2px; }
+.sbbd-strip .cap i { width: 6px; height: 12px; background: var(--sbbd-blue); opacity: .25; }
+.sbbd-strip .cap i.on { opacity: 1; }
+.sbbd-right { position: relative; padding: 20px 22px; }
+.sbbd-plat {
+  position: absolute; top: 14px; right: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 54px; height: 60px; border: 2px solid #fff; border-radius: 3px; line-height: 1;
+}
+.sbbd-plat span { font-size: 10px; }
+.sbbd-plat b { font-size: 26px; }
+.sbbd-stops { list-style: none; margin: 0; padding: 0 70px 0 0; }
+.sbbd-stops li { position: relative; padding: 0 0 6px 26px; font-size: 19px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sbbd-stops li::before { content: ""; position: absolute; left: 4px; top: 7px; width: 10px; height: 10px; border-radius: 50%; border: 2px solid #fff; background: var(--sbbd-blue); }
+.sbbd-stops li::after { content: ""; position: absolute; left: 10px; top: 21px; bottom: -6px; border-left: 2px dotted #fff; }
+.sbbd-stops li:last-child::after { display: none; }
+.sbbd-stops li small { font-weight: 400; opacity: .8; margin-left: 8px; font-size: 14px; }
+.tui-board-hint { margin: 0; color: #8a8a8f; font-size: 13px; }
+.tui-board-hint kbd { font: inherit; background: #222; color: #ccc; padding: 0 5px; border-radius: 2px; }
+@media (max-width: 767px) {
+  .sbb-display { grid-template-columns: 1fr; }
+  .sbbd-left { border-right: 0; border-bottom: 6px solid #13277a; min-height: 0; }
+  .sbbd-dest { font-size: 30px; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Buttons wieder komplett durchsichtig – dafür ein Farbverlauf im Hintergrund
+   ═════════════════════════════════════════════════════════════════════════════ */
+.ui-card-footer::before, .wallet-actions::before, .mw-foot::before, .term-actions::before { display: none !important; }
+.aurora { display: none; }
+
+/* Seitenhintergrund: von Hellblau zu leicht dunklerem Blau */
+html { min-height: 100%; }
+body {
+  background: linear-gradient(165deg, #e3f0ff 0%, #bcd6f5 45%, #8fb3e3 100%) fixed;
+}
+:root[data-theme="dark"] body { background: linear-gradient(165deg, #0f1b2d 0%, #16294a 50%, #1f3a66 100%) fixed; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body { background: linear-gradient(165deg, #0f1b2d 0%, #16294a 50%, #1f3a66 100%) fixed; }
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   ÖV-Fenster im PowerShell-Stil (uiverse.io / mihocsaszilard, MIT)
+   schwarz = Abfahrtstafel (serious-hound-10) · blau = Zuganzeige (modern-pig-15)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.tui {
+  border-radius: 4px 4px 0 0;
+  border: 1px solid #000;
+  background-color: #000;
+  transition: background-color 250ms;
+}
+.tui.is-board { background-color: mediumblue; }
+.tui-titlebar {
+  display: flex; justify-content: space-between; align-items: stretch;
+  padding: 0; background-color: #fff; color: #000;
+  font-family: "Gill Sans MT", "Gill Sans", "Segoe UI", "Ubuntu", sans-serif; font-size: 15px;
+}
+.tui-title { display: flex; gap: 6px; align-items: center; padding: 0 8px; margin-top: 4px; height: 26px; }
+.tui-ps-icon {
+  display: inline-grid; place-items: center; width: 18px; height: 16px; border-radius: 2px;
+  background: #012456; color: #fff; font: 700 10px/1 "Ubuntu Mono", monospace;
+}
+.tui-name { color: #000; }
+.tui-controls { display: flex; align-items: center; gap: 16px; margin: 0 8px; color: #000; user-select: none; }
+.tui .tui-x {
+  margin: 0; padding: 0 4px; border: 0; border-radius: 2px; background: none; color: #000;
+  font: 400 18px/1 "Segoe UI", sans-serif; cursor: pointer;
+}
+.tui .tui-x:hover { background: #e81123; color: #fff; }
+.tui .tui-x:focus-visible { outline: 2px solid #000; outline-offset: 1px; }
+.tui-bar { padding-top: 12px; }
+
+/* Ladeanzeige: drehender Schrägstrich wie im Original-Loader */
+.tui-loading { padding: 4px 2px; color: #ddd; font-size: 14px; }
+.tui-loading .ps { color: #9a9a9a; }
+.tui-spin { position: relative; display: inline-block; width: 1ch; }
+.tui-spin .slash { position: absolute; left: 0; visibility: hidden; animation: 2s infinite ps-loading; }
+.tui-spin .slash:nth-child(1) { animation-delay: .25s; }
+.tui-spin .slash:nth-child(2) { animation-delay: .5s; }
+.tui-spin .slash:nth-child(3) { animation-delay: .75s; }
+.tui-spin .slash:nth-child(4) { animation-delay: 1s; }
+.tui-spin .slash:nth-child(5) { animation-delay: 1.25s; }
+.tui-spin .slash:nth-child(6) { animation-delay: 1.5s; }
+.tui-spin .slash:nth-child(7) { animation-delay: 1.75s; }
+.tui-spin .slash:nth-child(8) { animation-delay: 2s; }
+@keyframes ps-loading { 0% { visibility: visible; } 12.5%, 100% { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .tui-spin .slash { animation: none; } .tui-spin .slash:first-child { visibility: visible; } }
+
+/* Zuganzeige: Fenster wird PowerShell-blau, Anzeige sitzt darin */
+.tui.is-board .tui-board { background: mediumblue; }
+.tui.is-board .tui-board-hint { color: rgba(255,255,255,.75); }
+.tui.is-board .tui-board-hint kbd { background: rgba(255,255,255,.18); color: #fff; }
+
+/* Zentrierung ohne translate – Animationen (GSAP) können sie so nicht verschieben */
+.tui { left: 0; right: 0; top: 0; bottom: 0; margin: auto; translate: none; }
+.cmdk { left: 0; right: 0; margin-inline: auto; translate: none; }
+
+/* Zuganzeige unter der weissen Titelleiste, damit das PowerShell-Fenster erkennbar bleibt */
+.tui-board { top: 30px; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   ÖV Schritt 1: ein einziges PowerShell-Fenster (uiverse.io / mihocsaszilard, MIT)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.ps-window {
+  display: flex; flex-direction: column;
+  background-color: #000; color: #fff;
+  border: 1px solid #000; border-radius: 4px 4px 0 0;
+  box-shadow: 0 18px 44px rgba(0,0,0,.28);
+  overflow: hidden;
+  scroll-margin-top: 72px;
+}
+.ps-titlebar {
+  display: flex; justify-content: space-between; align-items: center;
+  background-color: #fff; color: #000;
+  font-family: "Gill Sans MT", "Gill Sans", "Segoe UI", "Ubuntu", sans-serif;
+}
+.ps-title { display: flex; gap: 6px; align-items: center; padding: 0 8px; margin-top: 4px; height: 26px; }
+.ps-title h2 { margin: 0; font: inherit; font-size: 15px; font-weight: 400; color: #000; }
+.ps-controls { display: flex; gap: 16px; margin: 0 8px; user-select: none; }
+.ps-body {
+  padding: 10px 12px 16px;
+  font-family: "Ubuntu Mono", Consolas, ui-monospace, monospace; font-size: 15px; line-height: 1.5;
+}
+.ps-body p { margin: 0; white-space: pre-wrap; }
+.ps-dim { color: #9a9a9a; }
+.ps-out { color: #ddd; }
+.ps-prompt { display: flex; align-items: center; gap: 0 .6ch; flex-wrap: wrap; cursor: text; }
+.ps-cmd { color: #ff4d4d; }
+.ps-input {
+  flex: 1; min-width: 12ch; border: 0; outline: 0; padding: 0; background: transparent;
+  font: inherit; color: #fff; caret-color: #fff;
+}
+.ps-input::placeholder { color: #555; }
+/* Blinkender Block-Cursor, solange das Feld leer und nicht aktiv ist */
+.ps-caret { display: none; width: .6em; height: 1.1em; background: #fff; animation: term-blink 1.1s steps(1) infinite; }
+.ps-prompt:has(.ps-input:placeholder-shown:not(:focus)) .ps-caret { display: inline-block; }
+.ps-prompt:has(.ps-input:placeholder-shown:not(:focus)) .ps-input::placeholder { color: transparent; }
+@media (prefers-reduced-motion: reduce) { .ps-caret { animation: none; } }
+
+/* ── Zuganzeige: stabil, auch wenn keine weiteren Halte bekannt sind ───────── */
+.sbbd-right { min-height: 104px; padding-right: 84px; }
+.sbbd-stops { padding-right: 0; }
+.sbbd-stops li.is-end { padding-left: 0; font-weight: 400; opacity: .85; }
+.sbbd-stops li.is-end::before, .sbbd-stops li.is-end::after { display: none; }
+@media (max-width: 767px) {
+  .sbbd-plat { top: 12px; right: 12px; }
+}
+.tui-ends { color: var(--tui-dim); font-weight: 400; }

@@ -1443,3 +1443,99 @@ body.modal-open { overflow: hidden; }
 .wallet-delta-label { flex-basis: 100%; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 20px; }
 .wallet-delta, .wallet-delta-pill { line-height: 22px; white-space: nowrap; }
 .wallet-amount { white-space: nowrap; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Liquid Glass v2: klares Glas mit knackigen Kanten statt Weichzeichner
+   ═════════════════════════════════════════════════════════════════════════════ */
+/* Fallback (Safari/Firefox): nur leichtes Mattieren, damit nichts "verschmiert" */
+.liquid-glass {
+  -webkit-backdrop-filter: blur(6px) saturate(1.6) brightness(1.04);
+          backdrop-filter: blur(6px) saturate(1.6) brightness(1.04);
+}
+
+/* Glanz: schmaler, klar begrenzter Lichtstreifen oben links statt weicher Schleier */
+.liquid-glass::before {
+  background:
+    linear-gradient(158deg, rgba(255,255,255,.28) 0%, rgba(255,255,255,.06) 22%, rgba(255,255,255,0) 40%),
+    linear-gradient(338deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 22%) !important;
+}
+
+/* Kantenlicht: 1px-Ring – oben hell (Lichtkante), seitlich schwach, unten Reflex.
+   So wirkt die Fläche wie ein festes Stück Glas mit harter Kante. */
+.liquid-glass::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  border-radius: inherit; padding: 1px;
+  background: linear-gradient(180deg,
+    rgba(255,255,255,.85) 0%,
+    rgba(255,255,255,.22) 18%,
+    rgba(255,255,255,.06) 50%,
+    rgba(255,255,255,.18) 82%,
+    rgba(255,255,255,.45) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+/* Auf hellen Karten: dezentere, dunklere Kante, damit das Glas sichtbar bleibt */
+.ui-card .liquid-glass::after,
+.ui-header .liquid-glass:not(.ui-header-inner)::after {
+  background: linear-gradient(180deg, rgba(255,255,255,.95) 0%, rgba(140,140,155,.35) 40%, rgba(120,120,135,.3) 100%);
+}
+:root[data-theme="dark"] .ui-card .liquid-glass::after {
+  background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.1) 40%, rgba(255,255,255,.18) 100%);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ui-card .liquid-glass::after {
+    background: linear-gradient(180deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.1) 40%, rgba(255,255,255,.18) 100%);
+  }
+}
+@media (prefers-reduced-transparency: reduce) { .liquid-glass::after, .liquid-glass::before { display: none; } }
+
+/* ── Bitcoin: Pills und Zeitraum-Umschalter als Glas ─────────────────────── */
+.wallet-pair.liquid-glass { background: rgba(255,255,255,.06) !important; border-color: transparent; }
+.wallet-pill.liquid-glass { position: relative; background: rgba(171,159,242,.16) !important; border-radius: 9px; }
+.wallet-ranges.liquid-glass {
+  padding: 4px; gap: 2px; border-radius: 999px;
+  background: rgba(255,255,255,.04) !important;
+}
+.wallet-ranges.liquid-glass .wallet-range { position: relative; z-index: 2; height: 30px; }
+.wallet-ranges.liquid-glass .wallet-range.is-active {
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), inset 0 -1px 0 rgba(0,0,0,.25), 0 2px 8px rgba(0,0,0,.25);
+}
+
+/* Header: ohne Weichzeichner etwas mehr Tönung, damit die Navigation lesbar bleibt */
+.ui-header-inner.liquid-glass { --lg-tint: .62; }
+:root[data-theme="dark"] .ui-header-inner.liquid-glass { background: rgba(22,22,26,.72) !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .ui-header-inner.liquid-glass { background: rgba(22,22,26,.72) !important; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Liquid Glass v3 – Stil des Hire-Digital-Generators
+   (Frost 10, Blur 1, Refraction/Bezel je nach Grösse – siehe setupGlass)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.liquid-glass {
+  /* Fallback Safari/Firefox: lebendiges Mattglas wie im Generator */
+  -webkit-backdrop-filter: blur(8px) saturate(1.8) brightness(1.15) contrast(1.05);
+          backdrop-filter: blur(8px) saturate(1.8) brightness(1.15) contrast(1.05);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.15),
+    inset 1.5px 1.5px 0 rgba(255,255,255,.5),
+    inset 0 0 12px rgba(255,255,255,.2),
+    0 8px 32px rgba(0,0,0,.2) !important;
+}
+/* Eigene Zusatz-Effekte aus v2 weg – der Generator-Look kommt ohne aus */
+.liquid-glass::before, .liquid-glass::after { display: none !important; }
+/* Frost 10 als Grund-Tönung (Elemente mit eigener Tönung behalten diese) */
+.liquid-glass.lg-btn { --lg-tint: .10; }
+.liquid-glass.lg-btn:hover { --lg-tint: .18; }
+/* Auf hellen Karten: feiner dunkler Rand, sonst wäre der weisse Glasrand unsichtbar */
+:root:not([data-theme="dark"]) .ui-card .liquid-glass.lg-btn {
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.10), inset 1.5px 1.5px 0 rgba(255,255,255,.8), inset 0 0 12px rgba(255,255,255,.35), 0 6px 20px rgba(0,0,0,.10) !important;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ui-card .liquid-glass.lg-btn {
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), inset 1.5px 1.5px 0 rgba(255,255,255,.5), inset 0 0 12px rgba(255,255,255,.2), 0 8px 32px rgba(0,0,0,.2) !important;
+  }
+}
+.wallet-ranges.liquid-glass .wallet-range.is-active { box-shadow: inset 0 0 0 1px rgba(255,255,255,.15), inset 1.5px 1.5px 0 rgba(255,255,255,.45), inset 0 0 10px rgba(255,255,255,.15); }
+@media (prefers-reduced-transparency: reduce) { .liquid-glass { box-shadow: none !important; } }

@@ -1210,47 +1210,31 @@ const SVGNS = 'http://www.w3.org/2000/svg';
 const supportsLiquid = !!(navigator.userAgentData && navigator.userAgentData.brands.some((b) => /Chromium/.test(b.brand)))
   && !window.matchMedia('(prefers-reduced-transparency: reduce)').matches;
 
-// Displacement-Map: R/G = Verschiebung in x/y, 128 = keine Verschiebung
-function glassMap(w, h, radius, bevel) {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const ctx = c.getContext('2d');
-  const img = ctx.createImageData(w, h);
-  const r = Math.min(radius, w / 2, h / 2);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const px = x + 0.5 - w / 2;
-      const py = y + 0.5 - h / 2;
-      const qx = Math.abs(px) - (w / 2 - r);
-      const qy = Math.abs(py) - (h / 2 - r);
-      const ox = Math.max(qx, 0);
-      const oy = Math.max(qy, 0);
-      const outer = Math.hypot(ox, oy);
-      const depth = -(outer + Math.min(Math.max(qx, qy), 0) - r); // Abstand zum Rand (innen > 0)
-      let dx = 0;
-      let dy = 0;
-      if (depth > 0 && depth < bevel) {
-        const t = 1 - depth / bevel;                 // 1 am Rand, 0 innen
-        const mag = 1 - Math.sqrt(1 - t * t);        // runde, linsenartige Wölbung
-        let nx;
-        let ny;
-        if (ox > 0 && oy > 0) { nx = ox / outer; ny = oy / outer; } else if (qx > qy) { nx = 1; ny = 0; } else { nx = 0; ny = 1; }
-        dx = Math.sign(px) * nx * mag;
-        dy = Math.sign(py) * ny * mag;
-      }
-      const i = (y * w + x) * 4;
-      img.data[i] = 128 + dx * 127;
-      img.data[i + 1] = 128 + dy * 127;
-      img.data[i + 2] = 128;
-      img.data[i + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  return c.toDataURL();
+// Liquid Glass wie beim Hire-Digital-Generator: Die Linsen-Karte ist ein kleines
+// SVG aus zwei Farbverläufen (Rot = x, Grün = y). Die Mitte ist neutral grau
+// und weich ausgeblendet → nur am Rand entsteht die "wässrige" Lichtbrechung.
+function glassMap(w, h, radius, bezel) {
+  const r = Math.max(0, Math.min(radius, w / 2, h / 2) - bezel);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`
+    + '<defs>'
+    + '<linearGradient id="Y" x1="0" x2="0" y1="3%" y2="97%"><stop offset="0%" stop-color="#0F0"/><stop offset="100%" stop-color="#000"/></linearGradient>'
+    + '<linearGradient id="X" x1="2%" x2="98%" y1="0" y2="0"><stop offset="0%" stop-color="#F00"/><stop offset="100%" stop-color="#000"/></linearGradient>'
+    + '</defs>'
+    + `<rect width="${w}" height="${h}" fill="#808080"/>`
+    + '<g filter="blur(2px)">'
+    + `<rect width="${w}" height="${h}" fill="#000080"/>`
+    + `<rect width="${w}" height="${h}" fill="url(#Y)" style="mix-blend-mode:screen"/>`
+    + `<rect width="${w}" height="${h}" fill="url(#X)" style="mix-blend-mode:screen"/>`
+    + `<rect x="${bezel}" y="${bezel}" width="${Math.max(0, w - 2 * bezel)}" height="${Math.max(0, h - 2 * bezel)}" rx="${r}" ry="${r}" fill="#808080" filter="blur(${bezel}px)"/>`
+    + '</g></svg>';
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 let glassDefs = null;
-function setupGlass(el, idx) {
+let glassCount = 0;
+function setupGlass(el) {
+  if (el.dataset.glassReady) return;
+  el.dataset.glassReady = '1';
   if (!glassDefs) {
     glassDefs = document.createElementNS(SVGNS, 'svg');
     glassDefs.setAttribute('width', '0'); glassDefs.setAttribute('height', '0');
@@ -1258,27 +1242,25 @@ function setupGlass(el, idx) {
     glassDefs.style.position = 'absolute';
     document.body.appendChild(glassDefs);
   }
-  const id = `liquid-glass-${idx}`;
-  const scale = Number(el.dataset.scale || 48);
-  const ab = Number(el.dataset.aberration || 4);
-  const frost = Number(el.dataset.frost || 0.4);
+  const id = `liquid-glass-${glassCount++}`;
+  const ab = Number(el.dataset.aberration || 2);
   const channel = (r, g, b) => `${r} 0 0 0 0  0 ${g} 0 0 0  0 0 ${b} 0 0  0 0 0 1 0`;
 
   const filter = document.createElementNS(SVGNS, 'filter');
   filter.id = id;
-  filter.setAttribute('filterUnits', 'userSpaceOnUse');
+  filter.setAttribute('x', '0'); filter.setAttribute('y', '0');
+  filter.setAttribute('width', '100%'); filter.setAttribute('height', '100%');
   filter.setAttribute('color-interpolation-filters', 'sRGB');
   filter.innerHTML = `
-    <feImage result="map" preserveAspectRatio="none" />
-    <feDisplacementMap in="SourceGraphic" in2="map" scale="${scale + ab}" xChannelSelector="R" yChannelSelector="G" result="dR" />
-    <feColorMatrix in="dR" type="matrix" values="${channel(1, 0, 0)}" result="r" />
-    <feDisplacementMap in="SourceGraphic" in2="map" scale="${scale}" xChannelSelector="R" yChannelSelector="G" result="dG" />
-    <feColorMatrix in="dG" type="matrix" values="${channel(0, 1, 0)}" result="g" />
-    <feDisplacementMap in="SourceGraphic" in2="map" scale="${scale - ab}" xChannelSelector="R" yChannelSelector="G" result="dB" />
-    <feColorMatrix in="dB" type="matrix" values="${channel(0, 0, 1)}" result="b" />
-    <feComposite in="r" in2="g" operator="arithmetic" k2="1" k3="1" result="rg" />
-    <feComposite in="rg" in2="b" operator="arithmetic" k2="1" k3="1" result="rgb" />
-    <feGaussianBlur in="rgb" stdDeviation="${frost}" />`;
+    <feImage x="0" y="0" result="map" />
+    <feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G" />
+    <feColorMatrix type="matrix" result="displacedR" values="${channel(1, 0, 0)}" />
+    <feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G" />
+    <feColorMatrix type="matrix" result="displacedG" values="${channel(0, 1, 0)}" />
+    <feDisplacementMap in="SourceGraphic" in2="map" xChannelSelector="R" yChannelSelector="G" />
+    <feColorMatrix type="matrix" result="displacedB" values="${channel(0, 0, 1)}" />
+    <feBlend in="displacedR" in2="displacedG" mode="screen" result="rg" />
+    <feBlend in="rg" in2="displacedB" mode="screen" />`;
   glassDefs.appendChild(filter);
 
   let lastKey = '';
@@ -1287,17 +1269,22 @@ function setupGlass(el, idx) {
     const h = Math.round(el.offsetHeight);
     if (!w || !h) return;
     const radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
-    const bevel = Number(el.dataset.bevel || 14);
     const key = `${w}x${h}x${radius}`;
     if (key === lastKey) return;
     lastKey = key;
-    ['x', 'y'].forEach((a) => filter.setAttribute(a, '0'));
-    filter.setAttribute('width', w); filter.setAttribute('height', h);
+    // Gewählte Einstellung (aus dem Generator getestet): weicher, breiter Rand,
+    // ruhige Mitte. Beides skaliert mit der Grösse, damit auch kleine Buttons gut aussehen.
+    const short = Math.min(w, h);
+    const bezel = Math.round(Math.max(4, Math.min(22, short * 0.3)));
+    const refraction = Math.round(Math.max(18, Math.min(Number(el.dataset.scale || 90), short * 1.1)));
     const img = filter.querySelector('feImage');
     img.setAttribute('width', w); img.setAttribute('height', h);
-    img.setAttribute('href', glassMap(w, h, radius, bevel));
-    el.style.backdropFilter = `url(#${id})`;
-    el.style.webkitBackdropFilter = `url(#${id})`;
+    img.setAttribute('href', glassMap(w, h, radius, bezel));
+    filter.querySelectorAll('feDisplacementMap').forEach((d, i) => d.setAttribute('scale', refraction + ab - i * ab));
+    const bf = `blur(0.5px) url(#${id}) blur(1px) saturate(1.5) brightness(1.1)`;
+    el.style.backdropFilter = bf;
+    el.style.webkitBackdropFilter = bf;
+    el.classList.add('is-refracting');
   };
   let t;
   new ResizeObserver(() => { clearTimeout(t); t = setTimeout(update, 120); }).observe(el);
@@ -1316,7 +1303,7 @@ $(function () {
     new IntersectionObserver(([e]) => { boardVisible = e.isIntersecting; }).observe(document.getElementById('flipboard'));
   }
   // Liquid Glass nur dort, wo der Browser SVG-Filter als backdrop-filter kann
-  if (supportsLiquid) $('.liquid-glass').each(function (i) { setupGlass(this, i); });
+  if (supportsLiquid) $('.liquid-glass').each(function () { setupGlass(this); });
 });
 
 // ═════════════════════════════════════════════════════════════════════════════

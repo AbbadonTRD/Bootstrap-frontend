@@ -67,7 +67,7 @@
 
   <!-- Header (Navigation Menu) -->
   <header class="ui-header">
-    <div class="container ui-header-inner liquid-glass" data-scale="40" data-bevel="18" data-aberration="3" data-frost="5">
+    <div class="container ui-header-inner liquid-glass" data-scale="40" data-bevel="18" data-aberration="3">
       <a class="ui-logo" href="#">
         <span class="ui-logo-mark"><svg class="ic" aria-hidden="true"><use href="#i-dashboard"/></svg></span>Dashboard
       </a>
@@ -80,10 +80,10 @@
         <a href="#card-sbb">ÖV</a>
       </nav>
       <div class="ui-header-actions">
-        <button id="btn-cmdk" class="cmdk-trigger liquid-glass lg-btn" data-scale="22" data-bevel="10" data-aberration="2" data-frost="1" type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" title="Befehlspalette (Ctrl+K)">
+        <button id="btn-cmdk" class="cmdk-trigger liquid-glass lg-btn" data-scale="22" data-bevel="10" data-aberration="2" type="button" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" title="Befehlspalette (Ctrl+K)">
           <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span class="cmdk-trigger-label">Suchen …</span><kbd class="cmdk-kbd">Ctrl K</kbd>
         </button>
-        <button id="btn-theme" class="ui-btn ui-btn-ghost ui-btn-icon liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten">
+        <button id="btn-theme" class="ui-btn ui-btn-ghost ui-btn-icon liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button" aria-label="Hell/Dunkel umschalten" title="Hell/Dunkel umschalten">
           <svg class="ic theme-icon-light" aria-hidden="true"><use href="#i-light"/></svg><svg class="ic theme-icon-dark" aria-hidden="true"><use href="#i-moon"/></svg>
         </button>
       </div>
@@ -142,7 +142,7 @@
             <div id="cat-error" class="ui-alert d-none" role="alert"><svg class="ic" aria-hidden="true"><use href="#i-warning"/></svg><span></span></div>
           </div>
           <div class="ui-card-footer">
-            <button id="btn-cat" class="ui-btn ui-btn-default ui-btn-block liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+            <button id="btn-cat" class="ui-btn ui-btn-default ui-btn-block liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button">
               <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Neues Katzenbild laden
             </button>
           </div>
@@ -158,18 +158,18 @@
               <span class="wallet-coin"><svg class="ic" aria-hidden="true"><use href="#i-bitcoin"/></svg></span>
               Bitcoin-Preis
             </span>
-            <span class="wallet-pair">BTC</span>
+            <span class="wallet-pair liquid-glass" data-scale="20" data-bevel="8" data-aberration="2">BTC</span>
           </div>
 
           <div class="wallet-balance">
             <span id="btc-usd" class="wallet-amount value">$ ––––</span>
             <span class="wallet-sub">
-              <span id="btc-chf" class="wallet-pill value">CHF ––––</span>
+              <span id="btc-chf" class="wallet-pill value liquid-glass" data-scale="22" data-bevel="9" data-aberration="2">CHF ––––</span>
             </span>
           </div>
 
           <div class="wallet-actions">
-            <button id="btn-btc" class="wallet-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+            <button id="btn-btc" class="wallet-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button">
               <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Preis abrufen
             </button>
           </div>
@@ -185,7 +185,7 @@
               <div class="wallet-chart-empty"><svg class="ic" aria-hidden="true"><use href="#i-bitcoin"/></svg></div>
             </div>
             <p id="btc-extremes" class="wallet-extremes d-none"></p>
-            <div class="wallet-ranges" role="group" aria-label="Zeitspanne">
+            <div class="wallet-ranges liquid-glass" role="group" aria-label="Zeitspanne" data-scale="30" data-bevel="12" data-aberration="2">
               <button type="button" class="wallet-range" data-range="1h">1S</button>
               <button type="button" class="wallet-range is-active" data-range="1" aria-pressed="true">1T</button>
               <button type="button" class="wallet-range" data-range="7">1W</button>
@@ -233,7 +233,7 @@
           </header>
 
           <!-- Stundenstreifen: bewusst minimal -->
-          <div id="weather-hourly-wrap" class="mw-hourly mw-glass liquid-glass mw-reveal d-none" data-scale="30" data-bevel="14" data-frost="2">
+          <div id="weather-hourly-wrap" class="mw-hourly mw-glass liquid-glass mw-reveal d-none" data-scale="70" data-bevel="14">
             <p class="mw-caption" aria-live="polite"><span id="weather-strip-title">Heute</span><span class="mw-caption-meta"><span id="weather-hourly-day">–</span> · <span id="weather-strip-rain">–</span></span></p>
             <!-- Seitlich wischen/ziehen: Stundenverlauf über alle 5 Tage -->
             <div id="weather-scroll" class="mw-scroll" tabindex="0" aria-label="Stundenverlauf – seitlich wischen oder mit den Pfeiltasten verschieben">
@@ -242,7 +242,7 @@
           </div>
 
           <!-- 5-Tage-Prognose: gleiches Glas wie oben, ein Tag steuert den Streifen oben -->
-          <div id="weather-chart-card" class="mw-days mw-glass liquid-glass mw-reveal d-none" data-scale="30" data-bevel="14" data-frost="2">
+          <div id="weather-chart-card" class="mw-days mw-glass liquid-glass mw-reveal d-none" data-scale="70" data-bevel="14">
             <p class="mw-caption"><span>5-Tage-Prognose</span><span>Tag wählen</span></p>
             <div id="weather-days" class="mw-days-grid" role="group" aria-label="Tag für den Verlauf oben wählen"></div>
             <!-- Wochenverlauf: bleibt immer gleich, egal welcher Tag gewählt ist -->
@@ -263,7 +263,7 @@
           </div>
 
           <footer class="mw-foot">
-            <button id="btn-weather" class="mw-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+            <button id="btn-weather" class="mw-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button">
               <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Wetter laden
             </button>
             <span id="weather-trend" class="mw-meta">47.3769° N · 8.5417° E · Open-Meteo</span>
@@ -286,7 +286,7 @@
               <label class="ui-label" for="ev-plz">Postleitzahl</label>
               <div class="ui-input-row">
                 <input id="ev-plz" class="ui-input" type="text" inputmode="numeric" maxlength="4" placeholder="z.B. 8400" autocomplete="postal-code" />
-                <button id="btn-ev-plz" class="ui-btn ui-btn-outline liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
+                <button id="btn-ev-plz" class="ui-btn ui-btn-outline liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
               </div>
             </div>
             <div id="ev-placeholder" class="ui-empty grow">
@@ -299,7 +299,7 @@
             <p id="ev-hint" class="ui-muted d-none"><svg class="ic" aria-hidden="true"><use href="#i-cursor"/></svg> Klicke auf eine Station für Details – die Karte zentriert sich darauf.</p>
           </div>
           <div class="ui-card-footer">
-            <button id="btn-ev" class="ui-btn ui-btn-default ui-btn-block liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button">
+            <button id="btn-ev" class="ui-btn ui-btn-default ui-btn-block liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button">
               <svg class="ic" aria-hidden="true"><use href="#i-reload"/></svg>Ladestationen laden (Winterthur)
             </button>
           </div>
@@ -314,7 +314,7 @@
           <div class="content-card-shade" aria-hidden="true"></div>
 
           <div class="content-card-top">
-            <div class="content-card-chip liquid-glass" data-scale="44" data-bevel="14" data-frost="3">
+            <div class="content-card-chip liquid-glass" data-scale="44" data-bevel="14">
               <span class="content-card-avatar"><svg class="ic" aria-hidden="true"><use href="#i-map"/></svg></span>
               <div>
                 <p class="content-card-name">Kartenausschnitt</p>
@@ -326,11 +326,11 @@
           <div class="content-card-bottom">
             <h2 id="map-title" class="content-card-title">Zürich</h2>
             <p id="map-desc" class="content-card-desc">47.3769° N · 8.5417° E · Ziehen, zoomen oder nach einem Ort suchen.</p>
-            <div class="content-card-search liquid-glass" data-scale="48" data-bevel="16" data-frost="3">
+            <div class="content-card-search liquid-glass" data-scale="48" data-bevel="16">
               <label class="sr-only" for="map-place">Ort</label>
               <input id="map-place" class="content-input" type="text" placeholder="Ort suchen, z.B. Luzern" />
-              <button id="btn-map-place" class="content-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
-              <button id="btn-map" class="content-btn content-btn-primary liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>Karte anzeigen (Zürich)</button>
+              <button id="btn-map-place" class="content-btn liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>Suchen</button>
+              <button id="btn-map" class="content-btn content-btn-primary liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg>Karte anzeigen (Zürich)</button>
             </div>
           </div>
         </section>
@@ -391,7 +391,7 @@
   <!-- Expandable Card: Overlay + Dialog für eine Ladestation -->
   <div id="ev-overlay" class="ev-overlay" hidden></div>
   <div id="ev-modal" class="ev-modal" role="dialog" aria-modal="true" aria-labelledby="ev-modal-title" hidden>
-    <button id="ev-modal-close" class="ev-modal-close liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button" aria-label="Schliessen"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
+    <button id="ev-modal-close" class="ev-modal-close liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button" aria-label="Schliessen"><svg class="ic" aria-hidden="true"><use href="#i-close"/></svg></button>
     <div class="ev-modal-media">
       <img id="ev-modal-img" alt="" />
       <span id="ev-modal-rank" class="ev-rank-pill"></span>
@@ -402,7 +402,7 @@
           <h3 id="ev-modal-title" class="ev-modal-title"></h3>
           <p id="ev-modal-sub" class="ev-modal-sub"></p>
         </div>
-        <button id="ev-modal-map" class="ui-btn ui-btn-default liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" data-frost="1" type="button"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg>Karte</button>
+        <button id="ev-modal-map" class="ui-btn ui-btn-default liquid-glass lg-btn" data-scale="26" data-bevel="10" data-aberration="2" type="button"><svg class="ic" aria-hidden="true"><use href="#i-target"/></svg>Karte</button>
       </div>
       <ul id="ev-modal-facts" class="ev-facts"></ul>
     </div>
@@ -413,7 +413,7 @@
 
   <!-- Befehlspalette (Ctrl+K) – Zusatzfeature -->
   <div id="cmdk-overlay" class="cmdk-overlay" hidden></div>
-  <div id="cmdk" class="cmdk liquid-glass" role="dialog" aria-modal="true" aria-label="Befehlspalette" data-scale="40" data-bevel="18" data-aberration="3" data-frost="6" hidden>
+  <div id="cmdk" class="cmdk liquid-glass" role="dialog" aria-modal="true" aria-label="Befehlspalette" data-scale="70" data-bevel="18" data-aberration="3" hidden>
     <div class="cmdk-input-row">
       <svg class="ic" aria-hidden="true"><use href="#i-search"/></svg>
       <input id="cmdk-input" class="cmdk-input" type="text" autocomplete="off" spellcheck="false"

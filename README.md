@@ -14,6 +14,7 @@ Ein Bootstrap 5.3 Frontend-Projekt mit 5 interaktiven Features, die offene APIs 
 | Advanced | Klick auf Tankstelle zentriert die Karte | – | ✅ |
 | Extra | Live-Abfahrten öffentlicher Verkehr mit Countdown + Haltestellensuche | transport.opendata.ch | ✅ |
 | Extra | Befehlspalette (Ctrl+K / Cmd+K / „/“) | – | ✅ |
+| Extra | Kartenebenen wie Google Maps: 6 Kartentypen (Monochrom … Luftbild), 7 Kartendetails, 3D mit Gelände & Gebäuden | Esri, swisstopo, MapLibre GL, AWS Terrain Tiles, OpenFreeMap | ✅ |
 | Extra | Scroll-Animationen und hochzählende Zahlen | GSAP 3 + ScrollTrigger | ✅ |
 
 ## Verwendete Technologien
@@ -21,6 +22,7 @@ Ein Bootstrap 5.3 Frontend-Projekt mit 5 interaktiven Features, die offene APIs 
 - [Bootstrap 5.3](https://getbootstrap.com/docs/5.3/) + [Streamline Core Solid Icons](https://www.streamlinehq.com/icons/core-solid) (CC BY 4.0, als SVG-Sprite)
 - [jQuery 3.7](https://jquery.com/)
 - [Leaflet 1.9](https://leafletjs.com/)
+- [MapLibre GL JS 4.7](https://maplibre.org/) (nur für die 3D-Ansicht, wird erst bei Bedarf geladen)
 - [Highcharts 11](https://www.highcharts.com/)
 - [GSAP 3](https://gsap.com/) + ScrollTrigger
 - Hero: Split-Flap-Board (inspiriert von Aceternity „Text Flipping Board“), nur HTML/CSS + jQuery

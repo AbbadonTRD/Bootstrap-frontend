@@ -2163,7 +2163,7 @@ body {
 .ml-item[aria-pressed="true"] .ml-img { box-shadow: 0 0 0 2px rgba(24,24,30,.9), 0 0 0 4px var(--primary); }
 .ml-item:focus-visible { outline: none; }
 .ml-item:focus-visible .ml-img { box-shadow: 0 0 0 2px rgba(24,24,30,.9), 0 0 0 4px #fff; }
-.ml-name { display: block; width: 100%; overflow-wrap: anywhere; hyphens: auto; }
+.ml-name { display: block; width: 100%; hyphens: auto; -webkit-hyphens: auto; }
 /* Details: Häkchen wie bei Google */
 #map-details .ml-item[aria-pressed="true"] .ml-img::after {
   content: "✓"; position: absolute; top: 4px; right: 4px;
@@ -2177,6 +2177,7 @@ body {
 
 /* 3D-Karte liegt über Leaflet und wird nur im 3D-Modus sichtbar */
 .map-3d { visibility: hidden; }
+#map-3d { position: absolute; inset: 0; } /* maplibre-gl.css setzt sonst position: relative → Höhe 0 */
 .content-card.is-3d .map-3d { visibility: visible; }
 .content-card.is-3d #map-container { visibility: hidden; }
 .content-card .maplibregl-ctrl-top-right { top: 8px; }

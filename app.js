@@ -29,15 +29,15 @@ const MAP_TYPES = [
 ];
 const MAP_DETAILS = [
   { id: 'ev',       name: 'Ladestationen' },
-  { id: 'oev',      name: 'ÖV-Haltestellen', url: WMTS('ch.bav.haltestellen-oev') },
+  { id: 'oev',      name: 'ÖV-Haltestellen', url: WMTS('ch.bav.haltestellen-oev'), minZoom: 15, thumb: [15, 17161, 11474] },   // erst nah sichtbar, sonst zu dicht
   { id: 'bahn',     name: 'Bahnnetz',        url: WMTS('ch.swisstopo.swisstlm3d-eisenbahnnetz') },
   { id: 'velo',     name: 'Velorouten',      url: WMTS('ch.astra.veloland') },
-  { id: 'mtb',      name: 'Mountainbike',    url: WMTS('ch.astra.mountainbikeland') },
-  { id: 'wandern',  name: 'Wanderwege',      url: WMTS('ch.swisstopo.swisstlm3d-wanderwege') },
-  { id: 'schatten', name: 'Relief',          url: WMTS('ch.swisstopo.swissalti3d-reliefschattierung'), opacity: 0.35 },
+  { id: 'mtb',      name: 'Mountainbike',    url: WMTS('ch.astra.mountainbikeland'), thumb: [12, 2144, 1439] },
+  { id: 'wandern',  name: 'Wanderwege',      url: WMTS('ch.swisstopo.swisstlm3d-wanderwege'), thumb: [13, 4289, 2869] },
+  { id: 'schatten', name: 'Relief',          url: WMTS('ch.swisstopo.swissalti3d-reliefschattierung'), opacity: 0.35, thumb: [12, 2144, 1439] },
 ];
-// Vorschaubild: eine Kachel bei Zürich/Uetliberg
-const thumbOf = (url, z = 13, x = 4289, y = 2866) => url.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+// Vorschaubild: eine Kachel in Zürich (Details können eine eigene Kachel wählen, wo es etwas zu sehen gibt)
+const thumbOf = (url, z = 13, x = 4290, y = 2868) => url.replace('{z}', z).replace('{x}', x).replace('{y}', y);
 const AERIAL_TILE = 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg';
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
@@ -969,9 +969,9 @@ function initMap() {
   renderLayerPicker();
   // Suche/Ladestation im 3D-Modus: Leaflet bewegt sich unsichtbar mit, die 3D-Karte fliegt hinterher
   map.on('moveend', () => {
-    if (!mapState.is3d || !gl) return;
+    if (!mapState.is3d || !glReady) return;
     const c = map.getCenter();
-    gl.flyTo({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom() - 1, 14), pitch: 62, duration: reduceMotion.matches ? 0 : 1400, essential: true });
+    fly3d({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom() - 1, 14), duration: 1400 });
     syncGlMarkers();
   });
   if (mapState.is3d) set3d(true, false);
@@ -998,7 +998,7 @@ function setMapDetail(id, on, save = true) {
   if (id === 'ev') {
     if (on) stationLayer.addTo(map); else map.removeLayer(stationLayer);
   } else if (on && !mapLayers.details[id]) {
-    mapLayers.details[id] = L.tileLayer(d.url, { maxZoom: 19, maxNativeZoom: 18, opacity: d.opacity || 1, zIndex: 5, attribution: SWISSTOPO }).addTo(map);
+    mapLayers.details[id] = L.tileLayer(d.url, { minZoom: d.minZoom || 0, maxZoom: 19, maxNativeZoom: 18, opacity: d.opacity || 1, zIndex: 5, attribution: SWISSTOPO }).addTo(map);
   } else if (!on && mapLayers.details[id]) {
     map.removeLayer(mapLayers.details[id]);
     delete mapLayers.details[id];
@@ -1022,8 +1022,8 @@ function renderLayerPicker() {
   $('#map-details').html(MAP_DETAILS.map((d) => {
     const over = d.id === 'ev'
       ? '<i class="ml-dot" style="left:30%;top:40%"></i><i class="ml-dot" style="left:62%;top:28%"></i><i class="ml-dot" style="left:55%;top:68%"></i>'
-      : `<img src="${thumbOf(d.url)}" alt="" loading="lazy"${d.opacity ? ` style="opacity:${Math.min(1, d.opacity * 2)}"` : ''}>`;
-    return item('data-detail', d.id, d.name, `<img src="${thumbOf(mono.url)}" alt="" loading="lazy">${over}`);
+      : `<img src="${thumbOf(d.url, ...(d.thumb || []))}" alt="" loading="lazy"${d.opacity ? ` style="opacity:${Math.min(1, d.opacity * 2)}"` : ''}>`;
+    return item('data-detail', d.id, d.name, `<img src="${thumbOf(mono.url, ...(d.thumb || []))}" alt="" loading="lazy">${over}`);
   }).join(''));
   syncLayerPicker();
 }
@@ -1054,6 +1054,7 @@ function toggleLayerPanel(open) {
 // ── 3D-Ansicht: MapLibre GL mit Höhenmodell (AWS Terrain Tiles) und Gebäuden (OpenFreeMap) ──
 const GL_VERSION = '4.7.1';
 let gl = null;
+let glReady = false;   // erst nach dem ersten load darf die Kamera animiert werden
 let glMarkers = [];
 let glLoading = null;
 function loadMapLibre() {
@@ -1080,7 +1081,7 @@ function glStyle() {
   MAP_DETAILS.forEach((d) => {
     if (!d.url || !mapState.details.has(d.id)) return;
     sources[`d-${d.id}`] = { type: 'raster', tiles: [d.url], tileSize: 256, maxzoom: 18 };
-    layers.push({ id: `d-${d.id}`, type: 'raster', source: `d-${d.id}`, paint: { 'raster-opacity': d.opacity || 1 } });
+    layers.push({ id: `d-${d.id}`, type: 'raster', source: `d-${d.id}`, minzoom: d.minZoom ? d.minZoom - 1 : 0, paint: { 'raster-opacity': d.opacity || 1 } });
   });
   if (t.labels) {
     sources.labels = { type: 'raster', tiles: [t.labels], tileSize: 256, maxzoom: t.nativeZoom || 18 };
@@ -1097,7 +1098,7 @@ function glStyle() {
   });
   return {
     version: 8, sources, layers,
-    terrain: { source: 'dem', exaggeration: 1.4 },
+    terrain: { source: 'dem', exaggeration: 1 },   // echte Höhe – überhöht steckt die Kamera in den Alpen im Berg
     sky: t.night
       ? { 'sky-color': '#0f1b2d', 'horizon-color': '#1f3a66', 'fog-color': '#16294a', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85 }
       : { 'sky-color': '#9cc4f2', 'horizon-color': '#e3f0ff', 'fog-color': '#eef4fb', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85 },
@@ -1112,6 +1113,14 @@ function syncGlMarkers() {
   if (mapState.details.has('ev')) {
     stationLayer.eachLayer((l) => { const el = document.createElement('span'); el.className = 'gl-dot'; add(l.getLatLng(), el); });
   }
+}
+// Kamera kippen; in den Bergen drückt das Gelände die Kamera runter → dann etwas herauszoomen
+function fly3d(opts) {
+  const { duration, ...rest } = opts;
+  gl.flyTo({ pitch: 62, ...rest, duration: reduceMotion.matches ? 0 : duration, essential: true });
+  gl.once('moveend', () => {
+    if (gl.getPitch() < 55 && gl.getZoom() > 11) fly3d({ zoom: gl.getZoom() - 1.3, duration: 900 });
+  });
 }
 function set3d(on, save = true) {
   const card = document.getElementById('card-map');
@@ -1132,6 +1141,9 @@ function set3d(on, save = true) {
     card.classList.remove('is-loading-3d');
     if (!mapState.is3d) return;
     const c = map.getCenter();
+    // Kamera erst kippen, wenn der Stil geladen ist – sonst bleibt MapLibre mit Terrain hängen
+    const tilt = () => fly3d({ bearing: -18, zoom: Math.max(map.getZoom() - 1, 14), duration: 1600 });
+    const fresh = !gl;
     if (!gl) {
       gl = new maplibregl.Map({
         container: 'map-3d', style: glStyle(), center: [c.lng, c.lat], zoom: map.getZoom() - 1,
@@ -1145,7 +1157,17 @@ function set3d(on, save = true) {
     card.classList.add('is-3d');
     gl.resize();
     syncGlMarkers();
-    gl.easeTo({ pitch: 62, bearing: -18, zoom: Math.max(map.getZoom() - 1, 14), duration: reduceMotion.matches ? 0 : 1600 });
+    if (fresh) {
+      gl.once('load', () => {
+        glReady = true;
+        tilt();
+        // Quellenangabe zugeklappt starten (Info-Knopf klappt sie auf)
+        const attrib = gl.getContainer().querySelector('.maplibregl-ctrl-attrib');
+        if (attrib) attrib.classList.remove('maplibregl-compact-show');
+      });
+    } else {
+      tilt();
+    }
   }).fail(() => {
     card.classList.remove('is-loading-3d');
     showToast('3D-Ansicht konnte nicht geladen werden.');

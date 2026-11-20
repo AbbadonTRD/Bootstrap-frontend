@@ -1528,6 +1528,7 @@ function loadArrivalRoute(t) {
   if (t.routeReq) return t.routeReq;
   if (!t.from || norm(t.from) === norm(tui.station)) { t.route = 'none'; return $.Deferred().resolve(t).promise(); }
   t.route = 'loading';
+  refreshCard(t);
   const back = new Date((t.dep - 3 * 3600) * 1000);
   const day = localStr(t.dep).slice(0, 10);
   const startDay = back.toISOString().slice(0, 10);
@@ -1640,12 +1641,28 @@ function loadTui() {
       renderTuiList();
       renderTuiDetail();
       $('#tui-status').text(`${tui.list.length} ${arr ? 'ankünfte' : 'abfahrten'} · ${r.name}`);
+      if (arr) preloadArrivalRoutes(tui.list);
     })
     .fail(() => {
       $list.html('<p class="tui-empty">› verbindung fehlgeschlagen – später nochmals versuchen.</p>');
       $('#tui-detail').empty();
       $('#tui-status').text('fehler');
     });
+}
+
+// Alle Ankunfts-Routen im Hintergrund laden – höchstens 3 gleichzeitig
+function preloadArrivalRoutes(list) {
+  const queue = list.filter((t) => t.route === 'todo');
+  const run = () => {
+    const t = queue.shift();
+    if (!t || tui.list !== list) return;         // Tafel wurde inzwischen neu geladen
+    loadArrivalRoute(t).always(() => {
+      refreshCard(t);
+      if (tui.list[tui.sel] === t) renderTuiDetail();
+      run();
+    });
+  };
+  for (let k = 0; k < 3; k++) run();
 }
 
 // Stopp-Leiste ●—○—○—● für eine Liste von Halten
@@ -1659,6 +1676,22 @@ function trainCardHtml(t) {
   const arr = t.mode === 'arrival';
   const dl = t.delay > 0 ? `<span class="tui-delay">+${t.delay}'</span>` : '';
   const gl = t.platform ? `gleis ${esc(t.platform)}${t.platformChanged ? '!' : ''}` : '';
+  if (arr && (t.route === 'todo' || t.route === 'loading')) {
+    // Route lädt noch: Skeleton statt "von …"
+    return `
+      <span class="tui-row1">
+        <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
+        <span class="tui-line">${esc(t.line)}</span>
+        ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+        <span class="tui-to">← ${esc(t.from || 'unbekannt')}</span>
+      </span>
+      <span class="tui-row2" aria-busy="true">
+        <span class="tui-skel-bar" style="width:5ch"></span>
+        <span class="tui-skel-bar tui-skel-track"></span>
+        <span>${hm(t.dep)}${dl}</span>
+      </span>
+      <span class="tui-row3"><span>${gl}</span><span class="tui-skel-bar" style="width:16ch"></span></span>`;
+  }
   if (arr) {
     const ready = t.route === 'ready' && t.stops.length > 1;
     const start = ready ? t.stops[0] : null;
@@ -1788,7 +1821,8 @@ function fillBoard(t) {
   $('#sbbd-line').text(t.line).toggleClass('is-sbahn', t.kind !== 'long');
   $('#sbbd-time').text(hm(t.dep));
   $('#sbbd-delay').text(t.cancelled ? 'fällt aus' : (t.delay > 0 ? `+${t.delay}'` : ''));
-  $('#sbbd-plat').text(t.platform || '–');
+  const plat = String(t.platform || '–');
+  $('#sbbd-plat').text(plat).parent().attr('data-len', plat.length > 6 ? 'long' : plat.length);
   let stops;
   let strip = [`<span>${esc(t.op || 'ÖV')}</span>`];
   if (t.number) strip.push(`<span>Zug ${esc(String(t.number).replace(/^0+/, ''))}</span>`);

@@ -2029,3 +2029,15 @@ body {
   .sbbd-plat { top: 12px; right: 12px; }
 }
 .tui-ends { color: var(--tui-dim); font-weight: 400; }
+
+/* Skeleton in Zug-Karten, solange die Route einer Ankunft lädt */
+.tui-skel-bar { display: inline-block; height: 10px; border-radius: 2px; background: linear-gradient(90deg, #1a1a1d, #2c2c31, #1a1a1d); background-size: 200% 100%; animation: tui-shimmer 1.2s linear infinite; }
+.tui-skel-track { width: 100%; height: 4px; }
+@media (prefers-reduced-motion: reduce) { .tui-skel-bar { animation: none; } }
+
+/* Gleisbox: wächst mit langen Gleisangaben (z. B. 41/42) statt überzulaufen */
+.sbbd-plat { width: auto; min-width: 54px; padding: 0 6px; white-space: nowrap; }
+.sbbd-plat b { max-width: 96px; overflow: hidden; text-overflow: ellipsis; }
+.sbbd-plat[data-len="3"] b, .sbbd-plat[data-len="4"] b { font-size: 23px; }
+.sbbd-plat[data-len="5"] b, .sbbd-plat[data-len="6"] b { font-size: 20px; }
+.sbbd-plat[data-len="long"] b { font-size: 13px; }

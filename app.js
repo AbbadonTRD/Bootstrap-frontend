@@ -13,7 +13,31 @@ const BTC_API     = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&v
 const WEATHER_API = 'https://api.open-meteo.com/v1/forecast';
 const EV_API      = 'https://data.geo.admin.ch/ch.bfe.ladestellen-elektromobilitaet/data/ch.bfe.ladestellen-elektromobilitaet.json';
 const GEO_SEARCH  = 'https://api3.geo.admin.ch/rest/services/api/SearchServer';
-const MAP_TILES   = 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg';
+// Kartenebenen wie bei Google Maps: ein Kartentyp, beliebig viele Details, optional 3D
+const SWISSTOPO = '&copy; <a href="https://www.swisstopo.admin.ch/" target="_blank">swisstopo</a>';
+const ESRI = 'Tiles &copy; <a href="https://www.esri.com/" target="_blank">Esri</a> · HERE, Garmin, &copy; OpenStreetMap';
+const ESRI_URL = (name) => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${name}/MapServer/tile/{z}/{y}/{x}`;
+const WMTS = (layer, ext = 'png') => `https://wmts.geo.admin.ch/1.0.0/${layer}/default/current/3857/{z}/{x}/{y}.${ext}`;
+const MAP_TYPES = [
+  // building = Farbe der 3D-Gebäude auf diesem Kartentyp
+  { id: 'mono',     name: 'Monochrom',        url: ESRI_URL('World_Light_Gray_Base'), labels: ESRI_URL('World_Light_Gray_Reference'), attribution: ESRI, nativeZoom: 16, building: '#d6d6db' },
+  { id: 'dark',     name: 'Dunkel',           url: ESRI_URL('World_Dark_Gray_Base'),  labels: ESRI_URL('World_Dark_Gray_Reference'),  attribution: ESRI, nativeZoom: 16, building: '#45454f', night: true },
+  { id: 'grau',     name: 'Landeskarte grau', url: WMTS('ch.swisstopo.pixelkarte-grau', 'jpeg'),  attribution: SWISSTOPO, building: '#cfcfd4' },
+  { id: 'farbe',    name: 'Landeskarte',      url: WMTS('ch.swisstopo.pixelkarte-farbe', 'jpeg'), attribution: SWISSTOPO, building: '#ece4d4' },
+  { id: 'gelaende', name: 'Gelände',          url: WMTS('ch.swisstopo.swissalti3d-reliefschattierung'), labels: ESRI_URL('World_Light_Gray_Reference'), attribution: `${SWISSTOPO} · Esri`, building: '#e6e6ea' },
+  { id: 'luft',     name: 'Luftbild',         url: WMTS('ch.swisstopo.swissimage', 'jpeg'),      attribution: SWISSTOPO, building: '#eeeae2' },
+];
+const MAP_DETAILS = [
+  { id: 'ev',       name: 'Ladestationen' },
+  { id: 'oev',      name: 'ÖV-Haltestellen', url: WMTS('ch.bav.haltestellen-oev') },
+  { id: 'bahn',     name: 'Bahnnetz',        url: WMTS('ch.swisstopo.swisstlm3d-eisenbahnnetz') },
+  { id: 'velo',     name: 'Velorouten',      url: WMTS('ch.astra.veloland') },
+  { id: 'mtb',      name: 'Mountainbike',    url: WMTS('ch.astra.mountainbikeland') },
+  { id: 'wandern',  name: 'Wanderwege',      url: WMTS('ch.swisstopo.swisstlm3d-wanderwege') },
+  { id: 'schatten', name: 'Relief',          url: WMTS('ch.swisstopo.swissalti3d-reliefschattierung'), opacity: 0.35 },
+];
+// Vorschaubild: eine Kachel bei Zürich/Uetliberg
+const thumbOf = (url, z = 13, x = 4289, y = 2866) => url.replace('{z}', z).replace('{x}', x).replace('{y}', y);
 const AERIAL_TILE = 'https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.swissimage/default/current/3857/{z}/{x}/{y}.jpeg';
 
 // ── Hilfsfunktionen ──────────────────────────────────────────────────────────
@@ -911,19 +935,223 @@ function closeStation() {
 let map = null;
 let placeLayer = null;   // Marker für Ort-Suche
 let stationLayer = null; // Marker für Ladestationen
+const mapState = { type: 'mono', details: new Set(['ev']), is3d: false };
+const mapLayers = { base: null, details: {} };
+
+const mapType = () => MAP_TYPES.find((t) => t.id === mapState.type) || MAP_TYPES[0];
+const mapLabel = () => `${mapType().name}${mapState.is3d ? ' · 3D' : ''}`;
+
+function loadMapPrefs() {
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem('map-layers') || 'null'); } catch (e) { /* kein Speicher */ }
+  if (p && MAP_TYPES.some((t) => t.id === p.type)) {
+    mapState.type = p.type;
+    mapState.details = new Set((p.details || []).filter((id) => MAP_DETAILS.some((d) => d.id === id)));
+    mapState.is3d = !!p.is3d;
+  } else {
+    mapState.type = isDark() ? 'dark' : 'mono';   // ohne Wahl: passend zum Farbschema
+  }
+}
+function saveMapPrefs() {
+  try { localStorage.setItem('map-layers', JSON.stringify({ type: mapState.type, details: [...mapState.details], is3d: mapState.is3d })); } catch (e) { /* egal */ }
+}
 
 function initMap() {
   if (map) return map;
   map = L.map('map-container', { zoomControl: false, attributionControl: false }).setView([LAT, LON], 13);
   L.control.zoom({ position: 'topright' }).addTo(map);
   L.control.attribution({ position: 'topright', prefix: false }).addTo(map);
-  L.tileLayer(MAP_TILES, {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.swisstopo.admin.ch/" target="_blank">swisstopo</a>',
-  }).addTo(map);
   placeLayer = L.layerGroup().addTo(map);
-  stationLayer = L.layerGroup().addTo(map);
+  stationLayer = L.layerGroup();
+  loadMapPrefs();
+  setMapType(mapState.type, false);
+  [...mapState.details].forEach((id) => setMapDetail(id, true, false));
+  renderLayerPicker();
+  // Suche/Ladestation im 3D-Modus: Leaflet bewegt sich unsichtbar mit, die 3D-Karte fliegt hinterher
+  map.on('moveend', () => {
+    if (!mapState.is3d || !gl) return;
+    const c = map.getCenter();
+    gl.flyTo({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom() - 1, 14), pitch: 62, duration: reduceMotion.matches ? 0 : 1400, essential: true });
+    syncGlMarkers();
+  });
+  if (mapState.is3d) set3d(true, false);
   return map;
+}
+
+function setMapType(id, save = true) {
+  const t = MAP_TYPES.find((x) => x.id === id) || MAP_TYPES[0];
+  mapState.type = t.id;
+  if (mapLayers.base) map.removeLayer(mapLayers.base);
+  const opts = { maxZoom: 19, maxNativeZoom: t.nativeZoom || 18, attribution: t.attribution };
+  const base = L.tileLayer(t.url, { ...opts, zIndex: 1 });
+  mapLayers.base = t.labels ? L.layerGroup([base, L.tileLayer(t.labels, { ...opts, attribution: '', zIndex: 9 })]) : base;
+  mapLayers.base.addTo(map);
+  if (gl) gl.setStyle(glStyle());
+  if (save) saveMapPrefs();
+  syncLayerPicker();
+}
+
+function setMapDetail(id, on, save = true) {
+  const d = MAP_DETAILS.find((x) => x.id === id);
+  if (!d) return;
+  if (on) mapState.details.add(id); else mapState.details.delete(id);
+  if (id === 'ev') {
+    if (on) stationLayer.addTo(map); else map.removeLayer(stationLayer);
+  } else if (on && !mapLayers.details[id]) {
+    mapLayers.details[id] = L.tileLayer(d.url, { maxZoom: 19, maxNativeZoom: 18, opacity: d.opacity || 1, zIndex: 5, attribution: SWISSTOPO }).addTo(map);
+  } else if (!on && mapLayers.details[id]) {
+    map.removeLayer(mapLayers.details[id]);
+    delete mapLayers.details[id];
+  }
+  if (gl) { gl.setStyle(glStyle()); syncGlMarkers(); }
+  if (save) saveMapPrefs();
+  syncLayerPicker();
+}
+
+// ── Ebenen-Auswahl (Panel mit Vorschaubildern) ──
+function thumbHtml(t, extra = '') {
+  const imgs = [`<img src="${thumbOf(t.url)}" alt="" loading="lazy">`];
+  if (t.labels) imgs.push(`<img src="${thumbOf(t.labels)}" alt="" loading="lazy">`);
+  return imgs.join('') + extra;
+}
+function renderLayerPicker() {
+  const item = (attr, id, name, inner) =>
+    `<button type="button" class="ml-item" ${attr}="${id}" aria-pressed="false"><span class="ml-img">${inner}</span><span class="ml-name">${name}</span></button>`;
+  $('#map-types').html(MAP_TYPES.map((t) => item('data-type', t.id, t.name, thumbHtml(t))).join(''));
+  const mono = MAP_TYPES[0];
+  $('#map-details').html(MAP_DETAILS.map((d) => {
+    const over = d.id === 'ev'
+      ? '<i class="ml-dot" style="left:30%;top:40%"></i><i class="ml-dot" style="left:62%;top:28%"></i><i class="ml-dot" style="left:55%;top:68%"></i>'
+      : `<img src="${thumbOf(d.url)}" alt="" loading="lazy"${d.opacity ? ` style="opacity:${Math.min(1, d.opacity * 2)}"` : ''}>`;
+    return item('data-detail', d.id, d.name, `<img src="${thumbOf(mono.url)}" alt="" loading="lazy">${over}`);
+  }).join(''));
+  syncLayerPicker();
+}
+function syncLayerPicker() {
+  const t = mapType();
+  $('#map-types .ml-item').each(function () { $(this).attr('aria-pressed', $(this).data('type') === t.id); });
+  $('#map-details .ml-item').each(function () { $(this).attr('aria-pressed', mapState.details.has($(this).data('detail'))); });
+  // Ansicht 2D/3D zeigt jeweils den aktuellen Kartentyp – einmal flach, einmal gekippt
+  const focused = $('#map-views .ml-item:focus').data('view');
+  $('#map-views').html(['2d', '3d'].map((v) =>
+    `<button type="button" class="ml-item ml-view" data-view="${v}" aria-pressed="${(v === '3d') === mapState.is3d}">` +
+    `<span class="ml-img${v === '3d' ? ' is-tilted' : ''}">${thumbHtml(t)}</span><span class="ml-name">${v === '3d' ? '3D · Gelände & Gebäude' : '2D'}</span></button>`).join(''));
+  if (focused) $(`#map-views [data-view="${focused}"]`).trigger('focus');
+  $('#map-layers-thumb').html(thumbHtml(t)).toggleClass('is-tilted', mapState.is3d);
+  $('#map-meta').text((i, txt) => (/^(Karte|Suchergebnis) ·/.test(txt) ? txt.replace(/·.*$/, `· ${mapLabel()}`) : txt));
+}
+function toggleLayerPanel(open) {
+  const $p = $('#map-layers-panel');
+  const show = open === undefined ? $p.prop('hidden') : open;
+  $p.prop('hidden', !show);
+  $('#map-layers-btn').attr('aria-expanded', show);
+  // Panel bleibt innerhalb der Karte (scrollt sonst)
+  if (show) { const card = document.getElementById('card-map'); $p.css('max-height', card.clientHeight - $p[0].offsetTop - 20 - 20); }
+  if (show && window.gsap && !reduceMotion.matches) gsap.fromTo($p[0], { opacity: 0, scale: 0.96, y: -6 }, { opacity: 1, scale: 1, y: 0, duration: 0.22, ease: 'power2.out', clearProps: 'all' });
+  if (show) $p.find('.ml-item[aria-pressed="true"]').first().trigger('focus');
+}
+
+// ── 3D-Ansicht: MapLibre GL mit Höhenmodell (AWS Terrain Tiles) und Gebäuden (OpenFreeMap) ──
+const GL_VERSION = '4.7.1';
+let gl = null;
+let glMarkers = [];
+let glLoading = null;
+function loadMapLibre() {
+  if (window.maplibregl) return $.Deferred().resolve().promise();
+  if (glLoading) return glLoading;
+  const d = $.Deferred();
+  $('<link rel="stylesheet">').attr('href', `https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${GL_VERSION}/maplibre-gl.min.css`).appendTo('head');
+  const s = document.createElement('script');
+  s.src = `https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/${GL_VERSION}/maplibre-gl.min.js`;
+  s.onload = () => d.resolve();
+  s.onerror = () => { glLoading = null; d.reject(); };
+  document.head.appendChild(s);
+  glLoading = d.promise();
+  return glLoading;
+}
+function glStyle() {
+  const t = mapType();
+  const sources = {
+    base: { type: 'raster', tiles: [t.url], tileSize: 256, maxzoom: t.nativeZoom || 18, attribution: t.attribution },
+    dem: { type: 'raster-dem', tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 14, attribution: 'Höhen: Mapzen / AWS Terrain Tiles' },
+    omt: { type: 'vector', url: 'https://tiles.openfreemap.org/planet', attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; OpenStreetMap' },
+  };
+  const layers = [{ id: 'base', type: 'raster', source: 'base' }];
+  MAP_DETAILS.forEach((d) => {
+    if (!d.url || !mapState.details.has(d.id)) return;
+    sources[`d-${d.id}`] = { type: 'raster', tiles: [d.url], tileSize: 256, maxzoom: 18 };
+    layers.push({ id: `d-${d.id}`, type: 'raster', source: `d-${d.id}`, paint: { 'raster-opacity': d.opacity || 1 } });
+  });
+  if (t.labels) {
+    sources.labels = { type: 'raster', tiles: [t.labels], tileSize: 256, maxzoom: t.nativeZoom || 18 };
+    layers.push({ id: 'labels', type: 'raster', source: 'labels' });
+  }
+  layers.push({
+    id: 'gebaeude', type: 'fill-extrusion', source: 'omt', 'source-layer': 'building', minzoom: 13,
+    paint: {
+      'fill-extrusion-color': t.building,
+      'fill-extrusion-height': ['coalesce', ['get', 'render_height'], 8],
+      'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+      'fill-extrusion-opacity': 0.9,
+    },
+  });
+  return {
+    version: 8, sources, layers,
+    terrain: { source: 'dem', exaggeration: 1.4 },
+    sky: t.night
+      ? { 'sky-color': '#0f1b2d', 'horizon-color': '#1f3a66', 'fog-color': '#16294a', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85 }
+      : { 'sky-color': '#9cc4f2', 'horizon-color': '#e3f0ff', 'fog-color': '#eef4fb', 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.85 },
+  };
+}
+function syncGlMarkers() {
+  if (!gl) return;
+  glMarkers.forEach((m) => m.remove());
+  glMarkers = [];
+  const add = (ll, el) => glMarkers.push(new maplibregl.Marker(el ? { element: el } : { color: '#7c6fd6' }).setLngLat([ll.lng, ll.lat]).addTo(gl));
+  placeLayer.eachLayer((l) => l.getLatLng && add(l.getLatLng()));
+  if (mapState.details.has('ev')) {
+    stationLayer.eachLayer((l) => { const el = document.createElement('span'); el.className = 'gl-dot'; add(l.getLatLng(), el); });
+  }
+}
+function set3d(on, save = true) {
+  const card = document.getElementById('card-map');
+  mapState.is3d = on;
+  if (save) saveMapPrefs();
+  syncLayerPicker();
+  if (!on) {
+    if (gl && card.classList.contains('is-3d')) {
+      const c = gl.getCenter();
+      map.setView([c.lat, c.lng], Math.round(gl.getZoom() + 1), { animate: false });
+    }
+    card.classList.remove('is-3d');
+    map.invalidateSize();
+    return;
+  }
+  card.classList.add('is-loading-3d');
+  loadMapLibre().done(() => {
+    card.classList.remove('is-loading-3d');
+    if (!mapState.is3d) return;
+    const c = map.getCenter();
+    if (!gl) {
+      gl = new maplibregl.Map({
+        container: 'map-3d', style: glStyle(), center: [c.lng, c.lat], zoom: map.getZoom() - 1,
+        maxPitch: 80, attributionControl: false,
+      });
+      gl.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+      gl.addControl(new maplibregl.AttributionControl({ compact: true }), 'top-right');
+    } else {
+      gl.jumpTo({ center: [c.lng, c.lat], zoom: map.getZoom() - 1, pitch: 0, bearing: 0 });
+    }
+    card.classList.add('is-3d');
+    gl.resize();
+    syncGlMarkers();
+    gl.easeTo({ pitch: 62, bearing: -18, zoom: Math.max(map.getZoom() - 1, 14), duration: reduceMotion.matches ? 0 : 1600 });
+  }).fail(() => {
+    card.classList.remove('is-loading-3d');
+    showToast('3D-Ansicht konnte nicht geladen werden.');
+    mapState.is3d = false;
+    syncLayerPicker();
+  });
 }
 
 // Titel/Beschreibung der Content Card aktualisieren
@@ -938,7 +1166,7 @@ function showMap() {
   placeLayer.clearLayers();
   L.marker([LAT, LON]).addTo(placeLayer).bindPopup('<strong>Zürich</strong>').openPopup();
   map.flyTo([LAT, LON], 13, { duration: 0.6 });
-  setMapInfo('Zürich', LAT, LON, 'swisstopo · Landeskarte');
+  setMapInfo('Zürich', LAT, LON, `Karte · ${mapLabel()}`);
 }
 
 // Für die Schnellen: Suche nach Ort – Karte wird darauf zentriert
@@ -959,7 +1187,7 @@ function searchPlace() {
       placeLayer.clearLayers();
       L.marker([place.lat, place.lon]).addTo(placeLayer).bindPopup(`<strong>${esc(place.label)}</strong>`).openPopup();
       map.flyTo([place.lat, place.lon], 13, { duration: 0.6 });
-      setMapInfo(place.label, place.lat, place.lon, 'Suchergebnis · swisstopo');
+      setMapInfo(place.label, place.lat, place.lon, `Suchergebnis · ${mapLabel()}`);
     })
     .fail(() => { $('#map-place').attr('aria-invalid', 'true'); showToast(`«${text}» wurde nicht gefunden.`); })
     .always(() => setLoading($btn, false));
@@ -969,6 +1197,7 @@ function searchPlace() {
 function showStationsOnMap(stations, originLat, originLon) {
   initMap();
   stationLayer.clearLayers();
+  if (!mapState.details.has('ev')) setMapDetail('ev', true);   // Stationen geladen → Ebene einschalten
   stations.forEach((s) => {
     s.marker = L.circleMarker([s.lat, s.lon], {
       radius: 8, color: '#fff', weight: 2, fillColor: '#7c6fd6', fillOpacity: 1,
@@ -1009,6 +1238,18 @@ $(function () {
   $('#year').text(new Date().getFullYear());
 
   $('#btn-theme').on('click', toggleTheme);
+
+  // Kartenebenen
+  $('#map-layers-btn').on('click', () => { initMap(); toggleLayerPanel(); });
+  $('#map-layers-close').on('click', () => { toggleLayerPanel(false); $('#map-layers-btn').trigger('focus'); });
+  $('#map-layers-panel')
+    .on('click', '[data-type]', function () { setMapType($(this).data('type')); })
+    .on('click', '[data-detail]', function () { const id = $(this).data('detail'); setMapDetail(id, !mapState.details.has(id)); })
+    .on('click', '[data-view]', function () { set3d($(this).data('view') === '3d'); });
+  $(document).on('click', (e) => { if (!$(e.target).closest('.map-layers').length && !$('#map-layers-panel').prop('hidden')) toggleLayerPanel(false); });
+  $(document).on('keydown', (e) => {
+    if (e.key === 'Escape' && !$('#map-layers-panel').prop('hidden')) { toggleLayerPanel(false); $('#map-layers-btn').trigger('focus'); }
+  });
   // Fehlermarkierung entfernen, sobald getippt wird
   $('#ev-plz, #map-place').on('input', function () { $(this).removeAttr('aria-invalid'); });
 
@@ -1816,8 +2057,53 @@ function openBoard(i) {
   }
 }
 
+// Sektoren & Wagenreihung – die freien APIs liefern keine Formation, darum schematisch:
+// Länge und Klassen-Lage hängen vom Zugtyp ab, die Zugnummer macht sie pro Zug stabil.
+const CUP_SVG = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 5h9v4a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V5Zm9 1h1.5a2 2 0 0 1 0 4H11" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>';
+function sectorBar(t) {
+  if (t.kind !== 'long' && t.kind !== 'sbahn' && t.kind !== 'other') return '';
+  const long = t.kind === 'long';
+  const seed = parseInt(String(t.number || t.line || '7').replace(/\D/g, ''), 10) || 7;
+  const letters = long ? ['A', 'B', 'C', 'D', 'E', 'F'] : ['A', 'B', 'C', 'D'];
+  let cars;
+  if (long) {
+    const n = 8 + (seed % 4);                       // 8–11 Wagen
+    cars = ['1', '1', 'WR'].concat(Array(n - 3).fill('2'));
+  } else {
+    const unit = ['2', '1', '2', '2'];              // Doppelstock-Einheit, 1. Klasse im 2. Wagen
+    cars = seed % 2 ? unit.concat(unit) : unit.slice();
+  }
+  const frontRight = seed % 2 === 0;                // Fahrtrichtung
+  if (frontRight) cars.reverse();                   // 1. Klasse immer an der Zugspitze
+  const w = long ? 7.4 : (cars.length > 4 ? 10.5 : 13);
+  const span = w * cars.length;
+  const start = Math.max(2, Math.min(96 - span, 4 + (seed % 3) * (100 - span) / 6));
+  const secW = 100 / letters.length;
+  const secOf = (x) => letters[Math.min(letters.length - 1, Math.floor(x / secW))];
+  const where = { '1': new Set(), WR: new Set() };
+  const carHtml = cars.map((c, k) => {
+    const left = start + k * w;
+    if (where[c]) where[c].add(secOf(left + w / 2));
+    const cls = `sbbd-car${c === '1' ? ' is-first' : ''}${c === 'WR' ? ' is-wr' : ''}${k === 0 ? ' is-head-l' : ''}${k === cars.length - 1 ? ' is-head-r' : ''}`;
+    return `<span class="${cls}" style="left:${left}%;width:${w}%">${c === 'WR' ? CUP_SVG : c}</span>`;
+  }).join('');
+  const arrow = frontRight
+    ? `<span class="sbbd-dir" style="left:${start + span}%">»</span>`
+    : `<span class="sbbd-dir is-left" style="left:${start}%">«</span>`;
+  const join = (s) => [...s].sort().join('/');
+  const note = [`1. Klasse: Sektor ${join(where['1'])}`];
+  if (where.WR.size) note.push(`Speisewagen: Sektor ${join(where.WR)}`);
+  note.push(`2. Klasse: übrige Sektoren`);
+  return `
+    <div class="sbbd-sec-letters">${letters.map((l, k) => `<span style="left:${k * secW}%;width:${secW}%">${l}</span>`).join('')}</div>
+    <div class="sbbd-train">${carHtml}${arrow}</div>
+    <p class="sbbd-sec-note">${note.join(' · ')} <em>schematisch</em></p>`;
+}
+
 function fillBoard(t) {
   const arr = t.mode === 'arrival';
+  const bar = sectorBar(t);
+  $('#sbbd-sectors').html(bar).prop('hidden', !bar);
   $('#sbbd-line').text(t.line).toggleClass('is-sbahn', t.kind !== 'long');
   $('#sbbd-time').text(hm(t.dep));
   $('#sbbd-delay').text(t.cancelled ? 'fällt aus' : (t.delay > 0 ? `+${t.delay}'` : ''));

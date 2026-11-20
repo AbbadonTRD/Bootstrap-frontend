@@ -1412,59 +1412,165 @@ $(function () {
 });
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  Zusatzfeature: ÖV in drei Schritten (transport.opendata.ch)
-//   1) kleines Terminal (uiverse.io / ilkhoeri, MIT) → Haltestelle + Enter
+//  Zusatzfeature: ÖV in drei Schritten
+//   1) PowerShell-Fenster (uiverse.io / mihocsaszilard, MIT) → Haltestelle + Enter
 //   2) grosses Terminal "sbb-tui": Abfahrts-/Ankunftstafel mit Zugverlauf
 //   3) Klick auf einen Zug → blaue SBB-Perronanzeige
+//  Daten: timetable.search.ch (Herkunft, Gleis, Verspätung, Halte);
+//         transport.opendata.ch als Ersatz, falls search.ch nicht antwortet.
 // ═════════════════════════════════════════════════════════════════════════════
+const SEARCH_API = 'https://timetable.search.ch/api';
 const SBB_API = 'https://transport.opendata.ch/v1';
 const tui = { station: 'Zürich HB', type: 'departure', list: [], sel: 0, lastFocus: null, timer: 0 };
 
 // Linien-Typ (für Badge-Farbe und Symbol)
 function lineKind(cat) {
-  if (/^(IC|ICE|IR|EC|RE|TGV|RJX?|EN|NJ|PE)$/i.test(cat)) return 'long';
-  if (/^S/i.test(cat)) return 'sbahn';
+  if (/^(IC|ICE|ICN|IR|EC|RE|TGV|RJX?|EN|NJ|PE)$/i.test(cat)) return 'long';
+  if (/^(S|SN|R)$/i.test(cat) || /^S/i.test(cat)) return 'sbahn';
   if (/^(T|TRAM)$/i.test(cat)) return 'tram';
-  if (/^(B|BUS|NFB|EXB)$/i.test(cat)) return 'bus';
+  if (/^(B|BUS|NFB|EXB|KB)$/i.test(cat)) return 'bus';
   if (/^(BAT|FAE|SCH)$/i.test(cat)) return 'boat';
   return 'other';
 }
 const modeIcon = { long: '🚆', sbahn: '🚆', tram: '🚊', bus: '🚌', boat: '⛴', other: '🚆' };
 
-// "S 3", "IC 5" – bei Fernzügen ist "number" oft die Zugnummer → dann nur Kategorie
-function lineLabel(e) {
-  const num = String(e.number || '').replace(/^0+/, '');
-  if (!num || num === e.category || num.length > 3) return e.category;
-  return `${e.category} ${num}`;
+// Zeiten als "Lokalzeit in Sekunden" (Schweizer Zeit, unabhängig von der Zeitzone des Browsers)
+const lts = (str) => (str ? Date.parse(`${String(str).slice(0, 16).replace(' ', 'T')}:00Z`) / 1000 : null);
+const hm = (ts) => (ts ? new Date(ts * 1000).toISOString().slice(11, 16) : '–');
+const localStr = (ts) => new Date(ts * 1000).toISOString().slice(0, 16).replace('T', ' ');
+const dur = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}h ${String(min % 60).padStart(2, '0')}m`;
+const delayOf = (v) => { const n = parseInt(v, 10); return Number.isFinite(n) && n > 0 ? n : 0; };
+
+// ── Daten von search.ch in ein einheitliches Zug-Objekt umwandeln ───────────
+function fromSearch(c, station, mode) {
+  const cat = c['*G'] || c.line || '';
+  const num = c['*L'] && c['*L'] !== cat ? c['*L'] : '';
+  const ts = lts(c.time);
+  const track = String(c.track || '');
+  const onward = (c.subsequent_stops || []).map((s) => ({ name: s.name, ts: lts(s.arr || s.dep), delay: delayOf(s.arr_delay || s.dep_delay) }));
+  const t = {
+    mode,
+    lineRaw: c.line,
+    line: num ? `${cat} ${num}` : (c.line || cat),
+    kind: lineKind(cat),
+    op: c.operator || '',
+    number: c['*Z'] || '',
+    dep: ts,
+    delay: delayOf(mode === 'arrival' ? c.arr_delay : c.dep_delay),
+    cancelled: /X/i.test(String(mode === 'arrival' ? c.arr_delay : c.dep_delay || '')),
+    platform: track.replace('!', ''),
+    platformChanged: track.includes('!'),
+    onward,
+  };
+  if (mode === 'arrival') {
+    t.from = c.terminal && c.terminal.name;
+    t.to = onward.length ? onward[onward.length - 1].name : station;
+    t.stops = [];                // vorherige Halte werden bei Bedarf nachgeladen
+    t.route = 'todo';
+  } else {
+    t.to = c.terminal && c.terminal.name;
+    t.stops = [{ name: station, ts, platform: t.platform }].concat(onward);
+    t.route = 'ready';
+  }
+  const last = t.stops[t.stops.length - 1];
+  t.end = last && last.ts > ts ? last.ts : null;
+  return t;
 }
 
-const hm = (ts) => (ts ? new Date(ts * 1000).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) : '–');
-const dur = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}h ${String(min % 60).padStart(2, '0')}m`;
-
-// Rohdaten in ein handliches Objekt pro Zug umwandeln
-function toTrain(e, stationName) {
+// Ersatz: transport.opendata.ch (hat keine Herkunft für Ankünfte)
+function fromOpendata(e, station, mode) {
   const pass = (e.passList || []).filter((p) => p.station);
   const stops = pass.map((p, i) => ({
-    name: p.station.name || stationName,
-    ts: p.departureTimestamp || p.arrivalTimestamp || (i === 0 ? e.stop.departureTimestamp : null),
+    name: p.station.name || station,
+    ts: lts(p.departure || p.arrival || (i === 0 ? e.stop.departure : null)),
     platform: p.platform || (i === 0 ? e.stop.platform : '') || '',
   }));
-  const dep = e.stop.departureTimestamp;
+  const num = String(e.number || '').replace(/^0+/, '');
+  const dep = lts(e.stop.departure || e.stop.arrival);
   const last = stops[stops.length - 1];
-  const end = last && last.ts && last.ts > dep ? last.ts : null;
   return {
-    raw: e,
-    line: lineLabel(e),
+    mode,
+    lineRaw: e.category + num,
+    line: !num || num === e.category || num.length > 3 ? e.category : `${e.category} ${num}`,
     kind: lineKind(e.category),
     op: e.operator || '',
-    to: e.to,
+    number: e.name || '',
     dep,
     delay: Number(e.stop.delay) || 0,
     platform: (e.stop.prognosis && e.stop.prognosis.platform) || e.stop.platform || '',
-    end,
+    platformChanged: !!(e.stop.prognosis && e.stop.prognosis.platform && e.stop.prognosis.platform !== e.stop.platform),
+    to: e.to,
+    from: null,
     stops,
-    cap1: e.capacity1st, cap2: e.capacity2nd,
+    onward: stops.slice(1),
+    route: 'ready',
+    end: last && last.ts > dep ? last.ts : null,
   };
+}
+
+function fetchBoard(station, mode) {
+  return $.getJSON(`${SEARCH_API}/stationboard.json`, {
+    stop: station, limit: 15, mode: mode === 'arrival' ? 'arrival' : 'depart',
+    show_subsequent_stops: 1, show_delays: 1, show_trackchanges: 1, show_tracks: 1,
+  }).then((d) => {
+    if (!d || !d.connections) return $.Deferred().reject('search-empty').promise();
+    const name = (d.stop && d.stop.name) || station;
+    return { name, list: d.connections.map((c) => fromSearch(c, name, mode)) };
+  }).then(null, () => $.getJSON(`${SBB_API}/stationboard`, { station, limit: 15, type: mode }).then((d) => {
+    const name = (d.station && d.station.name) || station;
+    return { name, list: (d.stationboard || []).map((e) => fromOpendata(e, name, mode)) };
+  }));
+}
+
+// Ankunft: denselben Zug an seinem Startbahnhof suchen (gleiche Linie, gleiche
+// Ankunftszeit hier) und daraus die vorherigen Halte übernehmen.
+function loadArrivalRoute(t) {
+  if (t.routeReq) return t.routeReq;
+  if (!t.from || norm(t.from) === norm(tui.station)) { t.route = 'none'; return $.Deferred().resolve(t).promise(); }
+  t.route = 'loading';
+  const back = new Date((t.dep - 3 * 3600) * 1000);
+  const day = localStr(t.dep).slice(0, 10);
+  const startDay = back.toISOString().slice(0, 10);
+  const when = startDay === day ? back.toISOString().slice(11, 16) : '00:00';
+  const target = localStr(t.dep);
+  const sameLine = (a) => String(a || '').replace(/\s+/g, '').toUpperCase() === String(t.lineRaw || '').replace(/\s+/g, '').toUpperCase();
+  const here = (name) => norm(name || '') === norm(tui.station);
+  const found = (stops) => { t.stops = stops; t.route = 'ready'; return t; };
+
+  // 1) Abfahrtstafel am Startbahnhof (klappt bei kleineren Bahnhöfen)
+  const viaBoard = () => $.getJSON(`${SEARCH_API}/stationboard.json`, {
+    stop: t.from, date: day, time: when, limit: 150, show_subsequent_stops: 1, show_tracks: 1,
+  }).then((d) => {
+    const hit = (d.connections || []).find((c) => sameLine(c.line)
+      && (c.subsequent_stops || []).some((s) => here(s.name) && String(s.arr || '').slice(0, 16) === target));
+    if (!hit) return $.Deferred().reject().promise();
+    const sub = hit.subsequent_stops;
+    const idx = sub.findIndex((s) => here(s.name) && String(s.arr || '').slice(0, 16) === target);
+    return found([{ name: t.from, ts: lts(hit.time), platform: String(hit.track || '').replace('!', '') }]
+      .concat(sub.slice(0, idx + 1).map((s) => ({ name: s.name, ts: lts(s.arr || s.dep) }))));
+  });
+
+  // 2) Verbindungssuche Startbahnhof → hier (für grosse Bahnhöfe wie Zürich HB)
+  const viaRoute = (minutesBefore) => {
+    const from = new Date((t.dep - minutesBefore * 60) * 1000).toISOString();
+    return $.getJSON(`${SEARCH_API}/route.json`, {
+      from: t.from, to: tui.station, date: from.slice(0, 10), time: from.slice(11, 16), num: 16,
+    }).then((d) => {
+      const leg = (d.connections || []).map((c) => c.legs && c.legs[0]).find((l) => l && sameLine(l.line)
+        && l.exit && here(l.exit.name) && String(l.exit.arrival || '').slice(0, 16) === target);
+      if (!leg) return $.Deferred().reject().promise();
+      return found([{ name: t.from, ts: lts(leg.departure), platform: String(leg.track || '').replace('!', '') }]
+        .concat((leg.stops || []).map((s) => ({ name: s.name, ts: lts(s.arrival || s.departure || s.arr || s.dep) })))
+        .concat([{ name: tui.station, ts: t.dep, platform: t.platform }]));
+    });
+  };
+
+  t.routeReq = viaBoard()
+    .then(null, () => viaRoute(75))
+    .then(null, () => viaRoute(180))
+    .then(null, () => viaRoute(330))     // lange Fahrten, z.B. Genève → Winterthur
+    .then(null, () => { t.route = 'none'; return t; });
+  return t.routeReq;
 }
 
 // ── Schritt 1 ────────────────────────────────────────────────────────────────
@@ -1484,8 +1590,7 @@ function openSbbTui(station) {
   closeBoard(false);
   if (window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     gsap.fromTo('#tui', { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.3, ease: 'power3.out', clearProps: 'opacity,transform' });
-    // Sicherheitsnetz, falls der Browser Frames auslässt
-    setTimeout(() => gsap.set('#tui', { clearProps: 'opacity,transform' }), 600);
+    setTimeout(() => gsap.set('#tui', { clearProps: 'opacity,transform' }), 600);   // Sicherheitsnetz
   }
   updateTuiClock();
   clearInterval(tui.timer);
@@ -1508,32 +1613,33 @@ function updateTuiClock() {
   $('#tui-time').text(now.toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }));
 }
 
+const psSpin = () => `<span class="tui-spin" aria-hidden="true">${['|', '/', '-', '\\', '|', '/', '-', '\\'].map((c) => `<span class="slash">${c}</span>`).join('')}</span>`;
+const psPrompt = '<span class="ps">PS C:\\sbb&gt;</span>';
+
 function loadTui() {
-  // PowerShell-artige Ladezeile mit drehendem Schrägstrich (uiverse.io / mihocsaszilard)
-  const slashes = ['|', '/', '-', '\\', '|', '/', '-', '\\'];
-  const spin = `<span class="tui-spin" aria-hidden="true">${slashes.map((c) => `<span class="slash">${c}</span>`).join('')}</span>`;
-  const ps = '<span class="ps">PS C:\\sbb&gt;</span>';
+  const arr = tui.type === 'arrival';
   const $list = $('#tui-list').html(
-    `<p class="tui-loading">${ps} stationboard "${esc(tui.station)}" --${tui.type === 'arrival' ? 'arrivals' : 'departures'} ${spin}</p>`
+    `<p class="tui-loading">${psPrompt} stationboard "${esc(tui.station)}" --${arr ? 'arrivals' : 'departures'} ${psSpin()}</p>`
     + '<div class="tui-skel"></div><div class="tui-skel"></div><div class="tui-skel"></div>');
-  $('#tui-detail').html(`<p class="tui-loading">${ps} lade verlauf ${spin}</p>`);
+  $('#tui-detail').html(`<p class="tui-loading">${psPrompt} lade verlauf ${psSpin()}</p>`);
   $('#tui-status').text('lädt …');
-  return $.getJSON(`${SBB_API}/stationboard`, { station: tui.station, limit: 15, type: tui.type })
-    .done((d) => {
-      const name = (d.station && d.station.name) || tui.station;
-      tui.station = name;
-      $('#tui-station').val(name);
-      tui.list = (d.stationboard || []).map((e) => toTrain(e, name));
+  const reqType = tui.type;
+  return fetchBoard(tui.station, tui.type)
+    .done((r) => {
+      if (reqType !== tui.type) return;          // inzwischen umgeschaltet
+      tui.station = r.name;
+      $('#tui-station').val(r.name);
+      tui.list = r.list;
       tui.sel = 0;
       if (!tui.list.length) {
-        $list.html(`<p class="tui-empty">› keine ${tui.type === 'arrival' ? 'ankünfte' : 'abfahrten'} für «${esc(tui.station)}» gefunden.</p>`);
+        $list.html(`<p class="tui-empty">› keine ${arr ? 'ankünfte' : 'abfahrten'} für «${esc(tui.station)}» gefunden.</p>`);
         $('#tui-detail').empty();
         $('#tui-status').text('0 züge');
         return;
       }
       renderTuiList();
       renderTuiDetail();
-      $('#tui-status').text(`${tui.list.length} züge · ${name}`);
+      $('#tui-status').text(`${tui.list.length} ${arr ? 'ankünfte' : 'abfahrten'} · ${r.name}`);
     })
     .fail(() => {
       $list.html('<p class="tui-empty">› verbindung fehlgeschlagen – später nochmals versuchen.</p>');
@@ -1542,37 +1648,68 @@ function loadTui() {
     });
 }
 
+// Stopp-Leiste ●—○—○—● für eine Liste von Halten
+function trackMarks(stops) {
+  const n = stops.length;
+  return stops.map((s, k) => `<i style="left:${n > 1 ? (k / (n - 1)) * 100 : 0}%" class="${k === 0 || k === n - 1 ? 'is-end' : ''}"></i>`).join('');
+}
+
+// Inhalt einer Zug-Karte (wird nach dem Nachladen der Route neu gesetzt)
+function trainCardHtml(t) {
+  const arr = t.mode === 'arrival';
+  const dl = t.delay > 0 ? `<span class="tui-delay">+${t.delay}'</span>` : '';
+  const gl = t.platform ? `gleis ${esc(t.platform)}${t.platformChanged ? '!' : ''}` : '';
+  if (arr) {
+    const ready = t.route === 'ready' && t.stops.length > 1;
+    const start = ready ? t.stops[0] : null;
+    const total = ready ? dur(Math.round((t.dep - start.ts) / 60)) : '';
+    return `
+      <span class="tui-row1">
+        <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
+        <span class="tui-line">${esc(t.line)}</span>
+        ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+        <span class="tui-to">← ${esc(t.from || 'unbekannt')}</span>
+      </span>
+      <span class="tui-row2">
+        <span>${ready ? hm(start.ts) : ''}</span>
+        ${ready ? `<span class="tui-track" aria-hidden="true">${trackMarks(t.stops)}</span>` : `<span class="tui-ends">von ${esc(t.from || '–')}${t.route === 'loading' ? ' …' : ''}</span>`}
+        <span>${hm(t.dep)}${dl}</span>
+      </span>
+      <span class="tui-row3"><span>${gl}</span><span>${t.onward.length ? `weiter → ${esc(t.to)}` : 'endet hier'}${total ? ` · ${total}` : ''}</span></span>`;
+  }
+  const n = t.stops.length;
+  const total = t.end ? dur(Math.round((t.end - t.dep) / 60)) : '';
+  return `
+    <span class="tui-row1">
+      <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
+      <span class="tui-line">${esc(t.line)}</span>
+      ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+      <span class="tui-to">${esc(t.to || '–')}</span>
+    </span>
+    <span class="tui-row2">
+      <span>${hm(t.dep)}${dl}</span>
+      ${n > 1 ? `<span class="tui-track" aria-hidden="true">${trackMarks(t.stops)}</span>` : '<span class="tui-ends">● endet hier</span>'}
+      <span>${t.end ? hm(t.end) : ''}</span>
+    </span>
+    <span class="tui-row3"><span>${gl}</span><span>${total}</span></span>`;
+}
+
 // Linke Liste: Karten wie in sbb-tui
 function renderTuiList() {
   const $list = $('#tui-list').empty();
   tui.list.forEach((t, i) => {
-    const n = t.stops.length;
-    const marks = t.stops.map((s, k) => {
-      const pos = n > 1 ? (k / (n - 1)) * 100 : 0;
-      return `<i style="left:${pos}%" class="${k === 0 || k === n - 1 ? 'is-end' : ''}"></i>`;
-    }).join('');
-    const total = t.end ? dur(Math.round((t.end - t.dep) / 60)) : '';
-    $(`
-      <button type="button" class="tui-train" role="option" id="tui-opt-${i}">
-        <span class="tui-row1">
-          <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
-          <span class="tui-line">${esc(t.line)}</span>
-          ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
-          <span class="tui-to">${esc(t.to)}</span>
-        </span>
-        <span class="tui-row2">
-          <span>${hm(t.dep)}${t.delay > 0 ? `<span class="tui-delay">+${t.delay}'</span>` : ''}</span>
-          ${n > 1 ? `<span class="tui-track" aria-hidden="true">${marks}</span>` : '<span class="tui-ends">● endet hier</span>'}
-          <span>${t.end ? hm(t.end) : ''}</span>
-        </span>
-        <span class="tui-row3"><span>${t.platform ? `gleis ${esc(t.platform)}` : ''}</span><span>${total}</span></span>
-      </button>`)
+    $(`<button type="button" class="tui-train" role="option" id="tui-opt-${i}">${trainCardHtml(t)}</button>`)
       .attr('aria-selected', i === tui.sel)
       .toggleClass('is-sel', i === tui.sel)
       .data('i', i)
       .appendTo($list);
   });
   $('#tui-list').attr('aria-activedescendant', `tui-opt-${tui.sel}`);
+}
+
+function refreshCard(t) {
+  const i = tui.list.indexOf(t);
+  if (i >= 0) $(`#tui-opt-${i}`).html(trainCardHtml(t));
 }
 
 function selectTui(i, scroll = true) {
@@ -1591,21 +1728,39 @@ function selectTui(i, scroll = true) {
 function renderTuiDetail() {
   const t = tui.list[tui.sel];
   if (!t) return;
+  const arr = t.mode === 'arrival';
+  if (arr && t.route === 'todo') {
+    loadArrivalRoute(t).always(() => { refreshCard(t); if (tui.list[tui.sel] === t) renderTuiDetail(); });
+  }
+  const head = `
+    <div class="tui-detail-head">
+      <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
+      <span class="tui-line">${esc(t.line)}</span>
+      ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+      <span>${arr ? `← ${esc(t.from || 'unbekannt')}` : `→ ${esc(t.to || '–')}`}</span>
+    </div>`;
+  if (arr && t.route !== 'ready') {
+    $('#tui-detail').html(head + (t.route === 'loading' || t.route === 'todo'
+      ? `<p class="tui-loading">${psPrompt} route von "${esc(t.from || '')}" ${psSpin()}</p>`
+      : `<p class="tui-empty">› kommt von ${esc(t.from || 'unbekannt')} · Ankunft ${hm(t.dep)} gleis ${esc(t.platform || '–')}</p>`)
+      + onwardNote(t));
+    return;
+  }
+  const lastIdx = t.stops.length - 1;
   const rows = t.stops.map((s, k) => `
-    <li class="tui-stop${k === 0 ? ' is-first' : ''}">
+    <li class="tui-stop${(arr ? k === lastIdx : k === 0) ? ' is-first' : ''}">
       <time>${hm(s.ts)}</time>
       <span class="rail" aria-hidden="true"><i></i></span>
       <span class="name">${esc(s.name)}</span>
       <span class="pl">${s.platform ? `gl ${esc(s.platform)}` : ''}</span>
     </li>`).join('');
-  $('#tui-detail').html(`
-    <div class="tui-detail-head">
-      <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
-      <span class="tui-line">${esc(t.line)}</span>
-      ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
-      <span>→ ${esc(t.to)}</span>
-    </div>
-    <ol class="tui-stops">${rows || '<li class="tui-empty">keine halte bekannt</li>'}</ol>`);
+  $('#tui-detail').html(`${head}<ol class="tui-stops">${rows || '<li class="tui-empty">keine halte bekannt</li>'}</ol>${arr ? onwardNote(t) : ''}`);
+}
+
+function onwardNote(t) {
+  return t.onward && t.onward.length
+    ? `<p class="tui-empty">› fährt weiter: ${t.onward.slice(0, 4).map((s) => esc(s.name)).join(' · ')}${t.onward.length > 4 ? ' …' : ''}</p>`
+    : '<p class="tui-empty">› endet hier</p>';
 }
 
 // ── Schritt 3: SBB-Perronanzeige ─────────────────────────────────────────────
@@ -1613,36 +1768,51 @@ function openBoard(i) {
   const t = tui.list[i];
   if (!t) return;
   selectTui(i, false);
-  const next = t.stops.slice(1);
-  const via = next.slice(0, -1).map((s) => s.name).slice(0, 6);
-  $('#sbbd-line').text(t.line).toggleClass('is-sbahn', t.kind !== 'long');
-  $('#sbbd-time').text(hm(t.dep));
-  $('#sbbd-delay').text(t.delay > 0 ? `+${t.delay}'` : '');
-  $('#sbbd-dest').text(t.to);
-  $('#sbbd-via').text(via.join('  '));
-  $('#sbbd-plat').text(t.platform || '–');
-  const cap = (n) => `<span class="cap">${[1, 2, 3].map((k) => `<i class="${n >= k ? 'on' : ''}"></i>`).join('')}</span>`;
-  $('#sbbd-strip').html(
-    `<span>${esc(t.op || 'ÖV')}</span>`
-    + (t.cap1 ? `<span>1. Kl. ${cap(t.cap1)}</span>` : '')
-    + (t.cap2 ? `<span>2. Kl. ${cap(t.cap2)}</span>` : '')
-    + (t.end ? `<span>an ${esc(t.to)} ${hm(t.end)}</span>` : ''),
-  );
-  // Endet der Zug hier (z.B. in der Ankunftstafel), gibt es keine weiteren Halte
-  const endsHere = !next.length || norm(t.to || '') === norm(tui.station || '');
-  $('#sbbd-stops').html(next.length
-    ? next.slice(0, 6).map((s) => `<li>${esc(s.name)}<small>${hm(s.ts)}</small></li>`).join('')
-    : `<li class="is-end">${endsHere ? 'Endstation – dieser Zug endet hier.' : 'Keine weiteren Halte bekannt.'}</li>`);
-  if (!next.length) $('#sbbd-via').text(endsHere ? `Ankunft in ${t.to}` : '');
-  $('#sbbd-sr').text(`${t.line} nach ${t.to}, ${hm(t.dep)}, Gleis ${t.platform || 'unbekannt'}. Halte: ${next.map((s) => s.name).join(', ')}.`);
+  fillBoard(t);
   const board = document.getElementById('tui-board');
   board.hidden = false;
   document.getElementById('tui').classList.add('is-board');
-  $('#tui-name').text(`sbb-tui · ${t.line} → ${t.to}`);
+  $('#tui-name').text(`sbb-tui · ${t.line} ${t.mode === 'arrival' ? '← ' + (t.from || '') : '→ ' + (t.to || '')}`);
   if (window.gsap && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     gsap.fromTo('.sbb-display', { y: 18, opacity: 0, rotateX: 8 }, { y: 0, opacity: 1, rotateX: 0, duration: 0.45, ease: 'power3.out', clearProps: 'all' });
     setTimeout(() => gsap.set('.sbb-display', { clearProps: 'all' }), 800);
   }
+  // Ankunft: Route ggf. nachladen und Anzeige aktualisieren
+  if (t.mode === 'arrival' && t.route !== 'ready' && t.route !== 'none') {
+    loadArrivalRoute(t).always(() => { refreshCard(t); if (!board.hidden && tui.list[tui.sel] === t) fillBoard(t); });
+  }
+}
+
+function fillBoard(t) {
+  const arr = t.mode === 'arrival';
+  $('#sbbd-line').text(t.line).toggleClass('is-sbahn', t.kind !== 'long');
+  $('#sbbd-time').text(hm(t.dep));
+  $('#sbbd-delay').text(t.cancelled ? 'fällt aus' : (t.delay > 0 ? `+${t.delay}'` : ''));
+  $('#sbbd-plat').text(t.platform || '–');
+  let stops;
+  let strip = [`<span>${esc(t.op || 'ÖV')}</span>`];
+  if (t.number) strip.push(`<span>Zug ${esc(String(t.number).replace(/^0+/, ''))}</span>`);
+  if (arr) {
+    // Ankunftsanzeige: Herkunft gross, darunter die letzten Halte vor diesem Bahnhof
+    const prev = t.route === 'ready' ? t.stops.slice(0, -1) : [];
+    $('#sbbd-dest').text(t.from ? `von ${t.from}` : 'Ankunft');
+    $('#sbbd-via').text(prev.length ? `über ${prev.slice(1).slice(-5).map((s) => s.name).join('  ')}` : (t.route === 'loading' || t.route === 'todo' ? 'Route wird geladen …' : `Ankunft ${hm(t.dep)}`));
+    stops = prev.length
+      ? prev.slice(-6).map((s) => `<li>${esc(s.name)}<small>ab ${hm(s.ts)}</small></li>`).join('') + `<li>${esc(tui.station)}<small>an ${hm(t.dep)}</small></li>`
+      : `<li class="is-end">${t.route === 'loading' || t.route === 'todo' ? 'Route wird geladen …' : `Kommt von ${esc(t.from || 'unbekannt')}.`}</li>`;
+    strip.push(t.onward.length ? `<span>weiter nach ${esc(t.to)}</span>` : '<span>endet hier</span>');
+  } else {
+    const next = t.stops.slice(1);
+    $('#sbbd-dest').text(t.to || '–');
+    $('#sbbd-via').text(next.length ? next.slice(0, -1).slice(0, 6).map((s) => s.name).join('  ') : `Ankunft in ${t.to || tui.station}`);
+    stops = next.length
+      ? next.slice(0, 6).map((s) => `<li>${esc(s.name)}<small>${hm(s.ts)}</small></li>`).join('')
+      : '<li class="is-end">Endstation – dieser Zug endet hier.</li>';
+    if (t.end) strip.push(`<span>an ${esc(t.to)} ${hm(t.end)}</span>`);
+  }
+  $('#sbbd-stops').html(stops);
+  $('#sbbd-strip').html(strip.join(''));
+  $('#sbbd-sr').text(`${t.line} ${arr ? `von ${t.from || 'unbekannt'}` : `nach ${t.to}`}, ${hm(t.dep)}, Gleis ${t.platform || 'unbekannt'}.`);
 }
 
 function closeBoard(refocus = true) {
@@ -1650,7 +1820,7 @@ function closeBoard(refocus = true) {
   if (board.hidden) return false;
   board.hidden = true;
   document.getElementById('tui').classList.remove('is-board');
-  $('#tui-name').text('sbb-tui · Abfahrtstafel');
+  $('#tui-name').text(tui.type === 'arrival' ? 'sbb-tui · Ankunftstafel' : 'sbb-tui · Abfahrtstafel');
   if (refocus) { const el = document.getElementById(`tui-opt-${tui.sel}`); if (el) el.focus(); }
   return true;
 }
@@ -1659,20 +1829,13 @@ function setTuiType(type) {
   tui.type = type;
   $('#tui-dep').toggleClass('is-on', type === 'departure').attr('aria-pressed', type === 'departure');
   $('#tui-arr').toggleClass('is-on', type === 'arrival').attr('aria-pressed', type === 'arrival');
+  $('#tui-name').text(type === 'arrival' ? 'sbb-tui · Ankunftstafel' : 'sbb-tui · Abfahrtstafel');
   loadTui();
 }
 
 $(function () {
   // Schritt 1
   $('#sbb-query').on('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); openFromEntry(); } });
-  $('#sbb-copy').on('click', function () {
-    const cmd = `sbb ${$('#sbb-query').val().trim() || 'Zürich HB'}`;
-    if (navigator.clipboard) navigator.clipboard.writeText(cmd).catch(() => {});
-    $(this).removeClass('is-copied');
-    void this.offsetWidth;
-    $(this).addClass('is-copied');
-    showToast(`Kopiert: ${cmd}`);
-  });
 
   // Schritt 2
   $('#tui-close, #tui-overlay').on('click', closeSbbTui);
@@ -1681,7 +1844,7 @@ $(function () {
   $('#tui-search').on('click', () => { tui.station = $('#tui-station').val().trim() || tui.station; loadTui(); });
   $('#tui-station').on('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tui.station = $(e.target).val().trim() || tui.station; loadTui(); } });
   $('#tui-list')
-    .on('mouseenter focus', '.tui-train', function () { selectTui($(this).data('i'), false); })
+    .on('mouseenter focus', '.tui-train', function () { if ($(this).data('i') !== tui.sel) selectTui($(this).data('i'), false); })
     .on('click', '.tui-train', function () { openBoard($(this).data('i')); });
 
   // Tastatur: ↑↓ Züge, Enter Anzeige, Esc zurück / schliessen
@@ -1695,7 +1858,7 @@ $(function () {
     if (e.key === 'ArrowUp') { e.preventDefault(); selectTui(tui.sel - 1); document.getElementById(`tui-opt-${tui.sel}`)?.focus(); }
     if (e.key === 'Enter' && document.activeElement.classList.contains('tui-train')) { e.preventDefault(); openBoard(tui.sel); }
   });
-  // Klick auf die Anzeige schliesst sie wieder
+  // Klick neben die Anzeige schliesst sie wieder
   $('#tui-board').on('click', (e) => { if (!$(e.target).closest('.sbb-display').length) closeBoard(); });
 });
 

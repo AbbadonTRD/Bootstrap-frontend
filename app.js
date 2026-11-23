@@ -591,7 +591,10 @@ function chooseCity(c) {
   loadWeather();
 }
 
-// ── Live-Himmel: Hintergrund folgt dem aktuellen Wetter und der Tageszeit ──────
+// ── Live-Himmel ─────────────────────────────────────────────────────────────────
+// Der Himmel (Wetterkarte + Seitenhintergrund) folgt dem Wetter zur gewählten Zeit.
+// Szenen: clear-day, partly-day, overcast, fog, rain, thunder, snow, clear-night, cloudy-night
+
 // WMO-Wettercode (Open-Meteo) → Szene
 function skyScene(c) {
   const code = Number(c.weather_code);
@@ -605,74 +608,307 @@ function skyScene(c) {
   return day ? 'clear-day' : 'clear-night';
 }
 
-// Regen/Schnee als leichtes Canvas-Partikelsystem – läuft nur, wenn die Karte sichtbar ist
-const skyFx = (() => {
-  let canvas = null, ctx = null, raf = 0, w = 0, h = 0, kind = 'none', amount = 0.5, visible = false;
-  let parts = [];
-  const spawn = (anywhere) => (kind === 'rain'
-    ? { x: Math.random() * w * 1.2, y: anywhere ? Math.random() * h : -20 - Math.random() * 40, l: 10 + Math.random() * 14, v: 7 + Math.random() * 5, a: 0.18 + Math.random() * 0.3 }
-    : { x: Math.random() * w, y: anywhere ? Math.random() * h : -6, r: 1 + Math.random() * 2.2, v: 0.35 + Math.random() * 0.7, p: Math.random() * 6.28, a: 0.55 + Math.random() * 0.4 });
-  const seed = () => {
-    const n = kind === 'rain' ? Math.round(35 + 95 * amount) : kind === 'snow' ? Math.round(25 + 55 * amount) : 0;
-    parts = Array.from({ length: n }, () => spawn(true));
+// WMO-Wettercode → kurze Beschreibung für die Kopfzeile
+function wmoLabel(code, isDay) {
+  const day = Number(isDay) === 1;
+  const map = {
+    0: day ? 'Sonnig' : 'Klar', 1: day ? 'Meist sonnig' : 'Meist klar', 2: 'Leicht bewölkt', 3: 'Bedeckt',
+    45: 'Nebel', 48: 'Nebel mit Reif', 51: 'Leichter Niesel', 53: 'Nieselregen', 55: 'Starker Niesel',
+    56: 'Gefrierender Niesel', 57: 'Gefrierender Niesel', 61: 'Leichter Regen', 63: 'Regen', 65: 'Starker Regen',
+    66: 'Gefrierender Regen', 67: 'Gefrierender Regen', 71: 'Leichter Schneefall', 73: 'Schneefall', 75: 'Starker Schneefall',
+    77: 'Schneegriesel', 80: 'Regenschauer', 81: 'Regenschauer', 82: 'Heftige Schauer', 85: 'Schneeschauer', 86: 'Schneeschauer',
+    95: 'Gewitter', 96: 'Gewitter mit Hagel', 99: 'Gewitter mit Hagel',
   };
+  return map[Number(code)] || 'Wetter';
+}
+
+// Was eine Szene zeichnet: Wolkenfarbe (light/dark/night), Nebel, Niederschlag
+const SKY_LOOK = {
+  'clear-day':    { tone: [1, 0, 0], fog: 0, rain: 0, snow: 0 },
+  'partly-day':   { tone: [1, 0, 0], fog: 0, rain: 0, snow: 0 },
+  overcast:       { tone: [0.7, 0.3, 0], fog: 0, rain: 0, snow: 0 },
+  fog:            { tone: [0.85, 0.15, 0], fog: 1, rain: 0, snow: 0 },
+  rain:           { tone: [0.15, 0.85, 0], fog: 0.15, rain: 1, snow: 0 },
+  thunder:        { tone: [0, 1, 0], fog: 0, rain: 1, snow: 0 },
+  snow:           { tone: [0.9, 0.1, 0], fog: 0.2, rain: 0, snow: 1 },
+  'clear-night':  { tone: [0, 0, 1], fog: 0, rain: 0, snow: 0 },
+  'cloudy-night': { tone: [0, 0.2, 0.8], fog: 0, rain: 0, snow: 0 },
+};
+
+// Weiche Wolken-Vorlage (Offscreen-Canvas) in einer Farbe; wird pro Frame nur noch kopiert
+function makeCloudSprite(seed, body, shade) {
+  const c = document.createElement('canvas');
+  c.width = 260; c.height = 120;
+  const g = c.getContext('2d');
+  let s = seed;
+  const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  const puffs = [];
+  for (let i = 0; i < 7; i++) puffs.push({ x: 40 + rnd() * 180, y: 52 + rnd() * 26, r: 26 + rnd() * 24 });
+  puffs.push({ x: 130, y: 50, r: 44 });
+  const blob = (p, col, dy, scale) => {
+    const gr = g.createRadialGradient(p.x, p.y + dy, 0, p.x, p.y + dy, p.r * scale);
+    gr.addColorStop(0, col); gr.addColorStop(0.55, col.replace(/[\d.]+\)$/, '0.55)')); gr.addColorStop(1, col.replace(/[\d.]+\)$/, '0)'));
+    g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y + dy, p.r * scale, 0, 6.283); g.fill();
+  };
+  puffs.forEach((p) => blob(p, shade, 9, 1.05));   // Schattenseite unten
+  puffs.forEach((p) => blob(p, body, 0, 1));       // Wolkenkörper
+  return c;
+}
+
+// Ein Himmel-Renderer (Wolken, Nebel, Regen, Schnee) für ein Canvas.
+// strength = Deckkraft (Karte 1, Seite dezent), size = Wolkengrösse, maxDpr = Schärfe
+function createSkyFx(canvas, opt) {
+  const ctx = canvas.getContext('2d');
+  // cloudBand: [oben, unten] – Zahlen < 1 = Anteil der Höhe, sonst Pixel
+  const o = { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [0.04, 0.45], lightAlpha: 1, drops: 130, flakes: 80, ...opt };
+  let w = 0, h = 0, raf = 0, last = 0, visible = true, idleSince = 0, tau = 380;
+  const cur = { cloud: 0, l: 1, d: 0, n: 0, fog: 0, rain: 0, snow: 0 };
+  let tgt = { ...cur };
+  const sprites = { l: [], d: [], n: [] };
+  for (let i = 0; i < 3; i++) {
+    sprites.l.push(makeCloudSprite(17 + i * 31, 'rgba(255,255,255,0.95)', 'rgba(196,206,220,0.75)'));
+    sprites.d.push(makeCloudSprite(17 + i * 31, 'rgba(112,124,140,0.95)', 'rgba(70,80,95,0.8)'));
+    sprites.n.push(makeCloudSprite(17 + i * 31, 'rgba(70,84,112,0.9)', 'rgba(40,50,72,0.8)'));
+  }
+  const clouds = Array.from({ length: o.clouds }, (_, k) => ({
+    k, x: Math.random(), y: Math.random(), s: 0.6 + Math.random() * 0.7,
+    v: 0.004 + Math.random() * 0.006, img: k % 3,
+  })).sort((a, b) => a.s - b.s);
+  const fogBands = [0, 1, 2].map((i) => ({ x: Math.random(), y: 0.58 + i * 0.13, v: 0.006 + i * 0.003 }));
+  const drops = [];
+  const flakes = [];
+  const newDrop = (any) => ({ x: Math.random() * (w + 80), y: any ? Math.random() * h : -30 - Math.random() * 60, l: 10 + Math.random() * 14, v: 420 + Math.random() * 300, a: 0.18 + Math.random() * 0.3 });
+  const newFlake = (any) => ({ x: Math.random() * w, y: any ? Math.random() * h : -8, r: 1 + Math.random() * 2.2, v: 22 + Math.random() * 40, p: Math.random() * 6.28, a: 0.55 + Math.random() * 0.4 });
+
   const resize = () => {
-    if (!canvas) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = Math.min(o.maxDpr, window.devicePixelRatio || 1);
     w = canvas.clientWidth; h = canvas.clientHeight;
+    if (!w || !h) return;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    seed();
-    if (!raf) frame(false);
+    drops.length = 0; flakes.length = 0;
+    draw(0);
   };
-  function frame(move = true) {
+
+  function draw(dt) {
     ctx.clearRect(0, 0, w, h);
-    if (kind === 'rain') {
-      ctx.strokeStyle = '#dbe7ff'; ctx.lineWidth = 1; ctx.lineCap = 'round';
-      for (const q of parts) {
-        if (move) { q.y += q.v; q.x -= q.v * 0.22; if (q.y > h + 20 || q.x < -20) Object.assign(q, spawn(false)); }
-        ctx.globalAlpha = q.a;
-        ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x + q.l * 0.22, q.y - q.l); ctx.stroke();
+    const S = o.strength;
+    // Wolken: je mehr Bewölkung, desto mehr und dichtere Wolken
+    if (cur.cloud > 0.01) {
+      const toneSum = cur.l + cur.d + cur.n || 1;
+      // Bei starker Bewölkung ein Schleier oben (geschlossene Wolkendecke)
+      const veil = Math.max(0, cur.cloud - 0.55) * 1.6;
+      if (veil > 0) {
+        const r = Math.round((255 * cur.l + 96 * cur.d + 52 * cur.n) / toneSum);
+        const gC = Math.round((255 * cur.l + 106 * cur.d + 64 * cur.n) / toneSum);
+        const b = Math.round((255 * cur.l + 122 * cur.d + 92 * cur.n) / toneSum);
+        const gr = ctx.createLinearGradient(0, 0, 0, h * 0.6);
+        gr.addColorStop(0, `rgba(${r},${gC},${b},${0.42 * veil * S})`);
+        gr.addColorStop(1, `rgba(${r},${gC},${b},0)`);
+        ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h * 0.6);
       }
-    } else if (kind === 'snow') {
-      ctx.fillStyle = '#fff';
-      for (const q of parts) {
-        if (move) { q.p += 0.02; q.y += q.v; q.x += Math.sin(q.p) * 0.4; if (q.y > h + 6) Object.assign(q, spawn(false)); }
-        ctx.globalAlpha = q.a;
-        ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 6.283); ctx.fill();
+      const base = Math.min(w, 520) * 0.44 * o.size;
+      const band = o.cloudBand.map((v) => (v < 1 ? v * h : v));
+      for (const c of clouds) {
+        // Wolke k erscheint, sobald die Bewölkung ihren Anteil erreicht
+        const a = Math.max(0, Math.min(1, (cur.cloud * (o.clouds + 1) - c.k) / 1.5)) * S;
+        if (a <= 0.01) continue;
+        c.x += c.v * dt / 1000;
+        if (c.x > 1.25) c.x = -0.35;
+        const cw = base * c.s, chh = cw * 0.46;
+        const x = c.x * (w + cw) - cw, y = band[0] + c.y * (band[1] - band[0]) - chh / 2;
+        for (const [key, wt] of [['l', cur.l], ['d', cur.d], ['n', cur.n]]) {
+          if (wt / toneSum < 0.02) continue;
+          ctx.globalAlpha = a * (wt / toneSum) * (key === 'l' ? o.lightAlpha : 1);
+          ctx.drawImage(sprites[key][c.img], x, y, cw, chh);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    // Nebel: weiche, langsam ziehende Bänder
+    if (cur.fog > 0.01) {
+      for (const f of fogBands) {
+        f.x += f.v * dt / 1000; if (f.x > 1) f.x -= 1;
+        const y = f.y * h, bw = w * 1.6;
+        for (const off of [f.x * bw - bw, f.x * bw]) {
+          const gr = ctx.createRadialGradient(off + bw / 2, y, 0, off + bw / 2, y, bw / 2);
+          gr.addColorStop(0, `rgba(236,240,245,${0.38 * cur.fog * S})`);
+          gr.addColorStop(1, 'rgba(236,240,245,0)');
+          ctx.save(); ctx.translate(0, y); ctx.scale(1, 0.16); ctx.translate(0, -y);
+          ctx.fillStyle = gr; ctx.fillRect(off, y - bw / 2, bw, bw);
+          ctx.restore();
+        }
       }
     }
-    ctx.globalAlpha = 1;
+    // Regen: gleicher Winkel und Tempo wie überall, Dichte nach Regenmenge
+    const wantDrops = Math.round(o.drops * cur.rain);
+    while (drops.length < wantDrops) drops.push(newDrop(true));
+    if (drops.length > wantDrops) drops.length = wantDrops;
+    if (drops.length) {
+      ctx.strokeStyle = '#dbe7ff'; ctx.lineWidth = 1; ctx.lineCap = 'round';
+      for (const q of drops) {
+        q.y += q.v * dt / 1000; q.x -= q.v * 0.22 * dt / 1000;
+        if (q.y > h + 24 || q.x < -24) Object.assign(q, newDrop(false));
+        ctx.globalAlpha = q.a * S;
+        ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x + q.l * 0.22, q.y - q.l); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // Schnee
+    const wantFlakes = Math.round(o.flakes * cur.snow);
+    while (flakes.length < wantFlakes) flakes.push(newFlake(true));
+    if (flakes.length > wantFlakes) flakes.length = wantFlakes;
+    if (flakes.length) {
+      ctx.fillStyle = '#fff';
+      for (const q of flakes) {
+        q.p += 1.2 * dt / 1000; q.y += q.v * dt / 1000; q.x += Math.sin(q.p) * 14 * dt / 1000;
+        if (q.y > h + 8) Object.assign(q, newFlake(false));
+        ctx.globalAlpha = q.a * S;
+        ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 6.283); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
   }
-  const loop = () => {
-    cancelAnimationFrame(raf); raf = 0;
-    if (!ctx) return;
-    if (kind === 'none') { ctx.clearRect(0, 0, w, h); return; }
-    if (!visible || reduceMotion.matches) { frame(false); return; }   // still: ein ruhiges Bild
-    const step = () => { frame(true); raf = requestAnimationFrame(step); };
+
+  // Werte gleiten zum Ziel (kein harter Wechsel), dann zeichnen
+  function step(now) {
+    raf = 0;
+    const dt = last ? Math.min(64, now - last) : 16;
+    last = now;
+    const k = 1 - Math.exp(-dt / tau);
+    let moving = false;
+    for (const key of Object.keys(cur)) {
+      const d = tgt[key] - cur[key];
+      if (Math.abs(d) > 0.002) { cur[key] += d * k; moving = true; } else cur[key] = tgt[key];
+    }
+    draw(dt);
+    const animated = cur.cloud > 0.01 || cur.fog > 0.01 || drops.length || flakes.length;
+    if (!animated && !moving) { if (!idleSince) idleSince = now; } else idleSince = 0;
+    if (visible && !document.hidden && (animated || moving)) raf = requestAnimationFrame(step);
+    else last = 0;
+  }
+  const kick = () => {
+    if (raf || !w) return;
+    if (reduceMotion.matches) { Object.assign(cur, tgt); draw(0); return; }   // ruhiges Standbild
     raf = requestAnimationFrame(step);
+  };
+
+  new ResizeObserver(resize).observe(canvas);
+  document.addEventListener('visibilitychange', kick);
+  reduceMotion.addEventListener('change', () => { cancelAnimationFrame(raf); raf = 0; last = 0; kick(); });
+  return {
+    set(look, cloudCover, amount, fast = false) {
+      tau = fast ? 130 : 380;   // beim Wischen schneller nachziehen
+      const [l, d, n] = look.tone;
+      tgt = { cloud: cloudCover, l, d, n, fog: look.fog, rain: look.rain * amount, snow: look.snow * amount };
+      kick();
+    },
+    setVisible(v) { visible = v; if (v) kick(); },
+  };
+}
+
+// Steuerung: setzt Szene für Karte + Seite gleichzeitig, inkl. Blitz
+const sky = (() => {
+  let card = null, page = null, scene = '', flashTimer = 0;
+  const flash = () => {
+    clearTimeout(flashTimer);
+    if (scene !== 'thunder' || reduceMotion.matches) return;
+    const frames = (peak) => [{ opacity: 0 }, { opacity: peak, offset: 0.08 }, { opacity: 0, offset: 0.2 }, { opacity: peak * 0.6, offset: 0.3 }, { opacity: 0 }];
+    const a = document.querySelector('#card-weather .mw-flash');
+    const b = document.querySelector('.page-sky-flash');
+    if (a && a.animate) a.animate(frames(0.38), { duration: 700, easing: 'ease-out' });
+    if (b && b.animate) b.animate(frames(0.14), { duration: 700, easing: 'ease-out' });
+    flashTimer = setTimeout(flash, 5000 + Math.random() * 8000);
   };
   return {
     init() {
-      canvas = document.getElementById('mw-precip');
-      if (!canvas || !canvas.getContext) return;
-      ctx = canvas.getContext('2d');
-      new ResizeObserver(resize).observe(canvas);
-      new IntersectionObserver(([e]) => { visible = e.isIntersecting; loop(); }).observe(canvas);
-      reduceMotion.addEventListener('change', loop);
+      const c = document.getElementById('mw-sky-fx');
+      const p = document.getElementById('page-sky-fx');
+      if (c && c.getContext) {
+        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [20, 210], lightAlpha: 0.62, drops: 130, flakes: 80 });
+        new IntersectionObserver(([e]) => card.setVisible(e.isIntersecting)).observe(c);
+      }
+      if (p && p.getContext) page = createSkyFx(p, { strength: 0.38, size: 1.9, maxDpr: 1, clouds: 6, cloudBand: [0.02, 0.32], drops: 70, flakes: 50 });
     },
-    set(k, amt) { kind = k; amount = Math.max(0, Math.min(1, amt)); seed(); loop(); },
+    // c = { weather_code, is_day, cloud_cover, precipitation }
+    set(c, fast = false) {
+      if (fast) {   // beim Wischen: kurze Übergänge, damit der Himmel mitkommt
+        document.documentElement.classList.add('sky-fast');
+        clearTimeout(this.fastTimer);
+        this.fastTimer = setTimeout(() => document.documentElement.classList.remove('sky-fast'), 500);
+      }
+      const next = skyScene(c);
+      const look = SKY_LOOK[next];
+      const cover = Math.max(0, Math.min(1, (Number(c.cloud_cover) || 0) / 100));
+      const amount = Math.min(1, 0.3 + (Number(c.precipitation) || 0) / 3);   // mm/h → Dichte
+      document.getElementById('card-weather').dataset.sky = next;
+      document.documentElement.dataset.sky = next;
+      if (card) card.set(look, cover, amount, fast);
+      if (page) page.set(look, cover, amount, fast);
+      if (next !== scene) { scene = next; if (scene === 'thunder') flashTimer = setTimeout(flash, 1200); else clearTimeout(flashTimer); }
+    },
   };
 })();
 
-function applySky(c) {
-  const scene = skyScene(c);
-  const card = document.getElementById('card-weather');
-  card.dataset.sky = scene;
-  // Regenmenge (mm/h) steuert die Dichte der Tropfen
-  const mm = Number(c.precipitation) || 0;
-  const amount = Math.min(1, 0.25 + mm / 3);
-  skyFx.set(scene === 'rain' || scene === 'thunder' ? 'rain' : scene === 'snow' ? 'snow' : 'none', amount);
+// Zeit-Zeiger im Stundenstreifen: welche Stunde Himmel + Kopfzeile bestimmt
+const wxFocus = { idx: -1, nowIdx: -1 };
+let skyLive = false;       // Live-Schalter: Himmel folgt beim Wischen jeder Stunde
+try { skyLive = localStorage.getItem('sky-live') === '1'; } catch (e) { /* privates Fenster */ }
+let weatherNow = null;     // aktuelle Werte (current) für "Jetzt"
+let weatherToday = null;   // Tageswerte heute (daily)
+
+function hourConditions(i) {
+  const h = lastForecast.hourly;
+  return { weather_code: h.weather_code[i], is_day: h.is_day[i], cloud_cover: h.cloud_cover[i], precipitation: h.precipitation[i], temperature_2m: h.temperature_2m[i] };
+}
+
+// Kopfzeile für die gewählte Stunde: Beschreibung · Zeit, Temperatur, Tageswerte
+function renderFocusHeader(animate = false) {
+  if (!lastForecast || wxFocus.idx < 0) return;
+  const h = lastForecast.hourly;
+  const i = wxFocus.idx;
+  const isNow = i === wxFocus.nowIdx;
+  const c = isNow && weatherNow ? weatherNow : hourConditions(i);
+  const day = weatherDays.find((d) => i >= d.from && i <= d.to) || weatherDays[0];
+  const hh = h.time[i].slice(11, 16);
+  const when = isNow ? 'Jetzt' : `${day.isToday ? 'Heute' : WEEKDAYS[new Date(day.key + 'T12:00Z').getUTCDay()]} ${hh}`;
+  const desc = `${wmoLabel(c.weather_code, c.is_day)} · ${when}`;
+  const temp = c.temperature_2m != null ? c.temperature_2m : h.temperature_2m[i];
+  const stats = day.isToday && weatherToday ? weatherToday : { tmax: day.max, tmin: day.min, rain: day.rain };
+  if (animate) {
+    swapValue($('#weather-desc'), desc);
+    rollNumber($('#weather-tmax'), temp, (v) => `${Math.round(v)}°C`);
+    rollNumber($('#weather-tmax-label'), stats.tmax, (v) => `${Math.round(v)} °C`);
+    rollNumber($('#weather-tmin'), stats.tmin, (v) => `${Math.round(v)} °C`);
+    rollNumber($('#weather-rain'), stats.rain, (v) => `${v.toFixed(1)} mm`);
+  } else {
+    $('#weather-desc').text(desc);
+    $('#weather-tmax').text(`${Math.round(temp)}°C`);
+    $('#weather-tmax-label').text(`${Math.round(stats.tmax)} °C`);
+    $('#weather-tmin').text(`${Math.round(stats.tmin)} °C`);
+    $('#weather-rain').text(`${stats.rain.toFixed(1)} mm`);
+  }
+  $('#weather-now').prop('hidden', isNow);
+}
+
+// Gewählte Stunde setzen → Himmel (Karte + Seite) und Kopfzeile folgen
+function setWeatherFocus(i, animate = false, fast = false) {
+  if (!lastForecast) return;
+  const n = lastForecast.hourly.time.length;
+  i = Math.max(0, Math.min(n - 1, i));
+  if (i === wxFocus.idx && !animate) return;
+  wxFocus.idx = i;
+  const isNow = i === wxFocus.nowIdx;
+  sky.set(isNow && weatherNow ? weatherNow : hourConditions(i), fast);
+  renderFocusHeader(animate);
+}
+
+// Beim Öffnen der Seite: nur den aktuellen Himmel holen (kein Laden der Wetterdaten)
+function loadSkyNow() {
+  $.getJSON(WEATHER_API, {
+    latitude: weatherLoc.lat, longitude: weatherLoc.lon,
+    current: 'weather_code,is_day,cloud_cover,precipitation,temperature_2m', timezone: 'Europe/Zurich',
+  }).done((data) => { if (data.current && !lastForecast) sky.set(data.current); });
 }
 
 function loadWeather() {
@@ -687,31 +923,30 @@ function loadWeather() {
     latitude: weatherLoc.lat,
     longitude: weatherLoc.lon,
     daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum',
-    current: 'weather_code,is_day,cloud_cover,precipitation',   // für den Live-Himmel
+    current: 'weather_code,is_day,cloud_cover,precipitation,temperature_2m',   // "Jetzt" für Himmel + Kopfzeile
     forecast_days: 1,
     timezone: 'Europe/Zurich',
   }).done((data) => {
-    if (data.current) applySky(data.current);
     const d = data.daily;
-    const tmax = Math.round(d.temperature_2m_max[0]);
-    const rain = d.precipitation_sum[0];
-    rollNumber($('#weather-tmax'), tmax, (v) => `${Math.round(v)}°C`);
-    rollNumber($('#weather-tmax-label'), tmax, (v) => `${Math.round(v)} °C`);
-    rollNumber($('#weather-tmin'), d.temperature_2m_min[0], (v) => `${Math.round(v)} °C`);
-    rollNumber($('#weather-rain'), rain, (v) => `${v.toFixed(1)} mm`);
-    swapValue($('#weather-desc'), describeDay(rain, tmax));
+    weatherToday = { tmax: d.temperature_2m_max[0], tmin: d.temperature_2m_min[0], rain: d.precipitation_sum[0] };
+    weatherNow = data.current || null;
   });
 
   // Für die Schnellen: stündlicher Verlauf der nächsten 5 Tage (MeteoSwiss-Modell)
   const forecast = $.getJSON(WEATHER_API, {
     latitude: weatherLoc.lat,
     longitude: weatherLoc.lon,
-    hourly: 'temperature_2m,precipitation',
+    hourly: 'temperature_2m,precipitation,weather_code,cloud_cover,is_day',   // auch für den Live-Himmel
     forecast_days: 5,
     models: 'meteoswiss_icon_ch2', // ch1 reicht nur ~33 h, ch2 deckt die vollen 5 Tage ab
     timezone: 'Europe/Zurich',
   }).done(renderWeatherChart);
 
+  // Erst wenn beides da ist: Himmel + Kopfzeile auf "Jetzt" (mit Zahlen-Animation)
+  $.when(today, forecast).done(() => {
+    if (wxFocus.idx === wxFocus.nowIdx || wxFocus.idx < 0) setWeatherFocus(wxFocus.nowIdx, true);
+    else renderFocusHeader(true);
+  });
   $.when(today, forecast)
     .fail(() => {
       $('#weather-skeleton').addClass('d-none');
@@ -765,6 +1000,8 @@ let weatherSelDay = null;  // gewählter Tag (key); null bzw. heute = "nächste 
 function renderWeatherChart(data) {
   lastForecast = data;
   const h = data.hourly;
+  wxFocus.nowIdx = Math.max(0, h.time.indexOf(zurichHourKey()));
+  wxFocus.idx = -1;
 
   Highcharts.setOptions({ lang: {
     weekdays: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
@@ -894,10 +1131,11 @@ function renderWeatherStrip() {
     ],
   });
 
-  // Start: "jetzt" am linken Rand (bzw. vorherige Position halten)
+  // Start: "Jetzt" unter dem Zeit-Zeiger in der Mitte (bzw. vorherige Position halten)
   if (keepTime != null) scrollStripTo(keepTime, 'center', false);
-  else scrollStripTo(nowT - 36e5 * 0.5, 'left', false);
+  else scrollStripTo(nowT, 'center', false);
   updateStripHeader();
+  setWeatherFocus(stripCenterIndex());
 }
 
 // Streifen zu einem Zeitpunkt scrollen.
@@ -964,9 +1202,19 @@ function selectWeatherDay(key) {
   if (!d || !lastForecast) return;
   showStripDay(d);
   const h = lastForecast.hourly;
-  // Heute: ab jetzt; andere Tage: ab 06 Uhr, damit man den Tag gut sieht
-  const idx = d.isToday ? Math.max(0, h.time.indexOf(zurichHourKey())) : Math.min(d.from + 6, d.to);
-  scrollStripTo(Date.parse(h.time[idx] + 'Z') - 36e5 * 0.5, 'left', true);
+  // Heute: jetzt; andere Tage: 12 Uhr – das Wetter des Tages. Himmel + Kopfzeile sofort.
+  const idx = d.isToday ? wxFocus.nowIdx : Math.min(d.from + 12, d.to);
+  setWeatherFocus(idx);
+  scrollStripTo(Date.parse(h.time[idx] + 'Z'), 'center', true);
+}
+
+// Stunde unter dem Zeit-Zeiger (Mitte des Streifens) als Index in den Stundendaten
+function stripCenterIndex() {
+  if (!wxStrip || !lastForecast) return wxFocus.nowIdx;
+  const scroller = document.getElementById('weather-scroll');
+  const t = wxStrip.xAxis[0].toValue(scroller.scrollLeft + scroller.clientWidth / 2);
+  const t0 = Date.parse(lastForecast.hourly.time[0] + 'Z');
+  return Math.round((t - t0) / 36e5);
 }
 
 // Ziehen mit der Maus, Pfeiltasten und Shift+Mausrad (Touch & Trackpad scrollen nativ)
@@ -980,7 +1228,11 @@ function initStripScroll() {
     if (!wxStrip || strip.busy) return;
     // Wie das Timer-Rad: jede Stunde, die durch die Mitte läuft, gibt einen Tick
     const hour = Math.round(wxStrip.xAxis[0].toValue(el.scrollLeft + el.clientWidth / 2) / 36e5);
-    if (hour !== strip.lastHour) { if (strip.lastHour != null) haptics.scrub(); strip.lastHour = hour; }
+    if (hour !== strip.lastHour) {
+      if (strip.lastHour != null) haptics.scrub();
+      strip.lastHour = hour;
+      if (skyLive) setWeatherFocus(stripCenterIndex(), false, true);   // Live: Himmel + Kopfzeile folgen der Mitte
+    }
     const d = stripCenterDay();
     if (d && d.key !== strip.lastKey) showStripDay(d);
   }, { passive: true });
@@ -1644,7 +1896,19 @@ $(function () {
     if (e.matches && btcUsd != null && !btcSeries) loadBtcChart(btcRange);
   });
   $('#btn-weather').on('click', loadWeather);
-  skyFx.init();
+  sky.init();
+  loadSkyNow();
+  // Live-Schalter: an = Himmel folgt beim Wischen; aus = nur gewählter Tag bzw. Jetzt
+  const setSkyLive = (on, save = true) => {
+    skyLive = on;
+    $('#sky-live-toggle').attr('aria-checked', on);
+    $('#weather-hourly-wrap').toggleClass('is-live', on);
+    if (save) { try { localStorage.setItem('sky-live', on ? '1' : '0'); } catch (e) { /* egal */ } }
+    if (on && lastForecast) setWeatherFocus(stripCenterIndex(), false, true);   // sofort zur Mitte springen
+  };
+  setSkyLive(skyLive, false);
+  $('#sky-live-toggle').on('click', () => setSkyLive(!skyLive));
+  $('#weather-now').on('click', () => { const d = weatherDays.find((x) => x.isToday); if (d) selectWeatherDay(d.key); });
 
   // Wetter: Ort wählen
   $('#weather-place').text(weatherLoc.name);

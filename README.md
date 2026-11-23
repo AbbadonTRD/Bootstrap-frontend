@@ -37,7 +37,7 @@ A live data dashboard built with plain HTML, Bootstrap 5.3 and jQuery. It combin
 
 - **Random cat:** loads a random image from The Cat API, shows its resolution and keeps a history of the last four images.
 - **Bitcoin price:** shows the current price in USD and CHF, the 24-hour change and a price chart with ranges from one hour to one year. The chart is green above the current price and red below it, and marks the high and low.
-- **Weather:** current conditions from the MeteoSwiss ICON-CH2 model, for Zurich by default. The search button next to the city name switches to any Swiss town or postcode, with quick picks such as Bern, Basel and Geneva, and remembers the choice. A swipeable hourly chart shows temperature and rain. A five-day forecast below it selects which day the hourly chart shows.
+- **Weather:** current conditions from the MeteoSwiss ICON-CH2 model, for Zurich by default. The search button next to the city name switches to any Swiss town or postcode, with quick picks such as Bern, Basel and Geneva, and remembers the choice. A swipeable hourly chart shows temperature and rain; the hour under its center pointer drives the header and a live sky. That sky (clear, clouds, fog, rain, thunder, snow, day and night) fills the card and is mirrored subtly in the page background. A five-day forecast below the chart jumps to noon of the chosen day.
 
 ### EV charging stations and map
 

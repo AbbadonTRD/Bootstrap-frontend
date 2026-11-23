@@ -637,21 +637,35 @@ const SKY_LOOK = {
 
 // Weiche Wolken-Vorlage (Offscreen-Canvas) in einer Farbe; wird pro Frame nur noch kopiert
 function makeCloudSprite(seed, body, shade) {
+  // Cumulus-Form: gewölbte Oberseite aus mehreren Bällen, flache Unterseite, klare Kante
   const c = document.createElement('canvas');
-  c.width = 260; c.height = 120;
+  c.width = 300; c.height = 140;
   const g = c.getContext('2d');
   let s = seed;
   const rnd = () => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-  const puffs = [];
-  for (let i = 0; i < 7; i++) puffs.push({ x: 40 + rnd() * 180, y: 52 + rnd() * 26, r: 26 + rnd() * 24 });
-  puffs.push({ x: 130, y: 50, r: 44 });
-  const blob = (p, col, dy, scale) => {
-    const gr = g.createRadialGradient(p.x, p.y + dy, 0, p.x, p.y + dy, p.r * scale);
-    gr.addColorStop(0, col); gr.addColorStop(0.55, col.replace(/[\d.]+\)$/, '0.55)')); gr.addColorStop(1, col.replace(/[\d.]+\)$/, '0)'));
-    g.fillStyle = gr; g.beginPath(); g.arc(p.x, p.y + dy, p.r * scale, 0, 6.283); g.fill();
+  const base = 104;
+  const puffs = [{ x: 150, y: 70, r: 46 + rnd() * 8 }];
+  for (let i = 0; i < 4; i++) {
+    const side = i % 2 ? 1 : -1, d = 34 + Math.floor(i / 2) * 36 + rnd() * 10;
+    puffs.push({ x: 150 + side * d, y: 78 + Math.floor(i / 2) * 8 + rnd() * 6, r: 34 - Math.floor(i / 2) * 7 + rnd() * 8 });
+  }
+  for (let i = 0; i < 6; i++) puffs.push({ x: 50 + i * 40 + rnd() * 10, y: base - 14, r: 20 + rnd() * 8 });   // Sockel
+  const blob = (p, col, dx, dy, scale) => {
+    const r = p.r * scale;
+    const gr = g.createRadialGradient(p.x + dx, p.y + dy, 0, p.x + dx, p.y + dy, r);
+    gr.addColorStop(0, col);
+    gr.addColorStop(0.72, col.replace(/[\d.]+\)$/, (m) => `${parseFloat(m) * 0.88})`));
+    gr.addColorStop(1, col.replace(/[\d.]+\)$/, '0)'));
+    g.fillStyle = gr; g.beginPath(); g.arc(p.x + dx, p.y + dy, r, 0, 6.283); g.fill();
   };
-  puffs.forEach((p) => blob(p, shade, 9, 1.05));   // Schattenseite unten
-  puffs.forEach((p) => blob(p, body, 0, 1));       // Wolkenkörper
+  puffs.forEach((p) => blob(p, shade, 0, 10, 1.02));   // Schatten unten
+  puffs.forEach((p) => blob(p, body, -2, -2, 1));      // Körper, Licht leicht von oben links
+  // Unterseite weich abschneiden → flache Wolkenbasis
+  g.globalCompositeOperation = 'destination-out';
+  const cut = g.createLinearGradient(0, base - 6, 0, base + 14);
+  cut.addColorStop(0, 'rgba(0,0,0,0)'); cut.addColorStop(1, 'rgba(0,0,0,1)');
+  g.fillStyle = cut; g.fillRect(0, base - 6, c.width, c.height);
+  g.globalCompositeOperation = 'source-over';
   return c;
 }
 
@@ -707,15 +721,15 @@ function createSkyFx(canvas, opt) {
         gr.addColorStop(1, `rgba(${r},${gC},${b},0)`);
         ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h * 0.6);
       }
-      const base = Math.min(w, 520) * 0.44 * o.size;
-      const band = o.cloudBand.map((v) => (v < 1 ? v * h : v));
+      const base = Math.min(w, 520) * 0.56 * o.size;
+      const band = o.cloudBand.map((v) => (v >= 0 && v < 1 ? v * h : v));   // 0..1 = Anteil, sonst Pixel
       for (const c of clouds) {
         // Wolke k erscheint, sobald die Bewölkung ihren Anteil erreicht
         const a = Math.max(0, Math.min(1, (cur.cloud * (o.clouds + 1) - c.k) / 1.5)) * S;
         if (a <= 0.01) continue;
         c.x += c.v * dt / 1000;
         if (c.x > 1.25) c.x = -0.35;
-        const cw = base * c.s, chh = cw * 0.46;
+        const cw = base * c.s, chh = cw * 0.467;
         const x = c.x * (w + cw) - cw, y = band[0] + c.y * (band[1] - band[0]) - chh / 2;
         for (const [key, wt] of [['l', cur.l], ['d', cur.d], ['n', cur.n]]) {
           if (wt / toneSum < 0.02) continue;
@@ -825,7 +839,7 @@ const sky = (() => {
       const c = document.getElementById('mw-sky-fx');
       const p = document.getElementById('page-sky-fx');
       if (c && c.getContext) {
-        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [20, 210], lightAlpha: 0.62, drops: 130, flakes: 80 });
+        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.85, drops: 130, flakes: 80 });
         new IntersectionObserver(([e]) => card.setVisible(e.isIntersecting)).observe(c);
       }
       if (p && p.getContext) page = createSkyFx(p, { strength: 0.38, size: 1.9, maxDpr: 1, clouds: 6, cloudBand: [0.02, 0.32], drops: 70, flakes: 50 });
@@ -2601,10 +2615,35 @@ function preloadArrivalRoutes(list) {
   for (let k = 0; k < 3; k++) run();
 }
 
-// Stopp-Leiste ●—○—○—● für eine Liste von Halten
+// Stopp-Leiste ●—○—○—●: Punkte nach Fahrzeit platziert (nicht gleichmässig), zu nahe
+// Halte werden zusammengefasst – so bleibt die Linie auch bei vielen Halten ruhig
 function trackMarks(stops) {
   const n = stops.length;
-  return stops.map((s, k) => `<i style="left:${n > 1 ? (k / (n - 1)) * 100 : 0}%" class="${k === 0 || k === n - 1 ? 'is-end' : ''}"></i>`).join('');
+  if (n < 2) return '';
+  const t0 = stops[0].ts, t1 = stops[n - 1].ts, span = t1 - t0;
+  let prev = 0;
+  const pos = stops.map((s, k) => {
+    let f = span > 0 && s.ts ? (s.ts - t0) / span : k / (n - 1);
+    f = Math.max(prev, Math.min(1, f));          // nie rückwärts (Durchfahrten ohne Zeit)
+    prev = f;
+    return f;
+  });
+  const MIN = 0.08;                               // mind. 8 % Abstand → höchstens ~12 Punkte
+  const keep = [0];
+  for (let k = 1; k < n - 1; k++) {
+    if (pos[k] - pos[keep[keep.length - 1]] >= MIN && 1 - pos[k] >= MIN) keep.push(k);
+  }
+  keep.push(n - 1);
+  return keep.map((k) => `<i style="left:${(pos[k] * 100).toFixed(1)}%" class="${k === 0 || k === n - 1 ? 'is-end' : ''}"></i>`).join('');
+}
+
+// Halte-Anzahl für die Karte ("14 halte"), Start und Ziel nicht mitgezählt
+const stopCount = (stops) => (stops.length > 2 ? `${stops.length - 2} halt${stops.length - 2 === 1 ? '' : 'e'}` : 'direkt');
+
+// Betreiber sauber anzeigen: "SOB-sob" → "SOB", "BLS-bls" → "BLS"
+function opLabel(op) {
+  const m = String(op || '').match(/^([^-]+)-(.+)$/);
+  return m && m[1].toLowerCase() === m[2].toLowerCase() ? m[1] : op;
 }
 
 // Inhalt einer Zug-Karte (wird nach dem Nachladen der Route neu gesetzt)
@@ -2617,7 +2656,7 @@ function trainCardHtml(t) {
     return `
       <span class="tui-row1">
         <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
-        ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+        ${t.op ? `<span class="tui-op">${esc(opLabel(t.op))}</span>` : ''}
         <span class="tui-to">← ${esc(t.from || 'unbekannt')}</span>
       </span>
       <span class="tui-row2" aria-busy="true">
@@ -2634,7 +2673,7 @@ function trainCardHtml(t) {
     return `
       <span class="tui-row1">
         <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
-        ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+        ${t.op ? `<span class="tui-op">${esc(opLabel(t.op))}</span>` : ''}
         <span class="tui-to">← ${esc(t.from || 'unbekannt')}</span>
       </span>
       <span class="tui-row2">
@@ -2642,14 +2681,14 @@ function trainCardHtml(t) {
         ${ready ? `<span class="tui-track" aria-hidden="true">${trackMarks(t.stops)}</span>` : `<span class="tui-ends">von ${esc(t.from || '–')}${t.route === 'loading' ? ' …' : ''}</span>`}
         <span>${hm(t.dep)}${dl}</span>
       </span>
-      <span class="tui-row3"><span>${gl}</span><span>${t.onward.length ? `weiter → ${esc(t.to)}` : 'endet hier'}${total ? ` · ${total}` : ''}</span></span>`;
+      <span class="tui-row3"><span>${gl}</span><span>${t.onward.length ? `weiter → ${esc(t.to)}` : 'endet hier'}${ready ? ` · ${stopCount(t.stops)}` : ''}${total ? ` · ${total}` : ''}</span></span>`;
   }
   const n = t.stops.length;
   const total = t.end ? dur(Math.round((t.end - t.dep) / 60)) : '';
   return `
     <span class="tui-row1">
       <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
-      ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+      ${t.op ? `<span class="tui-op">${esc(opLabel(t.op))}</span>` : ''}
       <span class="tui-to">${esc(t.to || '–')}</span>
     </span>
     <span class="tui-row2">
@@ -2657,7 +2696,7 @@ function trainCardHtml(t) {
       ${n > 1 ? `<span class="tui-track" aria-hidden="true">${trackMarks(t.stops)}</span>` : '<span class="tui-ends">● endet hier</span>'}
       <span>${t.end ? hm(t.end) : ''}</span>
     </span>
-    <span class="tui-row3"><span>${gl}</span><span>${total}</span></span>`;
+    <span class="tui-row3"><span>${gl}</span><span>${n > 1 ? `${stopCount(t.stops)} · ` : ''}${total}</span></span>`;
 }
 
 // Linke Liste: Karten wie in sbb-tui
@@ -2701,7 +2740,7 @@ function renderTuiDetail() {
   const head = `
     <div class="tui-detail-head">
       <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
-      ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
+      ${t.op ? `<span class="tui-op">${esc(opLabel(t.op))}</span>` : ''}
       <span>${arr ? `← ${esc(t.from || 'unbekannt')}` : `→ ${esc(t.to || '–')}`}</span>
     </div>`;
   if (arr && t.route !== 'ready') {
@@ -2802,7 +2841,7 @@ function fillBoard(t) {
   const plat = String(t.platform || '–');
   $('#sbbd-plat').text(plat).parent().attr('data-len', plat.length > 6 ? 'long' : plat.length);
   let stops;
-  let strip = [`<span>${esc(t.op || 'ÖV')}</span>`];
+  let strip = [`<span>${esc(opLabel(t.op) || 'ÖV')}</span>`];
   if (t.number) strip.push(`<span>Zug ${esc(String(t.number).replace(/^0+/, ''))}</span>`);
   if (arr) {
     // Ankunftsanzeige: Herkunft gross, darunter die letzten Halte vor diesem Bahnhof

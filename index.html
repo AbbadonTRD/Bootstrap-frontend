@@ -25,7 +25,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-23j" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-23l" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -66,7 +66,7 @@
 
   <!-- Interaktiver Punkte-Hintergrund (Canvas) -->
   <!-- Seitenhintergrund: spiegelt den Live-Himmel der Wetterkarte (dezent) -->
-  <div class="page-sky" aria-hidden="true"><span class="page-sky-sun"></span><span class="page-sky-moon"></span><span class="page-sky-stars"></span><canvas id="page-sky-fx" class="page-sky-fx"></canvas><span class="page-sky-flash"></span></div>
+  <div class="page-sky" aria-hidden="true"><span class="page-sky-rays"></span><span class="page-sky-sun"></span><span class="page-sky-moon"></span><span class="page-sky-stars"></span><canvas id="page-sky-fx" class="page-sky-fx"></canvas><span class="page-sky-flash"></span></div>
   <canvas id="dot-bg" class="dot-bg" aria-hidden="true"></canvas>
 
   <!-- Header (Navigation Menu) -->
@@ -228,7 +228,7 @@
         <section id="card-weather" class="ui-card mw">
           <!-- Live-Himmel: folgt dem Wetter zur gewählten Zeit (data-sky).
                Hinten: Farbverlauf, Sonne/Mond, Sterne · Mitte: Alpenkämme · Vorne (Canvas): Wolken, Nebel, Regen, Schnee -->
-          <div class="mw-sky" aria-hidden="true"><span class="mw-sun"></span><span class="mw-moon"></span><span class="mw-stars"></span></div>
+          <div class="mw-sky" aria-hidden="true"><span class="mw-horizon"></span><span class="mw-rays"></span><span class="mw-sun"></span><span class="mw-moon"></span><span class="mw-stars"></span></div>
           <svg class="mw-mountains" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
             <path class="mw-ridge-far" d="M0 120 L0 74 L38 62 L70 50 L104 60 L150 38 L186 52 L226 36 L268 54 L308 42 L352 56 L400 46 L400 120 Z" />
             <path class="mw-ridge-near" d="M0 120 L0 88 L30 80 L55 62 L72 70 L95 46 L118 58 L140 40 L162 52 L190 30 L214 48 L236 42 L262 60 L290 50 L318 68 L346 58 L372 74 L400 66 L400 120 Z" />
@@ -546,6 +546,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-23j"></script>
+  <script src="app.js?v=2026-11-23l"></script>
 </body>
 </html>

@@ -2773,3 +2773,13 @@ html[data-theme="dark"][data-sky="cloudy-night"] .page-sky-stars { opacity: .16;
 html[data-sky="clear-day"] .page-sky-rays { opacity: .5; }
 html[data-sky="partly-day"] .page-sky-rays { opacity: .25; }
 @media (prefers-reduced-motion: reduce) { .mw-sky > .mw-rays, .page-sky > .page-sky-rays { animation: none; } }
+
+/* Schalter ohne Pillen-Rahmen: nur Icon/Label + Schalter (Bitcoin-Kursverlauf und Live) */
+.wallet-toggle, .wallet-toggle[aria-checked="true"],
+.mw-live-toggle, .mw-live-toggle[aria-checked="true"] {
+  background: transparent !important; border-color: transparent !important; box-shadow: none !important;
+}
+@media (hover: hover) and (pointer: fine) {
+  .wallet-toggle:hover, .wallet-toggle[aria-checked="true"]:hover,
+  .mw-live-toggle:hover, .mw-live-toggle[aria-checked="true"]:hover { background: rgba(255,255,255,.04) !important; }
+}

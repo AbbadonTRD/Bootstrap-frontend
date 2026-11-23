@@ -2239,9 +2239,10 @@ body {
    aus Licht-Kanten, Randleuchten und einem feinen Farbsaum (rot/blau) wie bei Chrome.
    In Chrome/Edge testen: ?glass=fallback an die URL hängen.
    ═════════════════════════════════════════════════════════════════════════════ */
+/* Klar statt matt: Chrome nutzt fast keinen Blur (0.5 + 1 px) – der Glas-Eindruck kommt von der Kante */
 .lg-fallback .liquid-glass {
-  -webkit-backdrop-filter: blur(5px) saturate(1.9) brightness(1.12) contrast(1.06);
-          backdrop-filter: blur(5px) saturate(1.9) brightness(1.12) contrast(1.06);
+  -webkit-backdrop-filter: blur(1.5px) saturate(1.7) brightness(1.1) contrast(1.04);
+          backdrop-filter: blur(1.5px) saturate(1.7) brightness(1.1) contrast(1.04);
 }
 /* Glaskante + Glanz auf einer eigenen Ebene (::before). So überschreiben die Knopf-Stile
    (lg-btn, Hell/Dunkel) den Effekt nicht – die setzen nur den Schatten des Elements selbst. */
@@ -2436,3 +2437,95 @@ input::-webkit-search-decoration, input::-webkit-search-cancel-button { -webkit-
 
 /* Kein Safari-"?" für Bilder ohne Quelle oder mit Ladefehler */
 img:not([src]), img[src=""], img.img-broken { visibility: hidden; }
+
+/* Unsichtbarer Schalter für den iPhone-Haptik-Tick (muss gerendert sein, darf nicht display:none sein) */
+.haptic-switch {
+  position: fixed; left: 0; bottom: 0; width: 1px; height: 1px;
+  overflow: hidden; opacity: .001; pointer-events: none; clip-path: inset(50%);
+}
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Wetter: Live-Himmel – der Hintergrund folgt dem aktuellen Wetter und der Tageszeit
+   (data-sky wird nach dem Laden gesetzt; ohne Daten bleibt der bisherige Look)
+   ═════════════════════════════════════════════════════════════════════════════ */
+@property --mw-top    { syntax: "<color>"; inherits: true; initial-value: #55677d; }
+@property --mw-mid    { syntax: "<color>"; inherits: true; initial-value: #7d8ea2; }
+@property --mw-bottom { syntax: "<color>"; inherits: true; initial-value: #a7b6c6; }
+#card-weather {
+  background: linear-gradient(180deg, var(--mw-top) 0%, var(--mw-mid) 45%, var(--mw-bottom) 100%);
+  transition: --mw-top 1.2s ease, --mw-mid 1.2s ease, --mw-bottom 1.2s ease, border-color 1.2s ease;
+}
+#card-weather[data-sky="clear-day"]    { --mw-top: #2c68b8; --mw-mid: #4f8fd6; --mw-bottom: #86b8e6; }
+#card-weather[data-sky="partly-day"]   { --mw-top: #44709f; --mw-mid: #6c95c0; --mw-bottom: #a3bfd9; }
+#card-weather[data-sky="overcast"]     { --mw-top: #55677d; --mw-mid: #7d8ea2; --mw-bottom: #a7b6c6; }
+#card-weather[data-sky="fog"]          { --mw-top: #727d88; --mw-mid: #929ca6; --mw-bottom: #bcc3ca; }
+#card-weather[data-sky="rain"]         { --mw-top: #2d3b4c; --mw-mid: #435468; --mw-bottom: #66788c; }
+#card-weather[data-sky="thunder"]      { --mw-top: #1c232e; --mw-mid: #2f3a49; --mw-bottom: #4f5c6c; }
+#card-weather[data-sky="snow"]         { --mw-top: #6a7c92; --mw-mid: #8fa2b6; --mw-bottom: #c4d1de; }
+#card-weather[data-sky="clear-night"]  { --mw-top: #070f24; --mw-mid: #12204a; --mw-bottom: #273c6b; }
+#card-weather[data-sky="cloudy-night"] { --mw-top: #0f1727; --mw-mid: #1c2840; --mw-bottom: #35435e; }
+
+/* Ebenen hinter dem Inhalt */
+.mw-sky { position: absolute; inset: 0; z-index: -2; pointer-events: none; }
+.mw-sky > span { position: absolute; inset: 0; opacity: 0; transition: opacity 1.2s ease; }
+.mw-precip { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+.mw-flash { position: absolute; inset: 0; z-index: -1; pointer-events: none; background: #fff; opacity: 0; }
+
+/* Sonne: warmer Schein oben rechts */
+.mw-sun {
+  background:
+    radial-gradient(circle at 86% 10%, rgba(255,244,214,.95) 0, rgba(255,226,150,.55) 34px, rgba(255,214,120,.18) 90px, rgba(255,214,120,0) 170px);
+}
+#card-weather[data-sky="clear-day"] .mw-sun { opacity: 1; }
+#card-weather[data-sky="partly-day"] .mw-sun { opacity: .65; }
+
+/* Sterne: viele kleine Punkte, leises Funkeln */
+.mw-stars {
+  background-image:
+    radial-gradient(1.2px 1.2px at 12% 14%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 27% 8%, #fff 50%, transparent 51%),
+    radial-gradient(1.4px 1.4px at 41% 22%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 55% 6%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 68% 18%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 79% 9%, #fff 50%, transparent 51%),
+    radial-gradient(1.5px 1.5px at 91% 24%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 7% 31%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 34% 36%, #fff 50%, transparent 51%),
+    radial-gradient(1.2px 1.2px at 61% 33%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 86% 40%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 19% 46%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 48% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 73% 28%, #fff 50%, transparent 51%);
+}
+#card-weather[data-sky="clear-night"] .mw-stars { opacity: .9; animation: mw-twinkle 4s ease-in-out infinite alternate; }
+#card-weather[data-sky="cloudy-night"] .mw-stars { opacity: .35; }
+@keyframes mw-twinkle { from { opacity: .9; } to { opacity: .55; } }
+
+/* Nebel: heller Dunst von unten */
+.mw-fog { background: linear-gradient(0deg, rgba(235,240,245,.55) 0%, rgba(235,240,245,.18) 45%, rgba(235,240,245,0) 75%); }
+#card-weather[data-sky="fog"] .mw-fog { opacity: 1; }
+
+/* Wolke nur, wenn es bewölkt ist; nachts gedämpft */
+#card-weather[data-sky="clear-day"] .mw-cloud,
+#card-weather[data-sky="clear-night"] .mw-cloud { opacity: 0; }
+#card-weather .mw-cloud { transition: opacity 1.2s ease, filter 1.2s ease; }
+#card-weather[data-sky="cloudy-night"] .mw-cloud { filter: brightness(.45); }
+#card-weather[data-sky="rain"] .mw-cloud,
+#card-weather[data-sky="thunder"] .mw-cloud { filter: brightness(.7) saturate(.6); }
+
+/* Gewitter: ab und zu ein kurzer Blitz */
+#card-weather[data-sky="thunder"] .mw-flash { animation: mw-flash 9s linear infinite; }
+@keyframes mw-flash {
+  0%, 62%, 64.5%, 66%, 100% { opacity: 0; }
+  63% { opacity: .35; } 65% { opacity: .2; }
+}
+/* Heller Himmel: Text bekommt einen Hauch Schatten, damit Weiss lesbar bleibt */
+#card-weather[data-sky="clear-day"] .mw-head,
+#card-weather[data-sky="partly-day"] .mw-head,
+#card-weather[data-sky="snow"] .mw-head,
+#card-weather[data-sky="fog"] .mw-head { text-shadow: 0 1px 8px rgba(0,0,0,.22); }
+@media (prefers-reduced-motion: reduce) {
+  #card-weather { transition: none; }
+  .mw-sky > span, #card-weather .mw-cloud { transition: none; }
+  #card-weather[data-sky="clear-night"] .mw-stars, #card-weather[data-sky="thunder"] .mw-flash { animation: none; }
+}

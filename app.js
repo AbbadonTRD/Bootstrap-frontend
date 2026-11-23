@@ -163,24 +163,41 @@ const haptics = (() => {
     osc.stop(t + 0.03);
   };
 
+  // Ein echter (unsichtbarer, aber gerenderter) Schalter – mit display:none spielt iOS keinen Tick
+  let sw = null;
   const iosTick = () => {
-    const label = document.createElement('label');
-    label.setAttribute('aria-hidden', 'true');
-    label.style.display = 'none';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.setAttribute('switch', '');
-    label.appendChild(input);
-    document.head.appendChild(label);
-    label.click();
-    label.remove();
+    if (!sw) {
+      sw = document.createElement('label');
+      sw.className = 'haptic-switch';
+      sw.setAttribute('aria-hidden', 'true');
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.setAttribute('switch', '');
+      input.tabIndex = -1;
+      sw.appendChild(input);
+      document.body.appendChild(sw);
+    }
+    const active = document.activeElement;
+    sw.click();
+    if (active && active !== document.activeElement && active.focus) active.focus({ preventScroll: true });
   };
 
-  return {
-    tick() {
+  // iPhone erlaubt den Tick nur direkt nach einer Berührung (Tippen bzw. Finger loslassen),
+  // nicht während der Finger über ein Diagramm fährt. Darum:
+  // 1) jedes Antippen von Knöpfen/Auswahlen tickt,
+  // 2) nach dem Durchfahren eines Diagramms gibt es beim Loslassen einen Tick.
+  let scrubbed = false;
+  document.addEventListener('click', (e) => {
+    if (touch && e.target.closest && e.target.closest('button, [role="switch"], [role="option"], .mw-day, .ps-choice')) api.tick();
+  }, true);
+  document.addEventListener('touchend', () => { if (scrubbed) { scrubbed = false; api.tick(true); } }, { capture: true, passive: true });
+
+  const api = {
+    scrub() { scrubbed = true; this.tick(); },
+    tick(force) {
       if (!touch) return;
       const now = performance.now();
-      if (now - last < 40) return;                 // höchstens ~25 Ticks pro Sekunde
+      if (!force && now - last < 40) return;       // höchstens ~25 Ticks pro Sekunde
       last = now;
       try {
         if (canVibrate) navigator.vibrate(6);
@@ -189,6 +206,7 @@ const haptics = (() => {
       click();
     },
   };
+  return api;
 })();
 
 // Beim Wischen über einen Diagramm-Punkt ticken – höchstens alle 12 px, damit dichte
@@ -198,7 +216,7 @@ function hapticScrub(point) {
   const x = point.plotX;
   if (chart.hapticX == null || Math.abs(x - chart.hapticX) >= 12) {
     chart.hapticX = x;
-    haptics.tick();
+    haptics.scrub();
   }
 }
 // Für alle Diagramme (Serien mit eigenem mouseOver rufen hapticScrub selbst auf)
@@ -573,6 +591,90 @@ function chooseCity(c) {
   loadWeather();
 }
 
+// ── Live-Himmel: Hintergrund folgt dem aktuellen Wetter und der Tageszeit ──────
+// WMO-Wettercode (Open-Meteo) → Szene
+function skyScene(c) {
+  const code = Number(c.weather_code);
+  const day = Number(c.is_day) === 1;
+  if ([95, 96, 99].includes(code)) return 'thunder';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain';
+  if (code === 45 || code === 48) return 'fog';
+  if (code === 3 || Number(c.cloud_cover) >= 85) return day ? 'overcast' : 'cloudy-night';
+  if (code === 1 || code === 2) return day ? 'partly-day' : 'cloudy-night';
+  return day ? 'clear-day' : 'clear-night';
+}
+
+// Regen/Schnee als leichtes Canvas-Partikelsystem – läuft nur, wenn die Karte sichtbar ist
+const skyFx = (() => {
+  let canvas = null, ctx = null, raf = 0, w = 0, h = 0, kind = 'none', amount = 0.5, visible = false;
+  let parts = [];
+  const spawn = (anywhere) => (kind === 'rain'
+    ? { x: Math.random() * w * 1.2, y: anywhere ? Math.random() * h : -20 - Math.random() * 40, l: 10 + Math.random() * 14, v: 7 + Math.random() * 5, a: 0.18 + Math.random() * 0.3 }
+    : { x: Math.random() * w, y: anywhere ? Math.random() * h : -6, r: 1 + Math.random() * 2.2, v: 0.35 + Math.random() * 0.7, p: Math.random() * 6.28, a: 0.55 + Math.random() * 0.4 });
+  const seed = () => {
+    const n = kind === 'rain' ? Math.round(35 + 95 * amount) : kind === 'snow' ? Math.round(25 + 55 * amount) : 0;
+    parts = Array.from({ length: n }, () => spawn(true));
+  };
+  const resize = () => {
+    if (!canvas) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    seed();
+    if (!raf) frame(false);
+  };
+  function frame(move = true) {
+    ctx.clearRect(0, 0, w, h);
+    if (kind === 'rain') {
+      ctx.strokeStyle = '#dbe7ff'; ctx.lineWidth = 1; ctx.lineCap = 'round';
+      for (const q of parts) {
+        if (move) { q.y += q.v; q.x -= q.v * 0.22; if (q.y > h + 20 || q.x < -20) Object.assign(q, spawn(false)); }
+        ctx.globalAlpha = q.a;
+        ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(q.x + q.l * 0.22, q.y - q.l); ctx.stroke();
+      }
+    } else if (kind === 'snow') {
+      ctx.fillStyle = '#fff';
+      for (const q of parts) {
+        if (move) { q.p += 0.02; q.y += q.v; q.x += Math.sin(q.p) * 0.4; if (q.y > h + 6) Object.assign(q, spawn(false)); }
+        ctx.globalAlpha = q.a;
+        ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, 6.283); ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  const loop = () => {
+    cancelAnimationFrame(raf); raf = 0;
+    if (!ctx) return;
+    if (kind === 'none') { ctx.clearRect(0, 0, w, h); return; }
+    if (!visible || reduceMotion.matches) { frame(false); return; }   // still: ein ruhiges Bild
+    const step = () => { frame(true); raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+  };
+  return {
+    init() {
+      canvas = document.getElementById('mw-precip');
+      if (!canvas || !canvas.getContext) return;
+      ctx = canvas.getContext('2d');
+      new ResizeObserver(resize).observe(canvas);
+      new IntersectionObserver(([e]) => { visible = e.isIntersecting; loop(); }).observe(canvas);
+      reduceMotion.addEventListener('change', loop);
+    },
+    set(k, amt) { kind = k; amount = Math.max(0, Math.min(1, amt)); seed(); loop(); },
+  };
+})();
+
+function applySky(c) {
+  const scene = skyScene(c);
+  const card = document.getElementById('card-weather');
+  card.dataset.sky = scene;
+  // Regenmenge (mm/h) steuert die Dichte der Tropfen
+  const mm = Number(c.precipitation) || 0;
+  const amount = Math.min(1, 0.25 + mm / 3);
+  skyFx.set(scene === 'rain' || scene === 'thunder' ? 'rain' : scene === 'snow' ? 'snow' : 'none', amount);
+}
+
 function loadWeather() {
   const $btn = $('#btn-weather');
   setLoading($btn, true);
@@ -585,9 +687,11 @@ function loadWeather() {
     latitude: weatherLoc.lat,
     longitude: weatherLoc.lon,
     daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum',
+    current: 'weather_code,is_day,cloud_cover,precipitation',   // für den Live-Himmel
     forecast_days: 1,
     timezone: 'Europe/Zurich',
   }).done((data) => {
+    if (data.current) applySky(data.current);
     const d = data.daily;
     const tmax = Math.round(d.temperature_2m_max[0]);
     const rain = d.precipitation_sum[0];
@@ -876,7 +980,7 @@ function initStripScroll() {
     if (!wxStrip || strip.busy) return;
     // Wie das Timer-Rad: jede Stunde, die durch die Mitte läuft, gibt einen Tick
     const hour = Math.round(wxStrip.xAxis[0].toValue(el.scrollLeft + el.clientWidth / 2) / 36e5);
-    if (hour !== strip.lastHour) { if (strip.lastHour != null) haptics.tick(); strip.lastHour = hour; }
+    if (hour !== strip.lastHour) { if (strip.lastHour != null) haptics.scrub(); strip.lastHour = hour; }
     const d = stripCenterDay();
     if (d && d.key !== strip.lastKey) showStripDay(d);
   }, { passive: true });
@@ -1540,6 +1644,7 @@ $(function () {
     if (e.matches && btcUsd != null && !btcSeries) loadBtcChart(btcRange);
   });
   $('#btn-weather').on('click', loadWeather);
+  skyFx.init();
 
   // Wetter: Ort wählen
   $('#weather-place').text(weatherLoc.name);

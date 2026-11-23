@@ -25,7 +25,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-23f" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-23g" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -224,11 +224,16 @@
       <div class="col-12 col-xl-4">
         <!-- Wetter im Stil der MeteoSwiss-App -->
         <section id="card-weather" class="ui-card mw">
+          <!-- Live-Himmel: Sonne, Sterne, Nebel (Farben folgen dem aktuellen Wetter, siehe data-sky) -->
+          <div class="mw-sky" aria-hidden="true"><span class="mw-sun"></span><span class="mw-stars"></span><span class="mw-fog"></span></div>
           <!-- Bergsilhouette + Wolke im Hintergrund -->
           <svg class="mw-mountains" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
             <path d="M0 120 L0 88 L30 80 L55 62 L72 70 L95 46 L118 58 L140 40 L162 52 L190 30 L214 48 L236 42 L262 60 L290 50 L318 68 L346 58 L372 74 L400 66 L400 120 Z" />
           </svg>
           <div class="mw-cloud" aria-hidden="true"><div class="cloud"></div></div>
+          <!-- Regen/Schnee (Canvas) und Blitz -->
+          <canvas id="mw-precip" class="mw-precip" aria-hidden="true"></canvas>
+          <span class="mw-flash" aria-hidden="true"></span>
 
           <!-- Kopf: Ort, Beschreibung, Temperatur -->
           <header class="mw-head">
@@ -526,6 +531,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-23f"></script>
+  <script src="app.js?v=2026-11-23g"></script>
 </body>
 </html>

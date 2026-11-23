@@ -568,7 +568,8 @@ function renderWeatherStrip() {
       { visible: false, maxPadding: 0.18, minPadding: 0.04, startOnTick: false, endOnTick: false },
       { visible: false, min: 0, max: Math.max(3, rainMax * 1.6) },
     ],
-    tooltip: weatherTooltip(),
+    // followTouchMove aus: sonst schluckt Highcharts das Wischen (touch-action: none) und der Streifen scrollt nicht
+    tooltip: { ...weatherTooltip(), followTouchMove: false },
     plotOptions: { series: { marker: { enabled: false }, animation: false } },
     series: [
       { name: 'Niederschlag', unit: 'mm', type: 'column', yAxis: 1, data: pts('precipitation'), color: WX_RAIN, borderWidth: 0, borderRadius: 2, pointPadding: 0.34, groupPadding: 0 },

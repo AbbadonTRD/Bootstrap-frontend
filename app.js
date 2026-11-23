@@ -1280,6 +1280,18 @@ $(function () {
   $('#cat-history').on('click', '.cat-thumb:not(.is-empty)', function () { showCatFromHistory($(this).data('cat')); });
   $('#btn-btc').on('click', loadBitcoin);
   $('.wallet-range').on('click', function () { loadBtcChart(String($(this).data('range'))); });
+  // Handy: Schalter blendet den Kursverlauf ein/aus (Wahl wird gemerkt)
+  const setBtcChartOpen = (open, save = true) => {
+    $('#card-btc').toggleClass('show-chart', open);
+    $('#btc-chart-toggle').attr('aria-checked', open);
+    if (save) { try { localStorage.setItem('btc-chart-open', open ? '1' : '0'); } catch (e) { /* egal */ } }
+    if (open && btcUsd != null && !btcSeries) loadBtcChart(btcRange);
+    if (open && window.gsap && !reduceMotion.matches) gsap.fromTo('#btc-chart-wrap', { opacity: 0, y: -8 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out', clearProps: 'opacity,transform' });
+  };
+  let btcChartOpen = false;
+  try { btcChartOpen = localStorage.getItem('btc-chart-open') === '1'; } catch (e) { /* privates Fenster */ }
+  setBtcChartOpen(btcChartOpen, false);
+  $('#btc-chart-toggle').on('click', function () { setBtcChartOpen($(this).attr('aria-checked') !== 'true'); });
   // Wird das Fenster gross genug, den Verlauf nachladen
   window.matchMedia('(min-width: 768px)').addEventListener('change', (e) => {
     if (e.matches && btcUsd != null && !btcSeries) loadBtcChart(btcRange);

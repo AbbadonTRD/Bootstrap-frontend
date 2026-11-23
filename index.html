@@ -175,6 +175,12 @@
             </button>
           </div>
 
+          <!-- Handy: Kursverlauf per Schalter ein-/ausblenden (ab 768 px immer sichtbar) -->
+          <button id="btc-chart-toggle" class="wallet-toggle" type="button" role="switch" aria-checked="false" aria-controls="btc-chart-wrap">
+            <span class="wallet-toggle-label">Kursverlauf anzeigen</span>
+            <span class="wallet-switch" aria-hidden="true"><span class="wallet-switch-knob"></span></span>
+          </button>
+
           <!-- Kursverlauf wie in der Phantom-App (nur bei genug Platz sichtbar) -->
           <div id="btc-chart-wrap" class="wallet-chart" aria-label="Bitcoin-Kursverlauf">
             <div class="wallet-change" aria-live="polite">

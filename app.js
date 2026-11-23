@@ -367,7 +367,113 @@ function loadBtcChart(range) {
     .always(() => $box.removeClass('is-loading'));
 }
 
-// ── c) Aktuelles Wetter (Zürich) + 5-Tage-Chart ──────────────────────────────
+// ── c) Aktuelles Wetter (Standard Zürich, Ort wählbar) + 5-Tage-Chart ───────────
+// Schnellwahl; weitere Orte kommen über die swisstopo-Suche
+const WEATHER_CITIES = [
+  { name: 'Zürich', lat: 47.3769, lon: 8.5417 },
+  { name: 'Bern', lat: 46.948, lon: 7.4474 },
+  { name: 'Basel', lat: 47.5596, lon: 7.5886 },
+  { name: 'Genf', lat: 46.2044, lon: 6.1432 },
+  { name: 'Lausanne', lat: 46.5197, lon: 6.6323 },
+  { name: 'Luzern', lat: 47.0502, lon: 8.3093 },
+  { name: 'St. Gallen', lat: 47.4245, lon: 9.3767 },
+  { name: 'Lugano', lat: 46.0037, lon: 8.9511 },
+  { name: 'Winterthur', lat: 47.4988, lon: 8.7241 },
+  { name: 'Chur', lat: 46.8508, lon: 9.532 },
+];
+let weatherLoc = WEATHER_CITIES[0];
+try {
+  const saved = JSON.parse(localStorage.getItem('weather-loc') || 'null');
+  if (saved && saved.name && Number.isFinite(saved.lat) && Number.isFinite(saved.lon)) weatherLoc = saved;
+} catch (e) { /* kein Speicher → Zürich */ }
+
+const city = { seq: 0, timer: 0, results: [], active: -1 };
+
+// swisstopo-Treffer → { name, meta, lat, lon }  ("<b>Bern</b> (BE)", "3011 - Bern")
+function parseCityHit(hit) {
+  const label = $('<div>').html(hit.attrs.label).text().trim();
+  let name = label;
+  const meta = [];
+  const zip = label.match(/^(\d{4})\s*-\s*(.+)$/);
+  if (zip) { name = zip[2]; meta.push(`PLZ ${zip[1]}`); }
+  const kt = name.match(/^(.*?)\s*\(([A-Z]{2})\)$/);
+  if (kt) { name = kt[1]; meta.push(kt[2]); }
+  return { name, meta: meta.join(' · '), lat: hit.attrs.lat, lon: hit.attrs.lon };
+}
+
+function renderCityChips() {
+  $('#weather-city-chips').html(WEATHER_CITIES.map((c, i) =>
+    `<button type="button" class="mw-city-chip${c.name === weatherLoc.name ? ' is-current' : ''}" data-city="${i}">${esc(c.name)}</button>`).join(''));
+}
+
+function renderCityResults() {
+  const $list = $('#weather-city-list');
+  $list.html(city.results.map((c, i) =>
+    `<li id="wc-opt-${i}" class="mw-city-opt${i === city.active ? ' is-active' : ''}" role="option" aria-selected="${i === city.active}" data-i="${i}">`
+    + `<span>${esc(c.name)}</span>${c.meta ? `<small>${esc(c.meta)}</small>` : ''}</li>`).join(''));
+  $list.prop('hidden', !city.results.length);
+  $('#weather-city-input').attr('aria-expanded', city.results.length > 0)
+    .attr('aria-activedescendant', city.active >= 0 ? `wc-opt-${city.active}` : null);
+}
+
+function searchCities(q) {
+  const seq = ++city.seq;
+  $('#weather-city-status').text('Suche …');
+  return $.getJSON(GEO_SEARCH, { searchText: q, type: 'locations', origins: 'gg25,zipcode', sr: 4326, limit: 8 })
+    .then((data) => {
+      if (seq !== city.seq) return city.results;             // veraltete Antwort ignorieren
+      const seen = new Set();
+      city.results = (data.results || []).map(parseCityHit)
+        // gleicher Ort in mehreren Sprachen (Bern/Berna/Berne) → nur einmal zeigen
+        .filter((c) => { const k = `${c.lat.toFixed(3)}|${c.lon.toFixed(3)}`; if (seen.has(k)) return false; seen.add(k); return true; })
+        .slice(0, 6);
+      city.active = city.results.length ? 0 : -1;
+      renderCityResults();
+      $('#weather-city-status').text(city.results.length ? '' : `Keinen Ort «${q}» gefunden.`);
+      return city.results;
+    }, () => { if (seq === city.seq) $('#weather-city-status').text('Suche gerade nicht erreichbar.'); });
+}
+
+function onCityInput() {
+  const q = $('#weather-city-input').val().trim();
+  clearTimeout(city.timer);
+  $('#weather-city-popular').prop('hidden', !!q);
+  if (q.length < 2) {
+    city.seq++; city.results = []; city.active = -1;
+    renderCityResults();
+    $('#weather-city-status').text('');
+    return;
+  }
+  city.timer = setTimeout(() => searchCities(q), 220);
+}
+
+function openCityPicker() {
+  const $p = $('#weather-city');
+  renderCityChips();
+  $p.prop('hidden', false);
+  $('#weather-city-btn').attr('aria-expanded', 'true');
+  $('#weather-city-input').val('').trigger('focus');
+  onCityInput();
+  if (window.gsap && !reduceMotion.matches) gsap.fromTo($p[0], { opacity: 0, y: -6, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'power2.out', clearProps: 'all' });
+}
+
+function closeCityPicker(refocus = true) {
+  if ($('#weather-city').prop('hidden')) return;
+  $('#weather-city').prop('hidden', true);
+  $('#weather-city-btn').attr('aria-expanded', 'false');
+  clearTimeout(city.timer);
+  city.seq++;
+  if (refocus) $('#weather-city-btn').trigger('focus');
+}
+
+function chooseCity(c) {
+  weatherLoc = { name: c.name, lat: c.lat, lon: c.lon };
+  try { localStorage.setItem('weather-loc', JSON.stringify(weatherLoc)); } catch (e) { /* egal */ }
+  $('#weather-place').text(weatherLoc.name);
+  closeCityPicker();
+  loadWeather();
+}
+
 function loadWeather() {
   const $btn = $('#btn-weather');
   setLoading($btn, true);
@@ -377,8 +483,8 @@ function loadWeather() {
 
   // Heute: Tmax, Tmin, Niederschlag
   const today = $.getJSON(WEATHER_API, {
-    latitude: LAT,
-    longitude: LON,
+    latitude: weatherLoc.lat,
+    longitude: weatherLoc.lon,
     daily: 'temperature_2m_max,temperature_2m_min,precipitation_sum',
     forecast_days: 1,
     timezone: 'Europe/Zurich',
@@ -395,8 +501,8 @@ function loadWeather() {
 
   // Für die Schnellen: stündlicher Verlauf der nächsten 5 Tage (MeteoSwiss-Modell)
   const forecast = $.getJSON(WEATHER_API, {
-    latitude: LAT,
-    longitude: LON,
+    latitude: weatherLoc.lat,
+    longitude: weatherLoc.lon,
     hourly: 'temperature_2m,precipitation',
     forecast_days: 5,
     models: 'meteoswiss_icon_ch2', // ch1 reicht nur ~33 h, ch2 deckt die vollen 5 Tage ab
@@ -591,24 +697,42 @@ function renderWeatherStrip() {
   updateStripHeader();
 }
 
-// Streifen zu einem Zeitpunkt scrollen
+// Streifen zu einem Zeitpunkt scrollen.
+// Eigene, kurze Animation statt scrollTo({behavior:'smooth'}): die ist auf dem Handy
+// träge (bis ~1 s) und lässt sich nicht abbrechen.
+const strip = { raf: 0, busy: false, lastKey: '' };
+function stopStripAnim() {
+  if (strip.raf) cancelAnimationFrame(strip.raf);
+  strip.raf = 0;
+  strip.busy = false;
+}
 function scrollStripTo(t, where = 'left', smooth = true) {
   if (!wxStrip) return;
   const scroller = document.getElementById('weather-scroll');
   const x = wxStrip.xAxis[0].toPixels(t);
-  const left = where === 'center' ? x - scroller.clientWidth / 2 : x - 14;
-  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  scroller.scrollTo({ left: Math.max(0, left), behavior: smooth && !reduce ? 'smooth' : 'auto' });
+  const max = scroller.scrollWidth - scroller.clientWidth;
+  const target = Math.max(0, Math.min(max, where === 'center' ? x - scroller.clientWidth / 2 : x - 14));
+  const from = scroller.scrollLeft;
+  stopStripAnim();
+  if (!smooth || reduceMotion.matches || Math.abs(target - from) < 2) { scroller.scrollLeft = target; return; }
+  const dist = target - from;
+  const dur = Math.min(320, 180 + Math.abs(dist) / 20);   // kurz, auch über mehrere Tage
+  const t0 = performance.now();
+  strip.busy = true;                                       // Kopfzeile während der Fahrt nicht umschalten
+  const step = (now) => {
+    const p = Math.min(1, (now - t0) / dur);
+    scroller.scrollLeft = from + dist * (1 - (1 - p) ** 3); // easeOutCubic
+    if (p < 1) { strip.raf = requestAnimationFrame(step); return; }
+    strip.raf = 0;
+    strip.busy = false;
+  };
+  strip.raf = requestAnimationFrame(step);
 }
 
-// Kopfzeile + gewählter Tag folgen dem Tag in der Mitte des sichtbaren Bereichs
-function updateStripHeader() {
-  if (!wxStrip || !weatherDays.length) return;
-  const scroller = document.getElementById('weather-scroll');
-  const t = wxStrip.xAxis[0].toValue(scroller.scrollLeft + scroller.clientWidth / 2);
-  const key = new Date(t).toISOString().slice(0, 10);
-  const d = weatherDays.find((x) => x.key === key) || (t < Date.parse(weatherDays[0].key) ? weatherDays[0] : weatherDays[weatherDays.length - 1]);
+// Kopfzeile + Markierung in der 5-Tage-Leiste für einen Tag setzen
+function showStripDay(d) {
   weatherSelDay = d.key;
+  strip.lastKey = d.key;
   const wd = WEEKDAYS[new Date(d.key + 'T12:00Z').getUTCDay()];
   $('#weather-strip-title').text(d.isToday ? `Heute, ${wd} ${d.date}` : `${d.name}, ${d.date}`);
   $('#weather-hourly-day').text(`${d.min}° bis ${d.max}°`);
@@ -616,10 +740,26 @@ function updateStripHeader() {
   $('.mw-day').each(function () { $(this).attr('aria-pressed', $(this).data('day') === d.key); });
 }
 
-// Tag in der 5-Tage-Leiste angetippt → Streifen dorthin scrollen
+// Tag in der Mitte des sichtbaren Bereichs bestimmen
+function stripCenterDay() {
+  if (!wxStrip || !weatherDays.length) return null;
+  const scroller = document.getElementById('weather-scroll');
+  const t = wxStrip.xAxis[0].toValue(scroller.scrollLeft + scroller.clientWidth / 2);
+  const key = new Date(t).toISOString().slice(0, 10);
+  return weatherDays.find((x) => x.key === key) || (t < Date.parse(weatherDays[0].key) ? weatherDays[0] : weatherDays[weatherDays.length - 1]);
+}
+
+// Kopfzeile + gewählter Tag folgen dem Tag in der Mitte des sichtbaren Bereichs
+function updateStripHeader() {
+  const d = stripCenterDay();
+  if (d) showStripDay(d);
+}
+
+// Tag in der 5-Tage-Leiste angetippt → sofort markieren, dann Streifen dorthin fahren
 function selectWeatherDay(key) {
   const d = weatherDays.find((x) => x.key === key);
   if (!d || !lastForecast) return;
+  showStripDay(d);
   const h = lastForecast.hourly;
   // Heute: ab jetzt; andere Tage: ab 06 Uhr, damit man den Tag gut sieht
   const idx = d.isToday ? Math.max(0, h.time.indexOf(zurichHourKey())) : Math.min(d.from + 6, d.to);
@@ -631,14 +771,15 @@ function initStripScroll() {
   const el = document.getElementById('weather-scroll');
   if (!el || el.dataset.ready) return;
   el.dataset.ready = '1';
-  // Direkt beim Scrollen aktualisieren (günstig, und hängt nicht an rAF)
-  let lastKey = '';
+  // Beim Scrollen nur reagieren, wenn der Tag in der Mitte wechselt (günstig).
+  // Während einer Fahrt nach Antippen bleibt der angetippte Tag stehen.
   el.addEventListener('scroll', () => {
-    if (!wxStrip) return;
-    const t = wxStrip.xAxis[0].toValue(el.scrollLeft + el.clientWidth / 2);
-    const key = new Date(t).toISOString().slice(0, 10);
-    if (key !== lastKey) { lastKey = key; updateStripHeader(); }
+    if (!wxStrip || strip.busy) return;
+    const d = stripCenterDay();
+    if (d && d.key !== strip.lastKey) showStripDay(d);
   }, { passive: true });
+  // Selbst wischen/scrollen bricht eine laufende Fahrt sofort ab
+  ['touchstart', 'wheel', 'pointerdown'].forEach((type) => el.addEventListener(type, stopStripAnim, { passive: true }));
 
   let drag = null;
   el.addEventListener('pointerdown', (e) => {
@@ -1297,6 +1438,33 @@ $(function () {
     if (e.matches && btcUsd != null && !btcSeries) loadBtcChart(btcRange);
   });
   $('#btn-weather').on('click', loadWeather);
+
+  // Wetter: Ort wählen
+  $('#weather-place').text(weatherLoc.name);
+  $('#weather-city-btn').on('click', () => ($('#weather-city').prop('hidden') ? openCityPicker() : closeCityPicker()));
+  $('#weather-city-close').on('click', () => closeCityPicker());
+  $('#weather-city-chips').on('click', '.mw-city-chip', function () { chooseCity(WEATHER_CITIES[$(this).data('city')]); });
+  $('#weather-city-list')
+    .on('mousedown', '.mw-city-opt', (e) => e.preventDefault())     // Fokus im Feld lassen
+    .on('click', '.mw-city-opt', function () { chooseCity(city.results[$(this).data('i')]); });
+  $('#weather-city-input')
+    .on('input', onCityInput)
+    .on('keydown', (e) => {
+      const n = city.results.length;
+      if (e.key === 'ArrowDown' && n) { e.preventDefault(); city.active = (city.active + 1) % n; renderCityResults(); }
+      else if (e.key === 'ArrowUp' && n) { e.preventDefault(); city.active = (city.active - 1 + n) % n; renderCityResults(); }
+      else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeCityPicker(); }
+      else if (e.key === 'Enter') {
+        e.preventDefault();
+        const q = $(e.target).val().trim();
+        if (n && city.active >= 0) chooseCity(city.results[city.active]);
+        else if (q.length >= 2) { clearTimeout(city.timer); searchCities(q).then((r) => { if (r && r.length) chooseCity(r[0]); }); }
+      }
+    });
+  // Klick neben das Panel schliesst es
+  $(document).on('click', (e) => {
+    if (!$(e.target).closest('#weather-city, #weather-city-btn').length) closeCityPicker(false);
+  });
   // 5-Tage-Prognose: Tag wählen = oberer Streifen zeigt diesen Tag
   $('#weather-days').on('click', '.mw-day', function () {
     const key = $(this).data('day');
@@ -1483,8 +1651,13 @@ async function runFlipBoard() {
 //  SVG-Filter mit Farbsaum. Chromium nutzt ihn als backdrop-filter.
 // ═════════════════════════════════════════════════════════════════════════════
 const SVGNS = 'http://www.w3.org/2000/svg';
-const supportsLiquid = !!(navigator.userAgentData && navigator.userAgentData.brands.some((b) => /Chromium/.test(b.brand)))
+// ?glass=fallback zeigt in Chrome/Edge die Safari/Firefox-Variante (zum Testen)
+const forceGlassFallback = new URLSearchParams(location.search).get('glass') === 'fallback';
+const supportsLiquid = !forceGlassFallback
+  && !!(navigator.userAgentData && navigator.userAgentData.brands.some((b) => /Chromium/.test(b.brand)))
   && !window.matchMedia('(prefers-reduced-transparency: reduce)').matches;
+// Safari/Firefox: eigene Glas-Variante in CSS (html.lg-fallback)
+document.documentElement.classList.toggle('lg-fallback', !supportsLiquid);
 
 // Liquid Glass wie beim Hire-Digital-Generator: Die Linsen-Karte ist ein kleines
 // SVG aus zwei Farbverläufen (Rot = x, Grün = y). Die Mitte ist neutral grau
@@ -1708,7 +1881,14 @@ function lineKind(cat) {
   if (/^(BAT|FAE|SCH)$/i.test(cat)) return 'boat';
   return 'other';
 }
-const modeIcon = { long: '🚆', sbahn: '🚆', tram: '🚊', bus: '🚌', boat: '⛴', other: '🚆' };
+
+// Farbe des Linien-Badges wie in der SBB-App:
+// Fernverkehr/InterRegio rot (weisse Schrift), S-Bahn & Regio weiss (schwarze Schrift),
+// Nachtzüge schwarz (gelbe Schrift)
+function lineBadgeClass(t) {
+  if (/^(SN|N|EN|NJ)$/i.test(t.cat || '')) return 'is-night';
+  return t.kind === 'long' ? 'is-long' : 'is-local';
+}
 
 // Zeiten als "Lokalzeit in Sekunden" (Schweizer Zeit, unabhängig von der Zeitzone des Browsers)
 const lts = (str) => (str ? Date.parse(`${String(str).slice(0, 16).replace(' ', 'T')}:00Z`) / 1000 : null);
@@ -1728,6 +1908,7 @@ function fromSearch(c, station, mode) {
     mode,
     lineRaw: c.line,
     line: num ? `${cat} ${num}` : (c.line || cat),
+    cat,
     kind: lineKind(cat),
     op: c.operator || '',
     number: c['*Z'] || '',
@@ -1768,6 +1949,7 @@ function fromOpendata(e, station, mode) {
     mode,
     lineRaw: e.category + num,
     line: !num || num === e.category || num.length > 3 ? e.category : `${e.category} ${num}`,
+    cat: e.category || '',
     kind: lineKind(e.category),
     op: e.operator || '',
     number: e.name || '',
@@ -1852,7 +2034,12 @@ function loadArrivalRoute(t) {
 
 // ── Schritt 1 ────────────────────────────────────────────────────────────────
 function openFromEntry() {
-  const q = $('#sbb-query').val().trim() || 'Zürich HB';
+  const raw = $('#sbb-query').val().trim();
+  // Einzelnes Kürzel wie bei einer PowerShell-Auswahl: "b" → Bern
+  const choice = raw.length === 1 && $(`.ps-choice[data-key="${raw.toUpperCase()}"]`).data('station');
+  const q = choice || raw || 'Zürich HB';
+  // Handy: Tastatur zuerst schliessen, sonst öffnet das Fenster in den Tastatur-/Zoom-Zustand hinein
+  document.getElementById('sbb-query').blur();
   openSbbTui(q);
 }
 
@@ -1956,8 +2143,7 @@ function trainCardHtml(t) {
     // Route lädt noch: Skeleton statt "von …"
     return `
       <span class="tui-row1">
-        <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
-        <span class="tui-line">${esc(t.line)}</span>
+        <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
         ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
         <span class="tui-to">← ${esc(t.from || 'unbekannt')}</span>
       </span>
@@ -1974,8 +2160,7 @@ function trainCardHtml(t) {
     const total = ready ? dur(Math.round((t.dep - start.ts) / 60)) : '';
     return `
       <span class="tui-row1">
-        <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
-        <span class="tui-line">${esc(t.line)}</span>
+        <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
         ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
         <span class="tui-to">← ${esc(t.from || 'unbekannt')}</span>
       </span>
@@ -1990,8 +2175,7 @@ function trainCardHtml(t) {
   const total = t.end ? dur(Math.round((t.end - t.dep) / 60)) : '';
   return `
     <span class="tui-row1">
-      <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
-      <span class="tui-line">${esc(t.line)}</span>
+      <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
       ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
       <span class="tui-to">${esc(t.to || '–')}</span>
     </span>
@@ -2043,8 +2227,7 @@ function renderTuiDetail() {
   }
   const head = `
     <div class="tui-detail-head">
-      <span class="tui-mode" aria-hidden="true">${modeIcon[t.kind]}</span>
-      <span class="tui-line">${esc(t.line)}</span>
+      <span class="tui-line ${lineBadgeClass(t)}">${esc(t.line)}</span>
       ${t.op ? `<span class="tui-op">${esc(t.op)}</span>` : ''}
       <span>${arr ? `← ${esc(t.from || 'unbekannt')}` : `→ ${esc(t.to || '–')}`}</span>
     </div>`;
@@ -2139,7 +2322,8 @@ function fillBoard(t) {
   const arr = t.mode === 'arrival';
   const bar = sectorBar(t);
   $('#sbbd-sectors').html(bar).prop('hidden', !bar);
-  $('#sbbd-line').text(t.line).toggleClass('is-sbahn', t.kind !== 'long');
+  const badge = lineBadgeClass(t);
+  $('#sbbd-line').text(t.line).toggleClass('is-sbahn', badge === 'is-local').toggleClass('is-night', badge === 'is-night');
   $('#sbbd-time').text(hm(t.dep));
   $('#sbbd-delay').text(t.cancelled ? 'fällt aus' : (t.delay > 0 ? `+${t.delay}'` : ''));
   const plat = String(t.platform || '–');
@@ -2191,6 +2375,11 @@ function setTuiType(type) {
 $(function () {
   // Schritt 1
   $('#sbb-query').on('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); openFromEntry(); } });
+  // Schnellwahl antippen (wie eine PowerShell-Auswahl)
+  $('.ps-choices').on('click', '.ps-choice', function () {
+    document.getElementById('sbb-query').blur();
+    openSbbTui($(this).data('station'));
+  });
 
   // Schritt 2
   $('#tui-close, #tui-overlay').on('click', closeSbbTui);

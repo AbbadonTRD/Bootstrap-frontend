@@ -1810,7 +1810,6 @@ body.modal-open { overflow: hidden; }
 .tui-train.is-sel { border-color: var(--tui-red); }
 .tui-train:focus-visible { outline: 2px solid var(--tui-red); outline-offset: 2px; }
 .tui-row1 { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.tui-mode { display: inline-grid; place-items: center; width: 22px; height: 16px; background: var(--tui-navy); color: #fff; font-size: 11px; border-radius: 1px; }
 .tui-line { background: var(--tui-red); color: #fff; padding: 0 5px; font-weight: 700; white-space: nowrap; }
 .tui-op { background: #fff; color: #000; padding: 0 4px; font-size: 12px; white-space: nowrap; }
 .tui-to { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -2191,28 +2190,227 @@ body {
    Highcharts setzt sonst touch-action: none auf das Diagramm */
 .mw-scroll .highcharts-container { touch-action: pan-x pan-y !important; }
 
-/* ── Bitcoin: Schalter für den Kursverlauf (nur Handy, ab 768 px ist er immer da) ── */
+/* ── Bitcoin: kleiner Schalter für den Kursverlauf (nur Handy, ab 768 px immer da) ──
+   Sitzt oben neben "BTC". Eingeschaltet tritt er in den Hintergrund (blass, ohne Fläche),
+   bleibt aber an derselben Stelle zum Ausschalten. */
+.wallet-top-end { display: inline-flex; align-items: center; gap: 8px; }
 .wallet-toggle {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  width: 100%; padding: 10px 14px;
-  border: 1px solid rgba(255,255,255,.12); border-radius: 12px;
-  background: rgba(255,255,255,.05); color: var(--w-text);
-  font: inherit; font-size: 14px; font-weight: 500; cursor: pointer;
-  transition: background-color 150ms var(--ease-out);
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 4px 0 8px;
+  border: 1px solid rgba(255,255,255,.14); border-radius: 999px;
+  background: rgba(255,255,255,.06); color: var(--w-text);
+  cursor: pointer; touch-action: manipulation;
+  transition: opacity 200ms var(--ease-out), background-color 200ms var(--ease-out), border-color 200ms var(--ease-out);
 }
-.wallet-toggle:hover { background: rgba(255,255,255,.09); }
-.wallet-toggle:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
+.wallet-toggle .ic { width: 12px; height: 12px; }
 .wallet-switch {
-  position: relative; flex: none; width: 40px; height: 24px; border-radius: 999px;
-  background: rgba(255,255,255,.18); transition: background-color 180ms var(--ease-out);
+  position: relative; flex: none; width: 26px; height: 16px; border-radius: 999px;
+  background: rgba(255,255,255,.2); transition: background-color 180ms var(--ease-out);
 }
 .wallet-switch-knob {
-  position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%;
-  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.35);
+  position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.35);
   transition: transform 180ms var(--ease-out);
 }
 .wallet-toggle[aria-checked="true"] .wallet-switch { background: var(--w-lavender); }
-.wallet-toggle[aria-checked="true"] .wallet-switch-knob { transform: translateX(16px); }
+.wallet-toggle[aria-checked="true"] .wallet-switch-knob { transform: translateX(10px); }
+/* An: tritt zurück – blass und ohne Fläche, bei Berührung/Fokus wieder voll da */
+.wallet-toggle[aria-checked="true"] { opacity: .5; background: transparent; border-color: transparent; }
+.wallet-toggle[aria-checked="true"]:hover,
+.wallet-toggle[aria-checked="true"]:focus-visible { opacity: 1; background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.14); }
+.wallet-toggle:focus-visible { outline: 2px solid rgba(255,255,255,.7); outline-offset: 2px; }
 @media (max-width: 767px) { .wallet.show-chart .wallet-chart { display: flex; } }
 @media (min-width: 768px) { .wallet-toggle { display: none; } }
-@media (prefers-reduced-motion: reduce) { .wallet-switch, .wallet-switch-knob { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .wallet-toggle, .wallet-switch, .wallet-switch-knob { transition: none; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Liquid Glass – Safari & Firefox (html.lg-fallback)
+   Diese Browser können keinen SVG-Filter als backdrop-filter, also keine echte
+   Lichtbrechung. Stattdessen: klare Mitte (wenig Blur) und eine "dicke" Glaskante
+   aus Licht-Kanten, Randleuchten und einem feinen Farbsaum (rot/blau) wie bei Chrome.
+   In Chrome/Edge testen: ?glass=fallback an die URL hängen.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.lg-fallback .liquid-glass {
+  -webkit-backdrop-filter: blur(5px) saturate(1.9) brightness(1.12) contrast(1.06);
+          backdrop-filter: blur(5px) saturate(1.9) brightness(1.12) contrast(1.06);
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.16),               /* Rand */
+    inset 1.5px 1.5px 0 -.5px rgba(255,255,255,.75),     /* Lichtkante oben links */
+    inset -1.5px -1.5px 0 -.5px rgba(255,255,255,.25),   /* Reflex unten rechts */
+    inset 0 0 20px 2px rgba(255,255,255,.2),             /* Randleuchten = "Brechung" */
+    inset 0 -8px 14px -10px rgba(0,0,0,.22),             /* Glasdicke unten */
+    inset 3px 0 6px -3px rgba(255,110,110,.32),          /* Farbsaum links (rot) */
+    inset -3px 0 6px -3px rgba(100,165,255,.36),         /* Farbsaum rechts (blau) */
+    0 8px 28px rgba(0,0,0,.2) !important;
+}
+/* Glanz: weicher Lichtfleck oben links, schwacher Reflex unten rechts */
+.lg-fallback .liquid-glass::before {
+  display: block !important;
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  border-radius: inherit;
+  background:
+    radial-gradient(130% 90% at 0% 0%, rgba(255,255,255,.22) 0%, rgba(255,255,255,0) 45%),
+    radial-gradient(120% 90% at 100% 100%, rgba(255,255,255,.10) 0%, rgba(255,255,255,0) 40%) !important;
+}
+@media (prefers-reduced-transparency: reduce) { .lg-fallback .liquid-glass::before { display: none !important; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Wetter: Ort wählen (Lupe neben dem Ortsnamen → Schnellwahl + Suche)
+   ═════════════════════════════════════════════════════════════════════════════ */
+.mw-place-row { display: flex; align-items: center; gap: 10px; }
+.mw-place-row .mw-place { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mw-city-btn {
+  position: relative; z-index: 3; flex: none;
+  display: grid; place-items: center; width: 34px; height: 34px; padding: 0;
+  border: 1px solid rgba(255,255,255,.28); border-radius: 50%;
+  background: rgba(255,255,255,.12); color: #fff; cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 150ms var(--ease-out), transform 160ms var(--ease-out);
+}
+.mw-city-btn:hover, .mw-city-btn[aria-expanded="true"] { background: rgba(255,255,255,.24); }
+.mw-city-btn:active { transform: scale(.94); }
+.mw-city-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.mw-city-btn .ic { width: 14px; height: 14px; }
+
+.mw-city {
+  position: absolute; top: -8px; left: -8px; right: -8px; z-index: 8;
+  padding: 10px; border-radius: 16px; color: #fff;
+  background: rgba(22,32,52,.86);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4); backdrop-filter: blur(18px) saturate(1.4);
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: inset 1.5px 1.5px 0 -.5px rgba(255,255,255,.35), 0 18px 40px rgba(0,0,0,.35);
+  transform-origin: top left;
+}
+.mw-city[hidden] { display: none; }
+.mw-city-field {
+  display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 6px 0 12px;
+  border: 1px solid rgba(255,255,255,.2); border-radius: 11px; background: rgba(255,255,255,.1);
+}
+.mw-city-field:focus-within { border-color: rgba(255,255,255,.6); }
+.mw-city-field > .ic { width: 14px; height: 14px; opacity: .75; flex: none; }
+.mw-city-field input {
+  flex: 1; min-width: 0; border: 0; outline: 0; padding: 0; background: transparent;
+  color: #fff; font: inherit; font-size: 16px;   /* 16px: iOS zoomt sonst beim Antippen */
+}
+.mw-city-field input::placeholder { color: rgba(255,255,255,.6); }
+.mw-city-close {
+  display: grid; place-items: center; width: 32px; height: 32px; flex: none;
+  border: 0; border-radius: 8px; background: transparent; color: #fff; cursor: pointer; touch-action: manipulation;
+}
+.mw-city-close:hover { background: rgba(255,255,255,.12); }
+.mw-city-close:focus-visible { outline: 2px solid #fff; outline-offset: 1px; }
+.mw-city-close .ic { width: 11px; height: 11px; }
+.mw-city-h { margin: 12px 2px 8px; font-size: 11px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+.mw-city-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mw-city-chip {
+  padding: 7px 12px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px;
+  background: rgba(255,255,255,.08); color: #fff; font: inherit; font-size: 13px; cursor: pointer;
+  touch-action: manipulation; transition: background-color 150ms var(--ease-out);
+}
+.mw-city-chip:hover { background: rgba(255,255,255,.18); }
+.mw-city-chip:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.mw-city-chip.is-current { background: rgba(255,255,255,.26); border-color: rgba(255,255,255,.5); font-weight: 500; }
+.mw-city-list { list-style: none; margin: 8px 0 0; padding: 0; max-height: 252px; overflow-y: auto; overscroll-behavior: contain; }
+.mw-city-opt {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  padding: 10px; border-radius: 9px; font-size: 14px; cursor: pointer;
+}
+.mw-city-opt small { font-size: 12px; color: rgba(255,255,255,.6); white-space: nowrap; }
+.mw-city-opt:hover, .mw-city-opt.is-active { background: rgba(255,255,255,.14); }
+.mw-city-status { margin: 8px 2px 0; font-size: 13px; color: rgba(255,255,255,.7); }
+.mw-city-status:empty { display: none; }
+
+/* 5-Tage-Leiste: ohne Doppeltipp-Zoom-Verzögerung */
+.mw-day { touch-action: manipulation; }
+@media (prefers-reduced-motion: reduce) { .mw-city-btn, .mw-city-chip { transition: none; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Handy: kein Hineinzoomen beim Tippen
+   iOS zoomt bei Eingabefeldern unter 16px hinein und bleibt dort – dann ragen
+   fixierte Fenster (ÖV-Terminal) über den Rand und lassen sich seitlich verschieben.
+   ═════════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 767px), (pointer: coarse) {
+  input[type="text"], input[type="search"], input[type="number"], input:not([type]), textarea, select { font-size: 16px !important; }
+}
+
+/* ── ÖV Schritt 3 (Zuganzeige): scrollt, wenn sie höher als das Fenster ist ── */
+.tui-board {
+  justify-content: flex-start;              /* zentriert über margin:auto unten – ragt so nie oben hinaus */
+  overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.tui-board > .sbb-display { margin-top: auto; flex: none; }
+.tui-board > .tui-board-hint { margin-bottom: auto; }
+/* "zurück zur Tafel" ist ein echter Knopf – auf dem Handy gibt es kein Esc */
+button.tui-board-hint {
+  border: 0; background: none; padding: 6px 10px; border-radius: 4px; cursor: pointer;
+  font-family: "Ubuntu Mono", ui-monospace, monospace; touch-action: manipulation;
+}
+button.tui-board-hint:hover { color: #fff; }
+button.tui-board-hint:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.tui-back-arrow { display: none; }
+@media (hover: none), (max-width: 767px) {
+  button.tui-board-hint { font-size: 15px; padding: 10px 16px; background: rgba(255,255,255,.12); }
+  button.tui-board-hint kbd { display: none; }
+  .tui-back-arrow { display: inline; margin-right: 4px; }
+}
+
+/* ── Zuganzeige auf dem Handy kompakter, damit sie meist ohne Scrollen passt ── */
+@media (max-width: 575px) {
+  .tui-board { padding: 12px; gap: 12px; }
+  .sbb-display { border-width: 6px; }
+  .sbbd-left { padding: 14px 14px 0; gap: 4px; }
+  .sbbd-line { font-size: 16px; padding: 1px 8px; }
+  .sbbd-time { font-size: 28px; }
+  .sbbd-dest { font-size: 26px !important; margin-top: 2px; }
+  .sbbd-via { font-size: 14px; }
+  .sbbd-strip { margin: auto -14px 0; padding: 5px 14px; font-size: 12px; gap: 4px 10px; }
+  .sbbd-right { padding: 14px 72px 10px 14px; min-height: 0; }
+  .sbbd-plat { top: 10px; right: 10px; }
+  .sbbd-stops li { font-size: 16px; padding-bottom: 4px; padding-left: 22px; }
+  .sbbd-stops li::before { top: 5px; width: 9px; height: 9px; }
+  .sbbd-stops li::after { left: 9px; top: 17px; bottom: -4px; }
+  .sbbd-stops li small { font-size: 12px; margin-left: 6px; }
+  .sbbd-sectors { padding: 8px 14px 0; border-top-width: 4px; }
+  .sbbd-sec-letters { height: 24px; }
+  .sbbd-train { box-shadow: -14px 0 0 #f4f5f7, 14px 0 0 #f4f5f7; }
+  .sbbd-sec-note { margin: 0 -14px; padding: 6px 14px 8px; font-size: 11px; }
+}
+
+/* Handy: Tastatur-Hinweise im ÖV-Terminal ausblenden (dort gibt es kein ↕ / Enter / Esc) */
+@media (hover: none), (max-width: 767px) {
+  .tui-foot > span:not(.tui-status) { display: none; }
+  .tui-foot .tui-status { margin-left: 0; }
+}
+
+/* ── ÖV Schritt 1: Schnellwahl im Stil einer PowerShell-Auswahl ─────────────
+   "[Z] Zürich HB  [B] Bern …" als normaler Konsolentext; angetippt/markiert wie
+   ausgewählter Text in der Konsole (weiss hinterlegt). */
+.ps-window { touch-action: manipulation; }            /* kein Doppeltipp-Zoom */
+.ps-choices { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 1.2ch; margin: 6px 0 0 !important; }
+.ps-choice {
+  padding: 2px 0; border: 0; border-radius: 0; background: transparent;
+  color: #ddd; font: inherit; line-height: 1.5; cursor: pointer; touch-action: manipulation;
+}
+.ps-choice b { font-weight: 400; color: #f9f1a5; }          /* Kürzel in PowerShell-Gelb */
+.ps-choice:hover, .ps-choice:focus-visible { background: #ddd; color: #000; outline: none; }
+.ps-choice:hover b, .ps-choice:focus-visible b { color: #000; }
+.ps-choice:active { background: #fff; }
+@media (max-width: 575px) { .ps-choice { padding: 6px 0; } }   /* grössere Tippfläche */
+
+/* ── Linien-Badges in den SBB-Farben ─────────────────────────────────────────
+   Fernverkehr/InterRegio rot + weiss · S-Bahn/Regio weiss + schwarz · Nacht schwarz + gelb */
+.tui-line.is-long  { background: #eb0000; color: #fff; }
+.tui-line.is-local { background: #fff; color: #000; }
+.tui-line.is-night { background: #000; color: #ffde00; box-shadow: inset 0 0 0 1px rgba(255,222,0,.55); }
+/* Perronanzeige */
+.sbbd-line.is-sbahn { background: #fff; color: #000; font-style: normal; }
+.sbbd-line.is-night { background: #000; color: #ffde00; font-style: normal; box-shadow: inset 0 0 0 1px rgba(255,222,0,.55); }
+
+/* Gleiche Schriftgrösse wie das Eingabefeld: Felder sind auf Handy/Touch 16px (gegen den
+   iOS-Zoom) – der Konsolentext drumherum muss mitziehen, sonst wirkt die Eingabe grösser. */
+.ps-input, .tui-input { font-size: inherit; }
+@media (max-width: 767px), (pointer: coarse) {
+  .ps-body { font-size: 16px; }
+  .tui-field-station { font-size: 16px; }
+}

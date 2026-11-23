@@ -2423,3 +2423,16 @@ button.tui-board-hint:focus-visible { outline: 2px solid #fff; outline-offset: 2
   .ps-body { font-size: 16px; }
   .tui-field-station { font-size: 16px; }
 }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Safari / iPhone: native Formular-Optik aus
+   iOS zeichnet <button> und Eingabefelder sonst mit eigener System-Optik (Form, Abstand,
+   blaue Schrift/Icons) über unsere Stile – deshalb sahen Knöpfe dort anders aus.
+   ═════════════════════════════════════════════════════════════════════════════ */
+button, [type="button"], [type="reset"], [type="submit"], input, select, textarea { -webkit-appearance: none; appearance: none; }
+input[type="checkbox"], input[type="radio"], input[type="range"] { -webkit-appearance: auto; appearance: auto; }
+button { color: inherit; -webkit-tap-highlight-color: transparent; }   /* kein iOS-Blau, kein grauer Tipp-Blitz */
+input::-webkit-search-decoration, input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+/* Kein Safari-"?" für Bilder ohne Quelle oder mit Ladefehler */
+img:not([src]), img[src=""], img.img-broken { visibility: hidden; }

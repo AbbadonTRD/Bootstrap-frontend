@@ -206,6 +206,14 @@ if (window.Highcharts) {
   Highcharts.setOptions({ plotOptions: { series: { point: { events: { mouseOver() { hapticScrub(this); } } } } } });
 }
 
+// Bilder, die nicht laden (Netz, Inhaltsblocker), ausblenden – Safari zeigt sonst ein blaues "?"
+document.addEventListener('error', (e) => {
+  if (e.target && e.target.tagName === 'IMG') e.target.classList.add('img-broken');
+}, true);
+document.addEventListener('load', (e) => {
+  if (e.target && e.target.tagName === 'IMG') e.target.classList.remove('img-broken');
+}, true);
+
 const fmtUSD = new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtCHF = new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 });
 

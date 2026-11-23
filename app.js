@@ -116,6 +116,96 @@ function geocode(text, origins) {
     });
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+//  Haptisches Feedback: kleine "Ticks" beim Durchfahren der Diagramme mit dem Finger
+//  (wie das Rad beim iPhone-Timer). Nur bei Touch-Bedienung, nie mit der Maus.
+//  - Android: navigator.vibrate()
+//  - iPhone (iOS 18+): Safari hat keine Vibrations-API; ein verstecktes Schalter-Feld
+//    (<input type="checkbox" switch>) löst beim Umschalten den System-Tick aus.
+//  - Dazu ein sehr leiser Klick-Ton (Web Audio, respektiert den Lautlos-Schalter).
+// ═════════════════════════════════════════════════════════════════════════════
+const haptics = (() => {
+  const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const canVibrate = typeof navigator.vibrate === 'function';
+  let touch = false;
+  let last = 0;
+  let audio = null;
+
+  // Audio darf erst nach einer Berührung starten (Browser-Regel)
+  const unlock = () => {
+    if (!touch) return;
+    try {
+      if (!audio) {
+        if (navigator.audioSession) navigator.audioSession.type = 'ambient'; // Lautlos-Schalter gilt, Musik läuft weiter
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return;
+        audio = new Ctx();
+      }
+      if (audio.state === 'suspended') audio.resume();
+    } catch (e) { audio = null; }
+  };
+  document.addEventListener('pointerdown', (e) => { touch = e.pointerType === 'touch'; unlock(); }, { capture: true, passive: true });
+  document.addEventListener('touchstart', () => { touch = true; }, { capture: true, passive: true });
+  document.addEventListener('touchend', unlock, { capture: true, passive: true });
+
+  const click = () => {
+    if (!audio || audio.state !== 'running') return;
+    const t = audio.currentTime;
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(1700, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.03, t + 0.002);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
+    osc.connect(gain).connect(audio.destination);
+    osc.start(t);
+    osc.stop(t + 0.03);
+  };
+
+  const iosTick = () => {
+    const label = document.createElement('label');
+    label.setAttribute('aria-hidden', 'true');
+    label.style.display = 'none';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.setAttribute('switch', '');
+    label.appendChild(input);
+    document.head.appendChild(label);
+    label.click();
+    label.remove();
+  };
+
+  return {
+    tick() {
+      if (!touch) return;
+      const now = performance.now();
+      if (now - last < 40) return;                 // höchstens ~25 Ticks pro Sekunde
+      last = now;
+      try {
+        if (canVibrate) navigator.vibrate(6);
+        else if (isIOS) iosTick();
+      } catch (e) { /* kein Feedback möglich */ }
+      click();
+    },
+  };
+})();
+
+// Beim Wischen über einen Diagramm-Punkt ticken – höchstens alle 12 px, damit dichte
+// Kurven (z.B. 290 Bitcoin-Punkte) nicht dauernd brummen
+function hapticScrub(point) {
+  const chart = point.series.chart;
+  const x = point.plotX;
+  if (chart.hapticX == null || Math.abs(x - chart.hapticX) >= 12) {
+    chart.hapticX = x;
+    haptics.tick();
+  }
+}
+// Für alle Diagramme (Serien mit eigenem mouseOver rufen hapticScrub selbst auf)
+if (window.Highcharts) {
+  Highcharts.setOptions({ plotOptions: { series: { point: { events: { mouseOver() { hapticScrub(this); } } } } } });
+}
+
 const fmtUSD = new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
 const fmtCHF = new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 });
 
@@ -338,6 +428,7 @@ function renderBtcChart(points) {
       marker: { enabled: false, states: { hover: { enabled: true, radius: 5, lineColor: '#1c1c1f', lineWidth: 2 } } },
       // Scrubbing: grosser Preis = Wert zu diesem Zeitpunkt, darunter Abstand zum aktuellen Preis
       point: { events: { mouseOver() {
+        hapticScrub(this);
         $('#btc-usd').text(fmtUSD.format(this.y));
         showBtcVsNow(this.y, now, fmtScrub(this.x));
       } } },
@@ -700,7 +791,7 @@ function renderWeatherStrip() {
 // Streifen zu einem Zeitpunkt scrollen.
 // Eigene, kurze Animation statt scrollTo({behavior:'smooth'}): die ist auf dem Handy
 // träge (bis ~1 s) und lässt sich nicht abbrechen.
-const strip = { raf: 0, busy: false, lastKey: '' };
+const strip = { raf: 0, busy: false, lastKey: '', lastHour: null };
 function stopStripAnim() {
   if (strip.raf) cancelAnimationFrame(strip.raf);
   strip.raf = 0;
@@ -775,6 +866,9 @@ function initStripScroll() {
   // Während einer Fahrt nach Antippen bleibt der angetippte Tag stehen.
   el.addEventListener('scroll', () => {
     if (!wxStrip || strip.busy) return;
+    // Wie das Timer-Rad: jede Stunde, die durch die Mitte läuft, gibt einen Tick
+    const hour = Math.round(wxStrip.xAxis[0].toValue(el.scrollLeft + el.clientWidth / 2) / 36e5);
+    if (hour !== strip.lastHour) { if (strip.lastHour != null) haptics.tick(); strip.lastHour = hour; }
     const d = stripCenterDay();
     if (d && d.key !== strip.lastKey) showStripDay(d);
   }, { passive: true });
@@ -1420,7 +1514,7 @@ $(function () {
   $('#btn-cat').on('click', loadCat);
   $('#cat-history').on('click', '.cat-thumb:not(.is-empty)', function () { showCatFromHistory($(this).data('cat')); });
   $('#btn-btc').on('click', loadBitcoin);
-  $('.wallet-range').on('click', function () { loadBtcChart(String($(this).data('range'))); });
+  $('.wallet-range').on('click', function () { haptics.tick(); loadBtcChart(String($(this).data('range'))); });
   // Handy: Schalter blendet den Kursverlauf ein/aus (Wahl wird gemerkt)
   const setBtcChartOpen = (open, save = true) => {
     $('#card-btc').toggleClass('show-chart', open);
@@ -1468,6 +1562,7 @@ $(function () {
   // 5-Tage-Prognose: Tag wählen = oberer Streifen zeigt diesen Tag
   $('#weather-days').on('click', '.mw-day', function () {
     const key = $(this).data('day');
+    haptics.tick();
     selectWeatherDay(key);
   });
   $('#btn-ev').on('click', loadStations);
@@ -1651,10 +1746,11 @@ async function runFlipBoard() {
 //  SVG-Filter mit Farbsaum. Chromium nutzt ihn als backdrop-filter.
 // ═════════════════════════════════════════════════════════════════════════════
 const SVGNS = 'http://www.w3.org/2000/svg';
-// ?glass=fallback zeigt in Chrome/Edge die Safari/Firefox-Variante (zum Testen)
-const forceGlassFallback = new URLSearchParams(location.search).get('glass') === 'fallback';
-const supportsLiquid = !forceGlassFallback
-  && !!(navigator.userAgentData && navigator.userAgentData.brands.some((b) => /Chromium/.test(b.brand)))
+// Zum Testen: ?glass=fallback zeigt in Chrome/Edge die Safari/Firefox-Variante,
+// ?glass=svg erzwingt die echte Lichtbrechung auch in Safari/Firefox
+const glassParam = new URLSearchParams(location.search).get('glass');
+const supportsLiquid = glassParam !== 'fallback'
+  && (glassParam === 'svg' || !!(navigator.userAgentData && navigator.userAgentData.brands.some((b) => /Chromium/.test(b.brand))))
   && !window.matchMedia('(prefers-reduced-transparency: reduce)').matches;
 // Safari/Firefox: eigene Glas-Variante in CSS (html.lg-fallback)
 document.documentElement.classList.toggle('lg-fallback', !supportsLiquid);

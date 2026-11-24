@@ -503,6 +503,8 @@ function renderBtcChart(points) {
   const grad = (c) => ({ linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
     stops: [[0, Highcharts.color(c).setOpacity(0.28).get()], [1, Highcharts.color(c).setOpacity(0).get()]] });
 
+  // Hell-Modus: Wallet ist weiss/lila → dunkle Linien und Beschriftung
+  const ink = (a) => (isLightMode() ? `rgba(28,24,48,${a})` : `rgba(255,255,255,${a})`);
   Highcharts.chart('btc-chart', {
     chart: {
       backgroundColor: 'transparent', margin: [22, 0, 4, 0],
@@ -512,7 +514,7 @@ function renderBtcChart(points) {
     title: { text: null }, credits: { enabled: false }, legend: { enabled: false },
     xAxis: {
       type: 'datetime', lineWidth: 0, tickLength: 0, labels: { enabled: false },
-      crosshair: { color: 'rgba(255,255,255,.35)', width: 1, dashStyle: 'Dash' },
+      crosshair: { color: ink(0.35), width: 1, dashStyle: 'Dash' },
     },
     yAxis: {
       title: { text: null }, labels: { enabled: false }, gridLineWidth: 0, lineWidth: 0,
@@ -520,10 +522,10 @@ function renderBtcChart(points) {
       startOnTick: false, endOnTick: false, minPadding: 0.04, maxPadding: 0.06,
       // Gestrichelte Linie = aktueller Preis (dezent beschriftet)
       plotLines: [{
-        value: now, color: 'rgba(255,255,255,.3)', width: 1, dashStyle: 'Dash', zIndex: 1,
+        value: now, color: ink(0.3), width: 1, dashStyle: 'Dash', zIndex: 1,
         label: {
           text: `Aktuell ${fmtUSD.format(now)}`, align: 'left', x: 8, y: -5,
-          style: { color: 'rgba(255,255,255,.55)', fontSize: '10px', fontWeight: '500' },
+          style: { color: ink(0.55), fontSize: '10px', fontWeight: '500' },
         },
       }],
     },
@@ -531,7 +533,7 @@ function renderBtcChart(points) {
       useHTML: true, backgroundColor: 'transparent', borderWidth: 0, shadow: false, padding: 0,
       positioner(w, h, point) { return { x: Math.min(Math.max(point.plotX - w / 2, 4), this.chart.chartWidth - w - 4), y: 0 }; },
       formatter() { return `<span class="wallet-scrub-time">${fmtScrub(this.x)}</span>`; },
-      style: { color: 'rgba(255,255,255,.7)', fontSize: '12px' },
+      style: { color: ink(0.7), fontSize: '12px' },
     },
     plotOptions: { series: { animation: { duration: 600 } } },
     series: [{
@@ -541,7 +543,7 @@ function renderBtcChart(points) {
         { value: now, color: BTC_DOWN, fillColor: grad(BTC_DOWN) },
         { color: BTC_UP, fillColor: grad(BTC_UP) },
       ],
-      marker: { enabled: false, states: { hover: { enabled: true, radius: 5, lineColor: '#1c1c1f', lineWidth: 2 } } },
+      marker: { enabled: false, states: { hover: { enabled: true, radius: 5, lineColor: isLightMode() ? '#ffffff' : '#1c1c1f', lineWidth: 2 } } },
       // Scrubbing: grosser Preis = Wert zu diesem Zeitpunkt, darunter Abstand zum aktuellen Preis
       point: { events: { mouseOver() {
         hapticScrub(this);
@@ -1055,7 +1057,8 @@ function createAlps(canvas) {
   const mix = (a, b, t) => `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`;
 
   function paint(target, scene, temp) {
-    const L = ALPS_LOOK[scene] || ALPS_LOOK.overcast;
+    const base = ALPS_LOOK[scene] || ALPS_LOOK.overcast;
+    const L = isLightMode() ? lightAlps(base) : base;
     target.width = Math.round(w * dpr); target.height = Math.round(h * dpr);
     const g = target.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1145,8 +1148,25 @@ function createAlps(canvas) {
       current = { scene, temp: t };
       render(!fast);
     },
+    refresh() { render(true); },   // hell/dunkel gewechselt: neu zeichnen, weich überblenden
   };
 }
+
+// Hell-Modus: die Karte ist ein heller Himmel mit dunkler Schrift – Berge und Wolken
+// werden dafür in Luftperspektive aufgehellt (sonst stünde dunkle Schrift auf dunklem Fels)
+const isLightMode = () => document.documentElement.dataset.mode === 'light';
+const mixRGB = (a, b, t) => a.map((v, k) => Math.round(v + (b[k] - v) * t));
+function lightAlps(L) {
+  return {
+    rock: L.rock.map((c) => mixRGB(c, [176, 192, 216], 0.5)),
+    snow: L.snow.map((c) => mixRGB(c, [250, 252, 255], 0.45)),
+    line: L.line,
+    haze: mixRGB(L.haze, [206, 222, 244], 0.6),
+    mist: L.mist.map((m) => Math.min(0.95, m + 0.1)),
+  };
+}
+// Wolken: Nacht- und Regentöne heller mischen
+const lightTone = ([l, d, n]) => [l + d * 0.45 + n * 0.6, d * 0.55 + n * 0.25, n * 0.15];
 
 // Steuerung: setzt Szene für Karte + Seite gleichzeitig, inkl. Blitz
 const sky = (() => {
@@ -1182,8 +1202,10 @@ const sky = (() => {
         clearTimeout(this.fastTimer);
         this.fastTimer = setTimeout(() => document.documentElement.classList.remove('sky-fast'), 500);
       }
+      this.last = c;
       const next = skyScene(c);
-      const look = SKY_LOOK[next];
+      const base = SKY_LOOK[next];
+      const look = isLightMode() ? { ...base, tone: lightTone(base.tone) } : base;
       const cover = Math.max(0, Math.min(1, (Number(c.cloud_cover) || 0) / 100));
       const amount = Math.min(1, 0.3 + (Number(c.precipitation) || 0) / 3);   // mm/h → Dichte
       document.getElementById('card-weather').dataset.sky = next;
@@ -1192,6 +1214,11 @@ const sky = (() => {
       if (alps) alps.set(next, c.temperature_2m != null ? Number(c.temperature_2m) : null, fast);
       if (page) page.set(look, cover, amount, fast);
       if (next !== scene) { scene = next; if (scene === 'thunder') flashTimer = setTimeout(flash, 1200); else clearTimeout(flashTimer); }
+    },
+    // hell/dunkel gewechselt: Wolkentöne + Berge neu
+    refresh() {
+      if (this.last) this.set(this.last);
+      if (alps) alps.refresh();
     },
   };
 })();
@@ -1608,6 +1635,8 @@ function renderWeatherChart(data) {
 
 // Farben der Wetter-Charts (ruhig, wie bei SRF Meteo)
 const WX_TEMP = '#ff6b6b';
+// Schrift/Linien in der Wetterkarte: weiss auf dunklem Himmel, dunkelblau auf hellem (Hell-Modus)
+const wxInk = (a = 1) => (isLightMode() ? `rgba(14,28,51,${a})` : `rgba(255,255,255,${a})`);
 const WX_RAIN = 'rgba(140,180,255,.8)';
 const WX_HOURS_VISIBLE = 12;          // so viele Stunden sieht man im Streifen gleichzeitig
 const wxFill = (a, b) => ({ linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
@@ -1646,11 +1675,11 @@ function renderWeatherStrip() {
     },
     title: { text: null }, credits: { enabled: false }, legend: { enabled: false },
     xAxis: {
-      type: 'datetime', lineWidth: 1, lineColor: 'rgba(255,255,255,.18)', tickLength: 0,
+      type: 'datetime', lineWidth: 1, lineColor: wxInk(0.18), tickLength: 0,
       tickInterval: 2 * 36e5, gridLineWidth: 0,
       labels: {
         useHTML: true, y: 15,
-        style: { color: 'rgba(255,255,255,.65)', fontSize: '11px' },
+        style: { color: wxInk(0.65), fontSize: '11px' },
         // Um Mitternacht steht der Wochentag statt "00"
         formatter() {
           const d = new Date(this.value);
@@ -1658,11 +1687,11 @@ function renderWeatherStrip() {
           return String(d.getUTCHours()).padStart(2, '0');
         },
       },
-      crosshair: { color: 'rgba(255,255,255,.3)', width: 1 },
+      crosshair: { color: wxInk(0.3), width: 1 },
       plotLines: [
-        ...midnights.map((t) => ({ value: t, color: 'rgba(255,255,255,.45)', width: 1, dashStyle: 'Dash' })),
+        ...midnights.map((t) => ({ value: t, color: wxInk(0.45), width: 1, dashStyle: 'Dash' })),
         { value: nowT, color: 'rgba(255,107,107,.6)', width: 1, dashStyle: 'Dot', zIndex: 2,
-          label: { text: 'Jetzt', rotation: 0, align: 'left', verticalAlign: 'bottom', x: 4, y: -6, style: { color: '#ff9b9b', fontSize: '10px', fontWeight: '500' } } },
+          label: { text: 'Jetzt', rotation: 0, align: 'left', verticalAlign: 'bottom', x: 4, y: -6, style: { color: isLightMode() ? '#c8323b' : '#ff9b9b', fontSize: '10px', fontWeight: '500' } } },
       ],
     },
     yAxis: [
@@ -1679,10 +1708,10 @@ function renderWeatherStrip() {
         fillColor: wxFill(0.22, 0), threshold: null,
         dataLabels: {
           enabled: true, formatter() { return new Date(this.x).getUTCHours() % 2 === 0 ? `${Math.round(this.y)}°` : null; },
-          style: { color: '#fff', textOutline: 'none', fontSize: '12px', fontWeight: '500' }, y: -6,
+          style: { color: wxInk(1), textOutline: 'none', fontSize: '12px', fontWeight: '500' }, y: -6,
         },
       },
-      { name: 'Jetzt', type: 'scatter', data: [[nowT, h.temperature_2m[nowIdx]]], color: WX_TEMP, marker: { enabled: true, radius: 4, symbol: 'circle', lineColor: '#fff', lineWidth: 1.5 }, enableMouseTracking: false },
+      { name: 'Jetzt', type: 'scatter', data: [[nowT, h.temperature_2m[nowIdx]]], color: WX_TEMP, marker: { enabled: true, radius: 4, symbol: 'circle', lineColor: isLightMode() ? 'rgba(255,255,255,.9)' : '#fff', lineWidth: 1.5 }, enableMouseTracking: false },
     ],
   });
 
@@ -1836,8 +1865,8 @@ function renderWeekChart() {
     xAxis: {
       type: 'datetime', min: dayStart, max: dayEnd, lineWidth: 0, tickLength: 0, labels: { enabled: false }, gridLineWidth: 0,
       // Deutliche Tagestrenner
-      plotLines: weatherDays.slice(1).map((_, i) => ({ value: dayStart + (i + 1) * 864e5, color: 'rgba(255,255,255,.4)', width: 1.5, zIndex: 3 })),
-      crosshair: { color: 'rgba(255,255,255,.3)', width: 1 },
+      plotLines: weatherDays.slice(1).map((_, i) => ({ value: dayStart + (i + 1) * 864e5, color: wxInk(isLightMode() ? 0.22 : 0.4), width: 1.5, zIndex: 3 })),
+      crosshair: { color: wxInk(0.3), width: 1 },
     },
     yAxis: [
       { visible: false, maxPadding: 0.15, minPadding: 0.1, startOnTick: false, endOnTick: false },
@@ -2408,8 +2437,21 @@ function toggleTheme() {
   const next = isDark() ? 'light' : 'dark';
   document.documentElement.dataset.theme = next;
   try { localStorage.setItem('theme', next); } catch (e) { /* privates Fenster */ }
-  if (lastForecast) renderWeatherChart(lastForecast);
+  applyMode();
 }
+
+// Modus anwenden: Diagramme + Himmel (Canvas) zeichnen ihre Farben je nach hell/dunkel
+function applyMode() {
+  const mode = isDark() ? 'dark' : 'light';
+  document.documentElement.dataset.mode = mode;
+  if (lastForecast) renderWeatherChart(lastForecast);
+  if (btcSeries) renderBtcChart(btcSeries);
+  sky.refresh();
+}
+// Ohne eigene Wahl folgt die Seite dem System (z. B. automatisch dunkel am Abend)
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (!document.documentElement.dataset.theme) applyMode();
+});
 
 // ── Event-Handler ────────────────────────────────────────────────────────────
 $(function () {

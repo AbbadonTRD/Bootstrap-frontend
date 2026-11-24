@@ -3092,3 +3092,197 @@ html[data-sky="partly-day"] .page-sky-rays { opacity: .3; }
           mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
 }
 .mw-lower.is-fixed .mw-bento::-webkit-scrollbar { display: none; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Hell-Modus: die bisher immer dunklen Teile drehen ihre Farben um
+   html[data-mode] wird im <head> aufgelöst (gewählt oder System) → ein Selektor reicht
+   ═════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Hero (Split-Flap-Board): Lila → Weiss statt Lila → Schwarz ──────────── */
+html[data-mode="light"] .flip-hero {
+  color: #1c1830;
+  border-color: #e2dcf7;
+  background: radial-gradient(120% 90% at 50% -10%, rgba(206,196,255,.92) 0%, rgba(243,240,255,.9) 48%, rgba(255,255,255,.92) 72%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 18px 40px rgba(70,56,150,.12);
+}
+html[data-mode="light"] .flap { color: #1d1b28; }
+html[data-mode="light"] .flap .t, html[data-mode="light"] .flap .f {
+  background: linear-gradient(#ffffff, #f6f5fb);
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 1px rgba(60,48,130,.07);
+}
+html[data-mode="light"] .flap .b, html[data-mode="light"] .flap .k {
+  background: linear-gradient(#f0eef7, #e9e7f1);
+  box-shadow: inset 0 0 0 1px rgba(60,48,130,.07), 0 1px 2px rgba(60,48,130,.08);
+}
+html[data-mode="light"] .flap::after { background: rgba(60,48,130,.16); }
+html[data-mode="light"] .flip-hero-foot { color: rgba(28,24,48,.58); }
+html[data-mode="light"] .flip-hero-brand { color: rgba(28,24,48,.88); }
+
+/* ── Bitcoin (Phantom-Wallet): Lila → Weiss, dunkle Schrift ───────────────── */
+html[data-mode="light"] .wallet {
+  --w-bg: #ffffff;
+  --w-surface: #f3f0fc;
+  --w-text: #1c1830;
+  --w-muted: #6c6884;
+  border-color: #e2dcf7;
+  background:
+    radial-gradient(120% 70% at 50% -10%, rgba(171,159,242,.5), transparent 60%),
+    linear-gradient(180deg, #e8e3ff 0%, #ffffff 55%);
+}
+html[data-mode="light"] .wallet-pill { color: #5443c9; }
+html[data-mode="light"] .wallet-pill.liquid-glass { background: rgba(171,159,242,.24) !important; }
+html[data-mode="light"] .wallet-pair { border-color: rgba(28,24,48,.08); }
+html[data-mode="light"] .wallet-pair.liquid-glass { background: rgba(28,24,48,.05) !important; }
+html[data-mode="light"] .wallet .liquid-glass.lg-btn { color: #1c1830 !important; }
+html[data-mode="light"] .wallet-range:hover { background: rgba(28,24,48,.05); color: var(--w-text); }
+html[data-mode="light"] .wallet-range.is-active { color: #4b3cc4; }
+html[data-mode="light"] .wallet-ranges.liquid-glass { background: rgba(28,24,48,.04) !important; }
+html[data-mode="light"] .wallet-ranges.liquid-glass .wallet-range.is-active {
+  background: #fff; color: #1c1830;
+  box-shadow: inset 0 0 0 1px rgba(28,24,48,.08), 0 2px 8px rgba(70,56,150,.16);
+}
+html[data-mode="light"] .wallet-row-end .wallet-row-sub { color: #5a4ad6; }
+html[data-mode="light"] .wallet-delta.up, html[data-mode="light"] .wallet-extremes em.up { color: #0f9a67; }
+html[data-mode="light"] .wallet-delta.down, html[data-mode="light"] .wallet-extremes em.down { color: #d23a3a; }
+html[data-mode="light"] .wallet-delta-pill.up { color: #0f9a67; background: rgba(46,192,139,.14); }
+html[data-mode="light"] .wallet-delta-pill.down { color: #d23a3a; background: rgba(235,87,87,.12); }
+html[data-mode="light"] .wallet-chart-empty {
+  color: rgba(28,24,48,.08);
+  background: linear-gradient(transparent calc(50% - 1px), rgba(28,24,48,.08) calc(50% - 1px), rgba(28,24,48,.08) 50%, transparent 50%);
+}
+html[data-mode="light"] .wallet-toggle { border-color: rgba(28,24,48,.12); background: rgba(28,24,48,.04); }
+html[data-mode="light"] .wallet-switch { background: rgba(28,24,48,.18); }
+html[data-mode="light"] .wallet-toggle[aria-checked="true"] { background: transparent; border-color: transparent; }
+html[data-mode="light"] .wallet-toggle[aria-checked="true"]:focus-visible { background: rgba(28,24,48,.04); border-color: rgba(28,24,48,.12); }
+@media (hover: hover) and (pointer: fine) {
+  html[data-mode="light"] .wallet-toggle[aria-checked="true"]:hover { background: rgba(28,24,48,.04); border-color: rgba(28,24,48,.12); }
+}
+
+/* ── Terminal (PowerShell-Fenster + Abfahrtstafel): umgedreht ─────────────── */
+/* weisser Körper, schwarze Titelleiste – die SBB-Farben der Linien bleiben */
+html[data-mode="light"] .ps-window { background-color: #fbfbfc; color: #111; border-color: #d6d6dc; box-shadow: 0 18px 44px rgba(20,30,60,.16); }
+html[data-mode="light"] .ps-titlebar { background-color: #1c1c1e; color: #fff; }
+html[data-mode="light"] .ps-title h2 { color: #fff; }
+html[data-mode="light"] .ps-dim { color: #6b6b72; }
+html[data-mode="light"] .ps-out { color: #26262a; }
+html[data-mode="light"] .ps-cmd { color: #c8161d; }
+html[data-mode="light"] .ps-input { color: #111; caret-color: #111; }
+html[data-mode="light"] .ps-input::placeholder { color: #a0a0a6; }
+html[data-mode="light"] .ps-caret { background: #111; }
+html[data-mode="light"] .ps-choice { color: #26262a; }
+html[data-mode="light"] .ps-choice b { color: #a06c00; }                 /* PowerShell-Gelb → Bernstein auf Weiss */
+html[data-mode="light"] .ps-choice:hover, html[data-mode="light"] .ps-choice:focus-visible { background: #1c1c1e; color: #fff; }
+html[data-mode="light"] .ps-choice:hover b, html[data-mode="light"] .ps-choice:focus-visible b { color: #fff; }
+html[data-mode="light"] .ps-choice:active { background: #000; }
+
+html[data-mode="light"] .tui-overlay { background: rgba(20,26,44,.34); }
+html[data-mode="light"] .tui {
+  --tui-text: #16161a; --tui-dim: #6b6b72; --tui-line: #d6d6dc; --tui-red-dim: #f0b9bb;
+  background-color: #fbfbfc; color: var(--tui-text); border-color: #d6d6dc;
+  box-shadow: 0 30px 80px rgba(20,30,60,.32);
+}
+html[data-mode="light"] .tui.is-board { background-color: mediumblue; }   /* Zuganzeige bleibt PowerShell-/SBB-blau */
+html[data-mode="light"] .tui-titlebar { background-color: #1c1c1e; color: #fff; }
+html[data-mode="light"] .tui-name, html[data-mode="light"] .tui-controls, html[data-mode="light"] .tui .tui-x { color: #fff; }
+html[data-mode="light"] .tui .tui-x:focus-visible { outline-color: #fff; }
+html[data-mode="light"] .tui-dim { color: #8a8a90; }
+html[data-mode="light"] .tui-field, html[data-mode="light"] .tui-seg, html[data-mode="light"] .tui-icon, html[data-mode="light"] .tui-train { border-color: #d2d2d8; }
+html[data-mode="light"] .tui-field-station { border-color: var(--tui-red-dim); }
+html[data-mode="light"] .tui-field-station:focus-within { border-color: var(--tui-red); }
+html[data-mode="light"] .tui-btn + .tui-btn { border-left-color: #d2d2d8; }
+html[data-mode="light"] .tui-train:hover { border-color: #a8a8b0; }
+html[data-mode="light"] .tui-train.is-sel { border-color: var(--tui-red); }
+html[data-mode="light"] .tui-pane { scrollbar-color: #c8c8ce transparent; }
+html[data-mode="light"] .tui-track::before, html[data-mode="light"] .tui-stop .rail::before { background: #9a9aa2; }
+html[data-mode="light"] .tui-track i, html[data-mode="light"] .tui-stop .rail i { background: #fff; border-color: #3a3a40; }
+html[data-mode="light"] .tui-track i.is-end,
+html[data-mode="light"] .tui-stop.is-first .rail i, html[data-mode="light"] .tui-stop:last-child .rail i { background: #16161a; border-color: #16161a; }
+html[data-mode="light"] .tui-op { background: #16161a; color: #fff; }
+html[data-mode="light"] .tui-line.is-local { box-shadow: inset 0 0 0 1px #16161a; }   /* weisses S-Bahn-Schild braucht einen Rand */
+html[data-mode="light"] .tui-loading { color: #333; }
+html[data-mode="light"] .tui-skel { border-color: #e2e2e7; background: linear-gradient(90deg, #f1f1f4, #e4e4e9, #f1f1f4); background-size: 200% 100%; }
+html[data-mode="light"] .tui-skel-bar { background: linear-gradient(90deg, #e9e9ee, #d9d9e0, #e9e9ee); background-size: 200% 100%; }
+html[data-mode="light"] .tui-foot kbd { background: #e8e8ed; color: #333; }
+html[data-mode="light"] .tui-board-hint { color: #6b6b72; }
+html[data-mode="light"] .tui-board-hint kbd { background: #e8e8ed; color: #333; }
+html[data-mode="light"] .tui.is-board .tui-board-hint { color: rgba(255,255,255,.75); }
+html[data-mode="light"] .tui.is-board .tui-board-hint kbd { background: rgba(255,255,255,.18); color: #fff; }
+
+/* ── Wetter: hellerer Himmel, dunkle Schrift ──────────────────────────────── */
+html[data-mode="light"] #card-weather {
+  --mw-ink: #0e1c33;
+  --mw-ink-2: rgba(14,28,51,.66);
+  color: var(--mw-ink);
+  border-color: rgba(14,28,51,.1);
+}
+html[data-mode="light"] #card-weather[data-sky="clear-day"]    { --mw-top: #5d9be6; --mw-mid: #94c3f3; --mw-bottom: #d9ebfc; --mw-tint: rgba(255,214,150,.3); }
+html[data-mode="light"] #card-weather[data-sky="partly-day"]   { --mw-top: #78a3d6; --mw-mid: #a7c6ea; --mw-bottom: #dde9f7; --mw-tint: rgba(255,226,180,.24); }
+html[data-mode="light"] #card-weather[data-sky="overcast"]     { --mw-top: #91a4bb; --mw-mid: #b6c4d4; --mw-bottom: #e1e7ef; --mw-tint: rgba(190,210,240,.24); }
+html[data-mode="light"] #card-weather[data-sky="fog"]          { --mw-top: #a5b1be; --mw-mid: #c6ced8; --mw-bottom: #eceff3; --mw-tint: rgba(255,255,255,.24); }
+html[data-mode="light"] #card-weather[data-sky="rain"]         { --mw-top: #7c92ad; --mw-mid: #a2b4c9; --mw-bottom: #d3dce7; --mw-tint: rgba(110,150,210,.22); }
+html[data-mode="light"] #card-weather[data-sky="thunder"]      { --mw-top: #8884ab; --mw-mid: #aaa8c8; --mw-bottom: #d6d5e7; --mw-tint: rgba(160,120,240,.2); }
+html[data-mode="light"] #card-weather[data-sky="snow"]         { --mw-top: #9fb7d6; --mw-mid: #c4d5ea; --mw-bottom: #eef4fb; --mw-tint: rgba(205,228,255,.3); }
+html[data-mode="light"] #card-weather[data-sky="clear-night"]  { --mw-top: #6f82c4; --mw-mid: #97a6d9; --mw-bottom: #cbd3ef; --mw-tint: rgba(150,125,235,.22); }
+html[data-mode="light"] #card-weather[data-sky="cloudy-night"] { --mw-top: #8290b0; --mw-mid: #a6b0c8; --mw-bottom: #d2d8e6; --mw-tint: rgba(255,180,135,.12); }
+
+/* Alle Texte in der Karte dunkel (viele Regeln setzen Weiss fest), Nebentexte gedämpft */
+html[data-mode="light"] #card-weather :where(p, span, strong, b, small, h1, h2, h3, dt, dd, button, label, time, a, li, div, input) { color: var(--mw-ink) !important; }
+html[data-mode="light"] #card-weather :is(#weather-trend, .mw-caption, .mw-caption-meta, .mw-today, .mw-tile-cap, .mw-tile-sub,
+  .mw-wind-list dt, .mw-sun-time small, .mw-details-title, .mw-tile-big small, .mw-city-h, .mw-city-opt small, .mw-city-status) { color: var(--mw-ink-2) !important; }
+html[data-mode="light"] #card-weather .mw-caption span:first-child { color: var(--mw-ink) !important; }
+html[data-mode="light"] #card-weather input::placeholder { color: rgba(14,28,51,.45) !important; }
+
+/* Schrift ohne dunklen Schatten, Vignette nur noch angedeutet */
+html[data-mode="light"] #card-weather[data-sky] .mw-head { text-shadow: 0 1px 10px rgba(255,255,255,.35); }
+html[data-mode="light"] #card-weather .mw-sky::after {
+  background: radial-gradient(140% 70% at 50% 0%, rgba(0,0,0,0) 45%, rgba(20,40,80,.07) 100%);
+}
+
+/* Glas-Panels: helles Milchglas statt dunkler Tönung */
+html[data-mode="light"] #card-weather .mw-glass.liquid-glass {
+  background: rgba(255,255,255,.36) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(255,255,255,.6), inset 0 -1px 0 rgba(14,28,51,.06), 0 8px 24px rgba(30,50,90,.1) !important;
+}
+html[data-mode="light"] #card-weather .mw-glass .mw-day:not(:last-child)::after { background: rgba(14,28,51,.12); }
+html[data-mode="light"] #card-weather .mw-glass .mw-day::before { background: var(--mw-ink); }
+html[data-mode="light"] #card-weather .mw-week-chart { border-top-color: rgba(14,28,51,.1); }
+html[data-mode="light"] #card-weather .mw-focus { border-left-color: rgba(14,28,51,.6); }
+html[data-mode="light"] #card-weather .mw-focus::before { background: var(--mw-ink); box-shadow: 0 0 6px rgba(255,255,255,.8); }
+
+/* Kleine Knöpfe (Suche, Jetzt, Live, Details) */
+html[data-mode="light"] #card-weather :is(.mw-city-btn, .mw-now-btn, .mw-details-open, .mw-details-back) {
+  background: rgba(255,255,255,.5); border-color: rgba(14,28,51,.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), inset 0 0 0 1px rgba(14,28,51,.1), 0 2px 8px rgba(30,50,90,.08);
+}
+@media (hover: hover) and (pointer: fine) {
+  html[data-mode="light"] #card-weather :is(.mw-city-btn, .mw-now-btn, .mw-details-open, .mw-details-back):hover { background: rgba(255,255,255,.75); }
+}
+html[data-mode="light"] #card-weather :is(.mw-city-btn, .mw-now-btn, .mw-details-open, .mw-details-back):focus-visible { outline-color: var(--mw-ink); }
+html[data-mode="light"] #card-weather .mw-live-switch { background: rgba(14,28,51,.2); }
+html[data-mode="light"] #card-weather .mw-live-toggle[aria-checked="true"] .mw-live-switch { background: #e5484d; }
+
+/* Ort-Suche: helles Panel */
+html[data-mode="light"] #card-weather .mw-city { background: rgba(255,255,255,.9); border-color: rgba(14,28,51,.12); box-shadow: 0 18px 40px rgba(30,50,90,.18); }
+html[data-mode="light"] #card-weather :is(.mw-city-field, .mw-city-chip) { border-color: rgba(14,28,51,.14); background: rgba(14,28,51,.04); }
+html[data-mode="light"] #card-weather .mw-city-field:focus-within { border-color: rgba(14,28,51,.4); }
+html[data-mode="light"] #card-weather .mw-city-chip.is-current { background: rgba(14,28,51,.1); border-color: rgba(14,28,51,.3); }
+
+/* Details-Kacheln */
+html[data-mode="light"] #card-weather :is(.mw-meter, .mw-scale) { background-color: rgba(14,28,51,.1); }
+html[data-mode="light"] #card-weather .mw-meter > span { background: linear-gradient(90deg, rgba(14,28,51,.35), rgba(14,28,51,.75)); }
+html[data-mode="light"] #card-weather .mw-meter-hum > span { background: linear-gradient(90deg, #6fb4f0, #2f7fd6); }
+html[data-mode="light"] #card-weather .mw-meter-rain > span { background: linear-gradient(90deg, #8aa8f0, #4a6fd8); }
+html[data-mode="light"] #card-weather .mw-wind-list > div { border-bottom-color: rgba(14,28,51,.12); }
+html[data-mode="light"] #card-weather .mw-compass-ring { fill: rgba(255,255,255,.3); stroke: rgba(14,28,51,.2); }
+html[data-mode="light"] #card-weather .mw-compass-ticks line { stroke: rgba(14,28,51,.4); }
+html[data-mode="light"] #card-weather .mw-compass-l { fill: rgba(14,28,51,.7); }
+html[data-mode="light"] #card-weather .mw-compass-arrow line { stroke: var(--mw-ink); }
+html[data-mode="light"] #card-weather .mw-compass-arrow path { fill: var(--mw-ink); }
+html[data-mode="light"] #card-weather .mw-compass-arrow circle { stroke: var(--mw-ink); }
+html[data-mode="light"] #card-weather .mw-compass-hub { fill: rgba(255,255,255,.78); stroke: rgba(14,28,51,.14); }
+html[data-mode="light"] #card-weather .mw-compass-v { fill: var(--mw-ink); }
+html[data-mode="light"] #card-weather .mw-compass-u { fill: rgba(14,28,51,.66); }
+html[data-mode="light"] #card-weather .mw-sun-horizon { stroke: rgba(14,28,51,.25); }
+html[data-mode="light"] #card-weather .mw-sun-path { stroke: rgba(14,28,51,.28); }
+html[data-mode="light"] #card-weather .mw-sun-done { stroke: #f0a21c; }
+html[data-mode="light"] #card-weather .mw-sun-dot { fill: #f5a623; filter: drop-shadow(0 0 5px rgba(245,166,35,.7)); }

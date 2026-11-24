@@ -850,9 +850,156 @@ function createSkyFx(canvas, opt) {
   };
 }
 
+// ── Alpen: realistisch gerendert (Canvas) und an Wetter, Tageszeit und Temperatur gekoppelt ──
+// Fraktale Bergkämme in drei Ebenen; jede Flanke wird je nach Neigung zum Licht (oben rechts)
+// hell oder im Schatten gezeichnet; Schnee liegt über einer Schneegrenze, die mit dem Wetter
+// und der Temperatur steigt oder sinkt; ferne Kämme verschwinden im Dunst der Himmelsfarbe.
+const ALPS_LOOK = {
+  //               Fels hell / Schatten          Schnee hell / Schatten        Schneegrenze  Dunst-Farbe     Dunst fern/mitte/nah
+  'clear-day':    { rock: [[122, 132, 146], [44, 54, 74]],   snow: [[252, 253, 255], [168, 190, 218]], line: 0.6,  haze: [118, 172, 232], mist: [0.55, 0.28, 0.08] },
+  'partly-day':   { rock: [[112, 120, 132], [46, 54, 70]],   snow: [[242, 246, 252], [160, 178, 204]], line: 0.6,  haze: [128, 168, 214], mist: [0.58, 0.32, 0.1] },
+  overcast:       { rock: [[96, 104, 116], [58, 64, 76]],    snow: [[214, 222, 232], [150, 162, 180]], line: 0.6,  haze: [124, 148, 176], mist: [0.62, 0.38, 0.14] },
+  fog:            { rock: [[150, 158, 168], [122, 130, 142]], snow: [[226, 231, 237], [186, 194, 204]], line: 0.6,  haze: [196, 205, 214], mist: [0.9, 0.78, 0.58] },
+  rain:           { rock: [[64, 72, 84], [26, 32, 42]],      snow: [[146, 156, 170], [92, 102, 118]],  line: 0.78, haze: [72, 96, 126],   mist: [0.7, 0.48, 0.24] },
+  thunder:        { rock: [[54, 52, 74], [18, 16, 30]],      snow: [[118, 116, 144], [66, 64, 92]],    line: 0.8,  haze: [62, 60, 102],   mist: [0.66, 0.42, 0.2] },
+  snow:           { rock: [[118, 128, 144], [64, 76, 96]],   snow: [[255, 255, 255], [192, 208, 228]], line: 0.24, haze: [178, 202, 230], mist: [0.68, 0.42, 0.16] },
+  'clear-night':  { rock: [[30, 38, 66], [8, 12, 28]],       snow: [[146, 166, 214], [56, 70, 116]],   line: 0.62, haze: [26, 42, 96],    mist: [0.6, 0.34, 0.1] },
+  'cloudy-night': { rock: [[28, 34, 50], [8, 11, 22]],       snow: [[92, 104, 130], [42, 50, 70]],     line: 0.66, haze: [34, 48, 78],    mist: [0.64, 0.4, 0.14] },
+};
+
+function createAlps(canvas) {
+  const ctx = canvas.getContext('2d');
+  let w = 0, h = 0, dpr = 1, layers = null, raf = 0;
+  let current = null;                 // { scene, temp }
+  const shown = document.createElement('canvas');   // was gerade zu sehen ist (für Überblendung)
+  const next = document.createElement('canvas');
+
+  // Deterministischer Zufall + fraktaler Kamm (Mittelpunktverschiebung)
+  const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  const ridge = (seed, n, rough, sharp) => {
+    const r = rng(seed);
+    const p = new Array(n + 1).fill(0);
+    p[0] = r(); p[n] = r();
+    for (let step = n, s = 1; step > 1; step /= 2, s *= rough) {
+      for (let i = step / 2; i < n; i += step) p[i] = (p[i - step / 2] + p[i + step / 2]) / 2 + (r() - 0.5) * s;
+    }
+    // glätten (sonst wirken die Kämme wie Rauschen)
+    const sm = p.map((_, i) => { let t = 0, c = 0; for (let k = -1; k <= 1; k++) { const v = p[i + k]; if (v != null) { t += v; c++; } } return t / c; });
+    const lo = Math.min(...sm), hi = Math.max(...sm);
+    const ph = seed * 0.37;
+    return sm.map((v, i) => ({
+      h: ((v - lo) / (hi - lo)) ** sharp,
+      n: 0.5 + 0.28 * Math.sin(i * 0.21 + ph) + 0.22 * Math.sin(i * 0.57 + ph * 2.3),   // weiche Schneekante
+    }));
+  };
+  const build = () => {
+    // Ebene: Grundlinie (Anteil der Höhe), Amplitude, Kamm
+    layers = [
+      { base: 0.6, amp: 0.38, pts: ridge(41, 128, 0.58, 1.7), mist: 0 },
+      { base: 0.8, amp: 0.44, pts: ridge(97, 128, 0.6, 1.9), mist: 1 },
+      { base: 1.0, amp: 0.5, pts: ridge(163, 128, 0.62, 2.1), mist: 2 },
+    ];
+  };
+
+  const mix = (a, b, t) => `rgb(${Math.round(a[0] + (b[0] - a[0]) * t)},${Math.round(a[1] + (b[1] - a[1]) * t)},${Math.round(a[2] + (b[2] - a[2]) * t)})`;
+
+  function paint(target, scene, temp) {
+    const L = ALPS_LOOK[scene] || ALPS_LOOK.overcast;
+    target.width = Math.round(w * dpr); target.height = Math.round(h * dpr);
+    const g = target.getContext('2d');
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, w, h);
+    // Schneegrenze: wärmer → höher, Frost → tiefer
+    let line = L.line;
+    if (temp != null) line = Math.max(0.15, Math.min(0.9, line + (temp - 3) * 0.018));
+    for (const layer of layers) {
+      const n = layer.pts.length - 1;
+      const dx = w / n;
+      const ys = layer.pts.map((p) => h * layer.base - p.h * h * layer.amp);
+      // Licht über ein breiteres Stück der Flanke bestimmen und glätten → ganze Hänge hell/dunkel
+      const raw = ys.map((_, i) => { const a0 = ys[Math.max(0, i - 3)], a1 = ys[Math.min(n, i + 3)]; return Math.max(0, Math.min(1, 0.5 + ((a1 - a0) / (6 * dx)) * 1.15)); });
+      const lit = raw.map((_, i) => { let t = 0, c = 0; for (let k = -2; k <= 2; k++) { const v = raw[i + k]; if (v != null) { t += v; c++; } } return t / c; });
+      const top = h * (layer.base - layer.amp);
+      // 1) Fels als Ganzes: oben Mittelton, nach unten dunkler
+      g.beginPath(); g.moveTo(0, h);
+      for (let i = 0; i <= n; i++) g.lineTo(i * dx, ys[i]);
+      g.lineTo(w, h); g.closePath();
+      const body = g.createLinearGradient(0, top, 0, h);
+      body.addColorStop(0, mix(L.rock[1], L.rock[0], 0.45));
+      body.addColorStop(1, mix(L.rock[1], L.rock[1], 0));
+      g.fillStyle = body; g.fill();
+      // 2) Licht und Schatten der Flanken: beginnt am Grat und läuft nach unten aus
+      const facet = h * layer.amp * 0.55;
+      for (let i = 0; i < n; i++) {
+        const x0 = i * dx, x1 = x0 + dx + 0.5;
+        const y0 = ys[i], y1 = ys[i + 1];
+        const gr = g.createLinearGradient(0, Math.min(y0, y1), 0, Math.min(y0, y1) + facet);
+        const col = mix(L.rock[1], L.rock[0], lit[i]);
+        gr.addColorStop(0, col); gr.addColorStop(1, col.replace('rgb', 'rgba').replace(')', ',0)'));
+        g.fillStyle = gr;
+        g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.lineTo(x1, y1 + facet); g.lineTo(x0, y0 + facet); g.closePath(); g.fill();
+        // 3) Schnee über der Grenze, weiche Unterkante
+        const p = layer.pts[i];
+        if (p.h > line) {
+          const depth = (p.h - line) * h * layer.amp * (0.6 + p.n * 0.6);
+          g.fillStyle = mix(L.snow[1], L.snow[0], lit[i]);
+          g.beginPath(); g.moveTo(x0, y0); g.lineTo(x1, y1); g.lineTo(x1, y1 + depth); g.lineTo(x0, y0 + depth); g.closePath(); g.fill();
+        }
+      }
+      // Luftperspektive: Dunst in Himmelsfarbe über der Ebene (fern stark, nah schwach)
+      const m = L.mist[layer.mist];
+      if (m > 0) {
+        g.globalCompositeOperation = 'source-atop';
+        const grd = g.createLinearGradient(0, h * (layer.base - layer.amp), 0, h);
+        grd.addColorStop(0, `rgba(${L.haze.join(',')},${m})`);
+        grd.addColorStop(1, `rgba(${L.haze.join(',')},${Math.min(1, m + 0.25)})`);
+        g.fillStyle = grd; g.fillRect(0, 0, w, h);
+        g.globalCompositeOperation = 'source-over';
+      }
+    }
+  }
+
+  const draw = (t) => {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (t < 1 && shown.width) { ctx.globalAlpha = 1 - t; ctx.drawImage(shown, 0, 0); }
+    ctx.globalAlpha = t; ctx.drawImage(next, 0, 0);
+    ctx.globalAlpha = 1;
+  };
+  const render = (fade) => {
+    if (!current || !w) return;
+    // Bisheriges Bild merken, neues zeichnen, dann überblenden
+    shown.width = canvas.width; shown.height = canvas.height;
+    shown.getContext('2d').drawImage(canvas, 0, 0);
+    paint(next, current.scene, current.temp);
+    cancelAnimationFrame(raf);
+    if (!fade || reduceMotion.matches) { draw(1); return; }
+    const t0 = performance.now();
+    const step = (now) => { const t = Math.min(1, (now - t0) / 900); draw(t); if (t < 1) raf = requestAnimationFrame(step); };
+    raf = requestAnimationFrame(step);
+  };
+  const resize = () => {
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    if (!w || !h) return;
+    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+    if (!layers) build();
+    render(false);
+  };
+  new ResizeObserver(resize).observe(canvas);
+  return {
+    set(scene, temp, fast) {
+      const t = temp != null ? Math.round(temp) : null;
+      if (current && current.scene === scene && current.temp === t) return;
+      current = { scene, temp: t };
+      render(!fast);
+    },
+  };
+}
+
 // Steuerung: setzt Szene für Karte + Seite gleichzeitig, inkl. Blitz
 const sky = (() => {
-  let card = null, page = null, scene = '', flashTimer = 0;
+  let card = null, page = null, alps = null, scene = '', flashTimer = 0;
   const flash = () => {
     clearTimeout(flashTimer);
     if (scene !== 'thunder' || reduceMotion.matches) return;
@@ -867,6 +1014,8 @@ const sky = (() => {
     init() {
       const c = document.getElementById('mw-sky-fx');
       const p = document.getElementById('page-sky-fx');
+      const a = document.getElementById('mw-alps');
+      if (a && a.getContext) alps = createAlps(a);
       if (c && c.getContext) {
         card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.7, drops: 130, flakes: 80 });
         new IntersectionObserver(([e]) => card.setVisible(e.isIntersecting)).observe(c);
@@ -887,6 +1036,7 @@ const sky = (() => {
       document.getElementById('card-weather').dataset.sky = next;
       document.documentElement.dataset.sky = next;
       if (card) card.set(look, cover, amount, fast);
+      if (alps) alps.set(next, c.temperature_2m != null ? Number(c.temperature_2m) : null, fast);
       if (page) page.set(look, cover, amount, fast);
       if (next !== scene) { scene = next; if (scene === 'thunder') flashTimer = setTimeout(flash, 1200); else clearTimeout(flashTimer); }
     },

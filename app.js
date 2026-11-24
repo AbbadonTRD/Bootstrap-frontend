@@ -1582,12 +1582,16 @@ function describeDay(rainMm, tmax) {
 }
 
 // Icon (Bootstrap Icons) passend zum Tageswetter
-function dayIcon(rainMm, tmax) {
-  if (rainMm >= 0.5 && tmax <= 1) return icon('snow', 'ic-snow');
-  if (rainMm < 0.2) return icon('sun', 'ic-sun');
-  if (rainMm < 1)   return icon('suncloud', 'ic-mix');
-  if (rainMm < 5)   return icon('rain', 'ic-rain');
-  return icon('rain', 'ic-rain ic-heavy');
+// Tagessymbol aus Bewölkung + Wettercode der hellen Stunden (wie die Wetter-Apps)
+function dayIcon(d) {
+  const cloud = d.clouds.length ? d.clouds.reduce((a, b) => a + b, 0) / d.clouds.length : 100;
+  const snowy = d.codes.some((c) => (c >= 71 && c <= 77) || c === 85 || c === 86);
+  if (snowy || (d.rain >= 0.5 && d.max <= 1)) return icon('snow', 'ic-snow');
+  if (d.rain >= 5) return icon('rain', 'ic-rain ic-heavy');
+  if (d.rain >= 0.5 || d.codes.some((c) => c >= 51)) return icon('rain', 'ic-rain');
+  if (cloud >= 75) return icon('cloud', 'ic-cloud');
+  if (cloud >= 30) return icon('suncloud', 'ic-mix');
+  return icon('sun', 'ic-sun');
 }
 
 // Aktuelle Stunde in Zürich als "YYYY-MM-DDTHH:00" (Format der Open-Meteo-Zeiten)
@@ -1621,8 +1625,10 @@ function renderWeatherChart(data) {
   h.time.forEach((t, i) => {
     const key = t.slice(0, 10);
     let d = weatherDays[weatherDays.length - 1];
-    if (!d || d.key !== key) { d = { key, from: i, to: i, temps: [], rain: 0 }; weatherDays.push(d); }
+    if (!d || d.key !== key) { d = { key, from: i, to: i, temps: [], rain: 0, clouds: [], codes: [] }; weatherDays.push(d); }
     d.to = i;
+    // Tageswetter: nur die hellen Stunden zählen
+    if (h.is_day[i]) { d.clouds.push(h.cloud_cover[i] || 0); d.codes.push(h.weather_code[i] || 0); }
     if (h.temperature_2m[i] != null) d.temps.push(h.temperature_2m[i]);
     d.rain += h.precipitation[i] || 0;
   });
@@ -1639,7 +1645,7 @@ function renderWeatherChart(data) {
               title="${d.rain.toFixed(1)} mm Niederschlag">
         <span class="mw-day-name">${d.name}</span>
         <span class="mw-day-date">${d.date}</span>
-        <span class="mw-day-icon">${dayIcon(d.rain, d.max)}</span>
+        <span class="mw-day-icon">${dayIcon(d)}</span>
         <span class="mw-day-temp">${d.min}°<span class="sep">|</span>${d.max}°</span>
       </button>`).data('day', d.key).appendTo($grid);
   });

@@ -3436,3 +3436,6 @@ html[data-mode="light"] #card-weather .mw-sun-ground::before { background: linea
     inset 3px 0 6px -4px rgba(255,90,90,.25),
     inset -3px 0 6px -4px rgba(80,160,255,.28) !important;
 }
+/* Wolken-Symbol in der 5-Tage-Leiste: hell auf dem Glas */
+.mw-glass .ic-cloud { color: #d3dbe6; }
+html[data-mode="light"] #card-weather .mw-glass .ic-cloud { color: #7d8aa0; }

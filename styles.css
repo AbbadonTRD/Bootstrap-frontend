@@ -2840,3 +2840,36 @@ html[data-sky="partly-day"] .page-sky-rays { opacity: .3; }
 /* Ton-Schalter neben "Live" */
 .mw-sound-toggle { padding-left: 6px; }
 .mw-sound-toggle .ic { width: 13px; height: 13px; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Live-Himmel v6: zackige Alpen in vier Ebenen + kräftigerer Verlauf
+   ═════════════════════════════════════════════════════════════════════════════ */
+.mw-mountains { top: 86px; height: 172px; }
+.mw-mountains .mw-ridge-hill { fill: url(#mw-g-hill); }
+.mw-mountains .mw-ridge-rim-mid { stroke: var(--ridge-rim-mid, rgba(255,255,255,.1)); stroke-width: .8; }
+.mw-mountains { -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%); mask-image: linear-gradient(to bottom, #000 62%, transparent 100%); }
+#card-weather { --ridge-hill: rgba(255,255,255,.08); }
+/*                                       Hügel vorne                       Lichtkante hinten */
+#card-weather[data-sky="clear-day"]    { --ridge-hill: rgba(8,30,70,.7);   --ridge-rim-mid: rgba(255,244,220,.28); }
+#card-weather[data-sky="partly-day"]   { --ridge-hill: rgba(12,32,64,.66); --ridge-rim-mid: rgba(255,240,215,.22); }
+#card-weather[data-sky="overcast"]     { --ridge-hill: rgba(20,28,42,.62); --ridge-rim-mid: rgba(230,238,248,.14); }
+#card-weather[data-sky="fog"]          { --ridge-hill: rgba(70,80,94,.4);  --ridge-rim-mid: rgba(255,255,255,.1); }
+#card-weather[data-sky="rain"]         { --ridge-hill: rgba(4,8,16,.74);   --ridge-rim-mid: rgba(170,195,230,.1); }
+#card-weather[data-sky="thunder"]      { --ridge-hill: rgba(2,2,10,.8);    --ridge-rim-mid: rgba(180,160,240,.12); }
+#card-weather[data-sky="snow"]         { --ridge-hill: rgba(44,64,92,.56); --ridge-rim-mid: rgba(255,255,255,.3); }
+#card-weather[data-sky="clear-night"]  { --ridge-hill: rgba(1,3,12,.88);   --ridge-rim-mid: rgba(200,215,255,.18); }
+#card-weather[data-sky="cloudy-night"] { --ridge-hill: rgba(1,3,10,.84);   --ridge-rim-mid: rgba(200,210,240,.08); }
+
+/* Kräftigerer Verlauf: oben tiefer, am Horizont heller, Akzent deutlicher */
+#card-weather {
+  background: linear-gradient(170deg, var(--mw-top) 0%, var(--mw-mid) 46%, var(--mw-bottom) 100%);
+}
+#card-weather[data-sky="clear-day"]    { --mw-top: #0b3f96; --mw-mid: #2a7ad8; --mw-bottom: #9ccff7; --mw-tint: rgba(255,210,140,.32); }
+#card-weather[data-sky="partly-day"]   { --mw-top: #1a4888; --mw-mid: #4a86ca; --mw-bottom: #b6d4ef; --mw-tint: rgba(255,222,170,.26); }
+#card-weather[data-sky="overcast"]     { --mw-top: #2c405e; --mw-mid: #617e9f; --mw-bottom: #b6c6d6; --mw-tint: rgba(170,198,236,.24); }
+#card-weather[data-sky="fog"]          { --mw-top: #53657b; --mw-mid: #8fa2b5; --mw-bottom: #dbe2e9; --mw-tint: rgba(255,255,255,.2); }
+#card-weather[data-sky="rain"]         { --mw-top: #101d2f; --mw-mid: #2e4767; --mw-bottom: #6a87a6; --mw-tint: rgba(90,140,210,.3); }
+#card-weather[data-sky="thunder"]      { --mw-top: #0b0919; --mw-mid: #262650; --mw-bottom: #565c80; --mw-tint: rgba(160,120,240,.3); }
+#card-weather[data-sky="snow"]         { --mw-top: #3c5a84; --mw-mid: #7f9fc4; --mw-bottom: #e0ebf5; --mw-tint: rgba(205,228,255,.3); }
+#card-weather[data-sky="clear-night"]  { --mw-top: #02061a; --mw-mid: #0c1b54; --mw-bottom: #2e4c92; --mw-tint: rgba(130,100,230,.3); }
+#card-weather[data-sky="cloudy-night"] { --mw-top: #060c1a; --mw-mid: #172644; --mw-bottom: #3b5078; --mw-tint: rgba(255,165,115,.12); }

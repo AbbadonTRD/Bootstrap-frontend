@@ -750,7 +750,7 @@ function createSkyFx(canvas, opt) {
         gr.addColorStop(1, `rgba(${r},${gC},${b},0)`);
         ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h * 0.6);
       }
-      const base = Math.min(w, 520) * 0.56 * o.size;
+      const base = Math.min(w, 520) * 0.5 * o.size;
       const band = o.cloudBand.map((v) => (v >= 0 && v < 1 ? v * h : v));   // 0..1 = Anteil, sonst Pixel
       for (const c of clouds) {
         // Wolke k erscheint, sobald die Bewölkung ihren Anteil erreicht
@@ -868,7 +868,7 @@ const sky = (() => {
       const c = document.getElementById('mw-sky-fx');
       const p = document.getElementById('page-sky-fx');
       if (c && c.getContext) {
-        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.85, drops: 130, flakes: 80 });
+        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.7, drops: 130, flakes: 80 });
         new IntersectionObserver(([e]) => card.setVisible(e.isIntersecting)).observe(c);
       }
       if (p && p.getContext) page = createSkyFx(p, { strength: 0.38, size: 1.9, maxDpr: 1, clouds: 6, cloudBand: [0.02, 0.32], drops: 70, flakes: 50 });

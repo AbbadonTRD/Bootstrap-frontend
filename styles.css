@@ -3372,3 +3372,28 @@ html[data-mode="light"] #card-weather .mw-sun-ground { border-top-color: rgba(14
 .mw-hourly.is-live .mw-scroll { overflow-x: hidden; touch-action: pan-y; cursor: default; }
 .mw-hourly.is-live [data-haptic-drag] { pointer-events: none !important; }
 .mw-hourly:not(.is-live) .mw-focus { opacity: 1; }
+
+/* Sonne v3: sauber am Horizont abgeschnitten + leicht für die GPU
+   (keine Box-Shadow-/Hintergrund-Animation mehr, die jedes Bild neu malt) */
+.mw-sun-sky { position: absolute; left: 0; right: 0; top: 0; height: 82.5%; overflow: hidden; z-index: 1; pointer-events: none; }
+.mw-sun-sky .mw-sun-orb { top: calc(100% / .825 * var(--sy)); }
+.mw-sun-sky .mw-sun-glow { top: 100%; }
+.mw-sun-disc { animation: mw-sun-turn 60s linear infinite !important; will-change: transform; }
+@keyframes mw-sun-turn { to { transform: rotate(360deg); } }
+.mw-sun-orb::before {
+  content: ""; position: absolute; inset: -14px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,150,40,.55), rgba(255,140,0,0));
+  animation: mw-sun-breathe 5s ease-in-out infinite; will-change: opacity;
+}
+@keyframes mw-sun-breathe { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.mw-sun-ground { -webkit-backdrop-filter: none; backdrop-filter: none; background: linear-gradient(rgba(12,22,42,.5), rgba(12,22,42,.25)); }
+.mw-sun-flare { filter: none; will-change: opacity; }
+.mw-sun-scene.is-night .mw-sun-orb { opacity: 0; }
+.mw-sun-orb { transition: left 700ms var(--ease-out), top 700ms var(--ease-out), opacity 500ms; }
+@media (prefers-reduced-motion: reduce) { .mw-sun-disc, .mw-sun-orb::before { animation: none !important; } }
+/* Licht + Schatten der Kugel bleiben stehen, nur die Oberfläche dreht sich */
+.mw-sun-disc { box-shadow: 0 0 16px 6px rgba(255,140,0,.7); }
+.mw-sun-orb::after {
+  content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+  box-shadow: -1px 0 2px 0 #ffb453 inset, 2px 0 5px 2px #bb6d01c5 inset, -3px 0 6px 3px #ffa265c2 inset, 14px 0 9px 4px #c55f00aa inset;
+}

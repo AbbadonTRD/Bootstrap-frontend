@@ -1193,7 +1193,7 @@ const sky = (() => {
       const a = document.getElementById('mw-alps');
       if (a && a.getContext) alps = createAlps(a);
       if (c && c.getContext) {
-        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.7, drops: 130, flakes: 80,
+        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 1.5, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.7, drops: 130, flakes: 80,
           fogBand: [150, 290], curtain: 260, mountainY: 228, lowY: 182 });
         new IntersectionObserver(([e]) => card.setVisible(e.isIntersecting)).observe(c);
       }
@@ -1415,7 +1415,7 @@ function renderDetails(i, force = false) {
     let by = (1 - f) ** 2 * 66 + 2 * (1 - f) * f * -14 + f * f * 66;
     // Nachts: Sonne sinkt hinter den Horizont (je weiter weg vom Auf-/Untergang, desto tiefer)
     const off = raw < 0 ? r - t : raw > 1 ? t - s : 0;
-    if (off > 0) by = 66 + Math.min(26, 8 + off / 6);
+    if (off > 0) by = 66 + Math.min(30, 10 + off / 4);   // hinter dem Horizont verschwunden
     scene.style.setProperty('--sx', (bx / 200).toFixed(4));
     scene.style.setProperty('--sy', (by / 80).toFixed(4));
     document.getElementById('wd-sun-cliprect').setAttribute('width', bx.toFixed(1));   // bisheriger Weg = Bahn links der Sonne

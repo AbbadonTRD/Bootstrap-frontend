@@ -158,7 +158,8 @@ bootstrap-frontend/
 
 ## Known limitations
 
-- **Haptics on iPhone:** since iOS 26.5, websites can no longer trigger haptics from code. The page places an invisible native switch inside tappable elements, so a real tap still produces the system tick. Ticks while scrubbing a chart work on Android only.
+- **Haptics on iPhone:** since iOS 26.5, websites can no longer trigger haptics from code. The page places an invisible native switch inside tappable elements, so a real tap still produces the system tick. Ticks while scrubbing a chart work on Android only. Open the page with `?haptics=test` to check a device.
+- **Liquid glass in Safari:** Safari does not render SVG filters in `backdrop-filter` yet ([WebKit bug 245510](https://bugs.webkit.org/show_bug.cgi?id=245510)), so it shows a drawn glass look (rim light, sheen, color fringe) instead of real refraction.
 
 - **Liquid glass:** shows the full refraction effect only in Chromium-based browsers. Other browsers get a simpler frosted look.
 - **Train formation:** the free timetable APIs do not include car order, so the sector bar is schematic. It is based on the train type and number, and the display labels it that way.

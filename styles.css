@@ -2829,17 +2829,20 @@ html[data-sky="partly-day"] .page-sky-rays { opacity: .3; }
 .mw-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .mw-caption-meta { white-space: nowrap; }
 
-/* iPhone-Haptik: unsichtbarer echter Schalter über dem ganzen Tap-Element.
-   Der Finger trifft ihn direkt → iOS spielt seinen Tick; der Klick läuft zum Element weiter. */
-.haptic-overlay {
-  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
-  opacity: .001; cursor: pointer; z-index: 5;
-  -webkit-appearance: auto; appearance: auto;
-  -webkit-tap-highlight-color: transparent;
+/* iPhone-Haptik: Stil des unsichtbaren Schalters steht inline (wie @haptics) */
+/* Testfeld für ?haptics=test */
+.haptic-test {
+  position: fixed; left: 12px; right: 12px; bottom: 12px; z-index: 5000;
+  padding: 14px 16px; border-radius: 16px; background: rgba(20,22,30,.96); color: #fff;
+  font: 14px/1.4 "Ubuntu", system-ui, sans-serif; box-shadow: 0 18px 40px rgba(0,0,0,.45);
 }
-/* Ton-Schalter neben "Live" */
-.mw-sound-toggle { padding-left: 6px; }
-.mw-sound-toggle .ic { width: 13px; height: 13px; }
+.haptic-test p { margin: 0 0 8px; }
+.haptic-test-title { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 16px; }
+.haptic-test-close { border: 0; background: rgba(255,255,255,.12); color: #fff; width: 30px; height: 30px; border-radius: 8px; font-size: 18px; }
+.haptic-test-info, .haptic-test-hint, .haptic-test-log { color: rgba(255,255,255,.7); font-size: 12.5px; }
+.haptic-test-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
+.haptic-test-row input { -webkit-appearance: auto; appearance: auto; transform: scale(1.3); }
+.haptic-test-btn { display: block; width: 100%; margin: 4px 0 10px; padding: 14px; border: 0; border-radius: 12px; background: #8b7cf6; color: #fff; font: inherit; font-weight: 500; }
 
 /* ═════════════════════════════════════════════════════════════════════════════
    Live-Himmel v6: zackige Alpen in vier Ebenen + kräftigerer Verlauf
@@ -2881,3 +2884,42 @@ html[data-sky="partly-day"] .page-sky-rays { opacity: .3; }
   -webkit-mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
           mask-image: linear-gradient(to bottom, #000 58%, transparent 100%);
 }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Liquid Glass – Safari & Firefox, Version 3: deutlich sichtbares Glas
+   Safari 26 kann keine SVG-Filter als backdrop-filter (WebKit-Bug 245510, offen) –
+   also keine echte Lichtbrechung. Dafür zeichnen wir das Glas selbst: Lichtkante,
+   Kuppel-Glanz, leuchtender Rand und Farbsaum.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.lg-fallback .liquid-glass {
+  -webkit-backdrop-filter: blur(2px) saturate(1.8) brightness(1.12);
+          backdrop-filter: blur(2px) saturate(1.8) brightness(1.12);
+}
+/* Glanz + Kante: Kuppel oben, Lichtfleck oben links, Reflex unten rechts */
+.lg-fallback .liquid-glass::before {
+  background:
+    radial-gradient(120% 70% at 50% -18%, rgba(255,255,255,.34) 0%, rgba(255,255,255,.1) 38%, rgba(255,255,255,0) 62%),
+    radial-gradient(90% 80% at 0% 0%, rgba(255,255,255,.2) 0%, rgba(255,255,255,0) 45%),
+    radial-gradient(90% 80% at 100% 100%, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 45%) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.2),
+    inset 2px 2px 1px -1px rgba(255,255,255,.95),
+    inset -2px -2px 1px -1px rgba(255,255,255,.4),
+    inset 0 0 22px 2px rgba(255,255,255,.22),
+    inset 0 -10px 16px -10px rgba(0,0,0,.28),
+    inset 4px 0 8px -4px rgba(255,90,90,.45),
+    inset -4px 0 8px -4px rgba(80,160,255,.5);
+}
+/* Scharfe Lichtkante rundum (1.5px Verlaufsrand) */
+.lg-fallback .liquid-glass::after {
+  display: block !important;
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  border-radius: inherit; padding: 1.5px;
+  background: linear-gradient(140deg,
+    rgba(255,255,255,.95) 0%, rgba(255,255,255,.35) 22%, rgba(150,160,180,.18) 50%,
+    rgba(255,255,255,.25) 78%, rgba(255,255,255,.7) 100%) !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+@media (prefers-reduced-transparency: reduce) { .lg-fallback .liquid-glass::after { display: none !important; } }

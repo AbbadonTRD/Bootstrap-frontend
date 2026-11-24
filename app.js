@@ -117,43 +117,47 @@ function geocode(text, origins) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  Haptisches Feedback (Stand Recherche Nov. 2026)
-//  - iPhone: Seit iOS 26.5 löst Apple Haptik NICHT mehr per Code aus (label.click() &
-//    Co. sind blockiert, auch bei web-haptics/ios-haptics). Was noch geht: der Finger
-//    tippt selbst auf einen echten <input type="checkbox" switch>. Darum liegt in jedem
-//    antippbaren Element ein unsichtbarer Schalter, den der Tipp direkt trifft.
+//  Haptisches Feedback (nur Haptik, kein Ton)
+//  - iPhone: Seit iOS 26.5 lässt Apple Haptik nicht mehr per Code auslösen. Was geht:
+//    der Finger tippt selbst auf einen echten <input type="checkbox" switch>. Darum liegt
+//    in jedem antippbaren Element ein unsichtbarer Schalter – aufgebaut exakt wie bei der
+//    Bibliothek @haptics (github.com/howdoiusekeyboard/haptics, MIT), die auf 26.5 läuft.
 //    → Haptik bei Taps, nicht beim Wischen durch Diagramme (geht auf iOS nicht).
 //  - Android: navigator.vibrate() – bei Taps und fein beim Wischen.
-//  - Ton (optional, Standard aus): weiches "Tock" wie das iOS-Auswahlrad, nur beim
-//    Wischen; je schneller, desto leiser und etwas heller, nie ein Dauerrattern.
+//  - Test: ?haptics=test zeigt unten ein Testfeld (sichtbarer Schalter + Knopf).
 // ═════════════════════════════════════════════════════════════════════════════
 const haptics = (() => {
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const canVibrate = typeof navigator.vibrate === 'function';
   // Elemente mit Haptik beim Antippen
-  const TAP = '.mw-day, .wallet-range, .wallet-toggle, .mw-live-toggle, .ml-item, .mw-city-chip, .mw-now-btn, .ps-choice, .tui-seg .tui-btn';
+  const TAP = '.mw-day, .wallet-range, .wallet-toggle, .mw-live-toggle, .ml-item, .mw-city-chip, .mw-now-btn, .ps-choice, .tui-seg .tui-btn, .haptic-test-btn';
   let touch = false;
   let lastScrub = 0;
-  let audio = null;
-  let noise = null;
-  let soundOn = false;
-  try { soundOn = localStorage.getItem('tick-sound') === '1'; } catch (e) { /* privates Fenster */ }
 
   document.addEventListener('pointerdown', (e) => { touch = e.pointerType === 'touch'; }, { capture: true, passive: true });
   document.addEventListener('touchstart', () => { touch = true; }, { capture: true, passive: true });
 
-  // ── iPhone: unsichtbarer echter Schalter als Tipp-Ziel in jedem Tap-Element ──
+  // ── iPhone: unsichtbarer echter Schalter als Tipp-Ziel (wie @haptics) ──
   const attach = () => {
-    document.querySelectorAll(TAP).forEach((el) => {
-      if (el.querySelector(':scope > .haptic-overlay')) return;
-      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    document.querySelectorAll(TAP).forEach((host) => {
+      if (host.querySelector(':scope > [data-haptic-overlay]')) return;
+      const pos = getComputedStyle(host).position;
+      if (pos !== 'absolute' && pos !== 'relative' && pos !== 'fixed' && pos !== 'sticky') host.style.position = 'relative';
       const sw = document.createElement('input');
       sw.type = 'checkbox';
       sw.setAttribute('switch', '');
-      sw.className = 'haptic-overlay';
-      sw.tabIndex = -1;
+      sw.setAttribute('data-haptic-overlay', '');
       sw.setAttribute('aria-hidden', 'true');
-      el.appendChild(sw);
+      sw.tabIndex = -1;
+      sw.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;'
+        + '-webkit-appearance:switch;appearance:auto;opacity:0;cursor:inherit;pointer-events:auto;';
+      // Der echte Tipp toggelt den Schalter (→ iOS-Tick); danach wie @haptics: Klick nicht
+      // doppelt durchreichen, sondern sauber am Element selbst auslösen.
+      sw.addEventListener('click', (e) => {
+        e.stopPropagation();
+        host.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      });
+      host.appendChild(sw);
     });
   };
   if (isIOS) {
@@ -170,62 +174,40 @@ const haptics = (() => {
     if (touch && canVibrate && e.target.closest && e.target.closest(`${TAP}, button`)) { try { navigator.vibrate(8); } catch (err) { /* egal */ } }
   }, true);
 
-  // ── Ton: weiches, kurzes "Tock" (gefiltertes Rauschen statt Piepton) ──
-  const ensureAudio = () => {
-    try {
-      if (!audio) {
-        if (navigator.audioSession) navigator.audioSession.type = 'ambient';   // Lautlos-Schalter gilt
-        const Ctx = window.AudioContext || window.webkitAudioContext;
-        if (!Ctx) return;
-        audio = new Ctx();
-        noise = audio.createBuffer(1, Math.round(audio.sampleRate * 0.03), audio.sampleRate);
-        const d = noise.getChannelData(0);
-        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
-      }
-      if (audio.state === 'suspended') audio.resume();
-    } catch (e) { audio = null; }
-  };
-  document.addEventListener('touchend', () => { if (soundOn) ensureAudio(); }, { capture: true, passive: true });
-
-  const tock = (rate) => {
-    if (!audio || audio.state !== 'running') return;
-    const t = audio.currentTime;
-    const src = audio.createBufferSource();
-    src.buffer = noise;
-    const band = audio.createBiquadFilter();
-    band.type = 'bandpass';
-    band.frequency.value = 1500 + Math.min(1300, rate * 55);   // schneller → etwas heller
-    band.Q.value = 6;
-    const gain = audio.createGain();
-    const peak = 0.55 * (1 - Math.min(0.65, rate / 40));          // schneller → leiser
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(peak, t + 0.0015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.028);
-    src.connect(band).connect(gain).connect(audio.destination);
-    src.start(t);
-    src.stop(t + 0.03);
-  };
+  // ── Testfeld: ?haptics=test ──
+  if (new URLSearchParams(location.search).get('haptics') === 'test') {
+    const show = () => {
+      const ver = (navigator.userAgent.match(/OS (\d+)_(\d+)/) || []).slice(1).join('.') || '–';
+      const box = document.createElement('div');
+      box.className = 'haptic-test';
+      box.innerHTML = `
+        <p class="haptic-test-title">Haptik-Test <button type="button" class="haptic-test-close" aria-label="Schliessen">×</button></p>
+        <p class="haptic-test-info">iOS ${ver} · Schalter-Element: ${'switch' in HTMLInputElement.prototype ? 'ja' : 'nein'} · Vibration: ${canVibrate ? 'ja' : 'nein'}</p>
+        <label class="haptic-test-row">1 · Sichtbarer iPhone-Schalter <input type="checkbox" switch></label>
+        <button type="button" class="haptic-test-btn">2 · Knopf mit unsichtbarem Schalter</button>
+        <p class="haptic-test-hint">Kein Tick bei 1 → Einstellungen › Töne &amp; Haptik › System-Haptik einschalten.<br>Tick bei 1, aber nicht bei 2 → bitte melden.</p>
+        <p class="haptic-test-log" aria-live="polite"></p>`;
+      document.body.appendChild(box);
+      const log = box.querySelector('.haptic-test-log');
+      let n = 0;
+      box.querySelector('.haptic-test-btn').addEventListener('click', () => { log.textContent = `Knopf ${++n}× getippt`; });
+      box.querySelector('.haptic-test-close').addEventListener('click', () => box.remove());
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show); else show();
+  }
 
   return {
-    // Ein Schritt beim Wischen (Diagramm-Punkt, Stunde im Streifen)
+    // Ein Schritt beim Wischen (Diagramm-Punkt, Stunde im Streifen) – nur Android kann das
     scrub() {
-      if (!touch) return;
+      if (!touch || !canVibrate) return;
       const now = performance.now();
       const gap = now - lastScrub;
       if (gap < 28) return;                       // nie mehr als ~35 Ticks pro Sekunde
       lastScrub = now;
-      const rate = gap > 600 ? 1 : 1000 / gap;    // Ticks pro Sekunde
-      if (canVibrate) { try { navigator.vibrate(rate > 18 ? 3 : 5); } catch (e) { /* egal */ } }
-      if (soundOn) tock(rate);
+      try { navigator.vibrate(gap < 55 ? 3 : 5); } catch (e) { /* egal */ }
     },
     // Antippen: iPhone über den Schalter, Android über den Klick-Listener oben
     tick() {},
-    get sound() { return soundOn; },
-    setSound(on) {
-      soundOn = on;
-      try { localStorage.setItem('tick-sound', on ? '1' : '0'); } catch (e) { /* egal */ }
-      if (on) { ensureAudio(); tock(2); }        // kurze Hörprobe
-    },
   };
 })();
 
@@ -2101,11 +2083,6 @@ $(function () {
   };
   setSkyLive(skyLive, false);
   $('#sky-live-toggle').on('click', () => setSkyLive(!skyLive));
-  // Ton beim Wischen (Standard aus)
-  $('#tick-sound-toggle').attr('aria-checked', haptics.sound).on('click', function () {
-    haptics.setSound(!haptics.sound);
-    $(this).attr('aria-checked', haptics.sound);
-  });
   $('#weather-now').on('click', () => { const d = weatherDays.find((x) => x.isToday); if (d) selectWeatherDay(d.key); });
 
   // Wetter: Ort wählen

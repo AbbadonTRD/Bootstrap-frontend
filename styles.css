@@ -3369,8 +3369,6 @@ html[data-mode="light"] #card-weather .mw-sun-ground { border-top-color: rgba(14
 
 /* Live = Streifen steht fest auf der aktuellen Uhrzeit: kein seitliches Scrollen,
    der Haptik-Schalter lässt den Finger los (die Seite scrollt nativ weiter) */
-.mw-hourly.is-live .mw-scroll { overflow-x: hidden; touch-action: pan-y; cursor: default; }
-.mw-hourly.is-live [data-haptic-drag] { pointer-events: none !important; }
 .mw-hourly:not(.is-live) .mw-focus { opacity: 1; }
 
 /* Sonne v3: sauber am Horizont abgeschnitten + leicht für die GPU
@@ -3397,3 +3395,14 @@ html[data-mode="light"] #card-weather .mw-sun-ground { border-top-color: rgba(14
   content: ""; position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
   box-shadow: -1px 0 2px 0 #ffb453 inset, 2px 0 5px 2px #bb6d01c5 inset, -3px 0 6px 3px #ffa265c2 inset, 14px 0 9px 4px #c55f00aa inset;
 }
+
+/* Sonne: Horizont weich statt harter Balken – Boden geht nahtlos in die Kachel über */
+.mw-sun-ground {
+  border-top: 0 !important; background: linear-gradient(rgba(12,22,42,.22), rgba(12,22,42,0)) !important;
+}
+.mw-sun-ground::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.35) 20%, rgba(255,255,255,.35) 80%, rgba(255,255,255,0));
+}
+html[data-mode="light"] #card-weather .mw-sun-ground { background: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,0)) !important; }
+html[data-mode="light"] #card-weather .mw-sun-ground::before { background: linear-gradient(90deg, rgba(14,28,51,0), rgba(14,28,51,.2) 20%, rgba(14,28,51,.2) 80%, rgba(14,28,51,0)); }

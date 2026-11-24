@@ -1847,7 +1847,7 @@ function initStripTouchScroll(el) {
   };
   el.addEventListener('touchstart', (e) => {
     stopStripMomentum();
-    if (skyLive || e.touches.length !== 1) { t = null; return; }   // Live: Seite scrollt nativ, Streifen steht
+    if (e.touches.length !== 1) { t = null; return; }
     const p = e.touches[0];
     t = { x: p.clientX, y: p.clientY, lx: p.clientX, ly: p.clientY, left: el.scrollLeft, axis: null, samples: [] };
   }, { passive: true });
@@ -1883,6 +1883,8 @@ function initStripScroll() {
   // Während einer Fahrt nach Antippen bleibt der angetippte Tag stehen.
   el.addEventListener('scroll', () => {
     if (!wxStrip || strip.busy) return;
+    // Selbst seitlich wischen schaltet Live aus (Live = fest auf jetzt)
+    if (skyLive && performance.now() - (strip.userAt || 0) < 1500 && window.setSkyLiveFn) window.setSkyLiveFn(false);
     // Wie das Timer-Rad: jede Stunde, die durch die Mitte läuft, gibt einen Tick
     const hour = Math.round(wxStrip.xAxis[0].toValue(el.scrollLeft + el.clientWidth / 2) / 36e5);
     if (hour !== strip.lastHour) {
@@ -1894,7 +1896,7 @@ function initStripScroll() {
     if (d && d.key !== strip.lastKey) showStripDay(d);
   }, { passive: true });
   // Selbst wischen/scrollen bricht eine laufende Fahrt sofort ab
-  ['touchstart', 'wheel', 'pointerdown'].forEach((type) => el.addEventListener(type, stopStripAnim, { passive: true }));
+  ['touchstart', 'wheel', 'pointerdown'].forEach((type) => el.addEventListener(type, () => { stopStripAnim(); strip.userAt = performance.now(); }, { passive: true }));
   if (haptics.isIOS) initStripTouchScroll(el);
 
   let drag = null;
@@ -2593,6 +2595,7 @@ $(function () {
     if (d) selectWeatherDay(d.key);
   }, 60000);
   setSkyLive(skyLive, false);
+  window.setSkyLiveFn = setSkyLive;
   $('#sky-live-toggle').on('click', () => setSkyLive(!skyLive));
   $('#weather-now').on('click', () => { const d = weatherDays.find((x) => x.isToday); if (d) selectWeatherDay(d.key); });
   // Wetterdetails: Pfeil neben "Tag wählen" öffnet, "‹ 5 Tage" bzw. Esc schliesst

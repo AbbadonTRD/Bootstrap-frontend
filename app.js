@@ -660,6 +660,13 @@ function makeCloudSprite(seed, body, shade) {
   };
   puffs.forEach((p) => blob(p, shade, 0, 10, 1.02));   // Schatten unten
   puffs.forEach((p) => blob(p, body, -2, -2, 1));      // Körper, Licht leicht von oben links
+  // Volumen: oben aufgehellt, unten abgedunkelt – nur auf der Wolke selbst (source-atop)
+  g.globalCompositeOperation = 'source-atop';
+  const lit = g.createLinearGradient(0, 20, 0, base);
+  lit.addColorStop(0, 'rgba(255,255,255,0.35)');
+  lit.addColorStop(0.45, 'rgba(255,255,255,0)');
+  lit.addColorStop(1, 'rgba(20,30,48,0.28)');
+  g.fillStyle = lit; g.fillRect(0, 0, c.width, c.height);
   // Unterseite weich abschneiden → flache Wolkenbasis
   g.globalCompositeOperation = 'destination-out';
   const cut = g.createLinearGradient(0, base - 6, 0, base + 14);
@@ -679,15 +686,17 @@ function createSkyFx(canvas, opt) {
   const cur = { cloud: 0, l: 1, d: 0, n: 0, fog: 0, rain: 0, snow: 0 };
   let tgt = { ...cur };
   const sprites = { l: [], d: [], n: [] };
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     sprites.l.push(makeCloudSprite(17 + i * 31, 'rgba(255,255,255,0.95)', 'rgba(196,206,220,0.75)'));
     sprites.d.push(makeCloudSprite(17 + i * 31, 'rgba(112,124,140,0.95)', 'rgba(70,80,95,0.8)'));
     sprites.n.push(makeCloudSprite(17 + i * 31, 'rgba(70,84,112,0.9)', 'rgba(40,50,72,0.8)'));
   }
   const clouds = Array.from({ length: o.clouds }, (_, k) => ({
-    k, x: Math.random(), y: Math.random(), s: 0.6 + Math.random() * 0.7,
-    v: 0.004 + Math.random() * 0.006, img: k % 3,
+    // Tiefe: grosse (nahe) Wolken ziehen schneller und liegen tiefer, kleine (ferne) langsamer und höher
+    k, x: Math.random(), y: 0, s: 0.5 + Math.random() * 0.8,
+    v: 0, img: k % 5,
   })).sort((a, b) => a.s - b.s);
+  clouds.forEach((c) => { c.v = 0.002 + c.s * 0.007; c.y = Math.min(1, Math.max(0, (c.s - 0.5) / 0.8 * 0.7 + Math.random() * 0.3)); });
   const fogBands = [0, 1, 2].map((i) => ({ x: Math.random(), y: 0.58 + i * 0.13, v: 0.006 + i * 0.003 }));
   const drops = [];
   const flakes = [];
@@ -733,7 +742,7 @@ function createSkyFx(canvas, opt) {
         const x = c.x * (w + cw) - cw, y = band[0] + c.y * (band[1] - band[0]) - chh / 2;
         for (const [key, wt] of [['l', cur.l], ['d', cur.d], ['n', cur.n]]) {
           if (wt / toneSum < 0.02) continue;
-          ctx.globalAlpha = a * (wt / toneSum) * (key === 'l' ? o.lightAlpha : 1);
+          ctx.globalAlpha = a * (wt / toneSum) * (key === 'l' ? o.lightAlpha : 1) * (0.7 + c.s * 0.3);   // ferne Wolken etwas blasser
           ctx.drawImage(sprites[key][c.img], x, y, cw, chh);
         }
       }

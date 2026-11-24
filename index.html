@@ -25,7 +25,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-23m" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-24a" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -229,10 +229,17 @@
           <!-- Live-Himmel: folgt dem Wetter zur gewählten Zeit (data-sky).
                Hinten: Farbverlauf, Sonne/Mond, Sterne · Mitte: Alpenkämme · Vorne (Canvas): Wolken, Nebel, Regen, Schnee -->
           <div class="mw-sky" aria-hidden="true"><span class="mw-horizon"></span><span class="mw-rays"></span><span class="mw-sun"></span><span class="mw-moon"></span><span class="mw-stars"></span></div>
-          <svg class="mw-mountains" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
-            <path class="mw-ridge-far" d="M0 120 L0 74 L38 62 L70 50 L104 60 L150 38 L186 52 L226 36 L268 54 L308 42 L352 56 L400 46 L400 120 Z" />
-            <path class="mw-ridge-near" d="M0 120 L0 88 L30 80 L55 62 L72 70 L95 46 L118 58 L140 40 L162 52 L190 30 L214 48 L236 42 L262 60 L290 50 L318 68 L346 58 L372 74 L400 66 L400 120 Z" />
-            <path class="mw-ridge-snow" d="M42.5 71.0 L55 62 L72.0 70.0 L63.5 67.6 L55.5 69.7 L49.4 67.6 Z M86.4 55.0 L95 46 L112.2 55.0 L103.6 52.3 L95.5 53.6 L91.1 51.6 Z M125.3 52.0 L140 40 L162.0 52.0 L151.0 48.4 L140.5 50.2 L133.4 47.4 Z M174.7 42.0 L190 30 L206.0 42.0 L198.0 38.4 L190.5 40.2 L183.1 37.4 Z M214.0 48.0 L236 42 L253.3 54.0 L244.7 50.4 L236.5 47.1 L226.1 45.7 Z M264.8 59.0 L290 50 L304.0 59.0 L297.0 56.3 L290.5 57.6 L278.7 55.6 Z M320.8 67.0 L346 58 L360.6 67.0 L353.3 64.3 L346.5 65.7 L334.7 63.6 Z" />
+          <svg class="mw-mountains" viewBox="0 0 400 140" preserveAspectRatio="none" aria-hidden="true">
+            <defs>
+              <linearGradient id="mw-g-far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--ridge-far)"/><stop offset="1" style="stop-color:var(--ridge-far);stop-opacity:0"/></linearGradient>
+              <linearGradient id="mw-g-mid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--ridge-mid)"/><stop offset="1" style="stop-color:var(--ridge-mid);stop-opacity:.15"/></linearGradient>
+              <linearGradient id="mw-g-near" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--ridge-near)"/><stop offset="1" style="stop-color:var(--ridge-near);stop-opacity:.35"/></linearGradient>
+            </defs>
+            <path class="mw-ridge-far" fill="url(#mw-g-far)" d="M0 140 L0 62 L40 50 L78 38 L112 48 L156 28 L196 42 L232 26 L276 44 L316 32 L358 46 L400 36 L400 140 Z" />
+            <path class="mw-ridge-mid" fill="url(#mw-g-mid)" d="M0 140 L0 80 L26 70 L60 58 L88 66 L120 46 L150 58 L178 44 L206 54 L240 38 L270 52 L300 42 L334 56 L366 46 L400 58 L400 140 Z" />
+            <path class="mw-ridge-near" fill="url(#mw-g-near)" d="M0 140 L0 98 L30 90 L55 72 L72 80 L95 56 L118 68 L140 50 L162 62 L190 40 L214 58 L236 52 L262 70 L290 60 L318 78 L346 68 L372 84 L400 76 L400 140 Z" />
+            <path class="mw-ridge-snow" transform="translate(0 10)" d="M42.5 71.0 L55 62 L72.0 70.0 L63.5 67.6 L55.5 69.7 L49.4 67.6 Z M86.4 55.0 L95 46 L112.2 55.0 L103.6 52.3 L95.5 53.6 L91.1 51.6 Z M125.3 52.0 L140 40 L162.0 52.0 L151.0 48.4 L140.5 50.2 L133.4 47.4 Z M174.7 42.0 L190 30 L206.0 42.0 L198.0 38.4 L190.5 40.2 L183.1 37.4 Z M214.0 48.0 L236 42 L253.3 54.0 L244.7 50.4 L236.5 47.1 L226.1 45.7 Z M264.8 59.0 L290 50 L304.0 59.0 L297.0 56.3 L290.5 57.6 L278.7 55.6 Z M320.8 67.0 L346 58 L360.6 67.0 L353.3 64.3 L346.5 65.7 L334.7 63.6 Z" />
+            <path class="mw-ridge-rim" d="M0 98 L30 90 L55 72 L72 80 L95 56 L118 68 L140 50 L162 62 L190 40 L214 58 L236 52 L262 70 L290 60 L318 78 L346 68 L372 84 L400 76" />
           </svg>
           <canvas id="mw-sky-fx" class="mw-sky-fx" aria-hidden="true"></canvas>
           <span class="mw-flash" aria-hidden="true"></span>
@@ -546,6 +553,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-23m"></script>
+  <script src="app.js?v=2026-11-24a"></script>
 </body>
 </html>

@@ -3406,3 +3406,16 @@ html[data-mode="light"] #card-weather .mw-sun-ground { border-top-color: rgba(14
 }
 html[data-mode="light"] #card-weather .mw-sun-ground { background: linear-gradient(rgba(255,255,255,.35), rgba(255,255,255,0)) !important; }
 html[data-mode="light"] #card-weather .mw-sun-ground::before { background: linear-gradient(90deg, rgba(14,28,51,0), rgba(14,28,51,.2) 20%, rgba(14,28,51,.2) 80%, rgba(14,28,51,0)); }
+
+/* Sonne v4: kein dunkler Boden mehr (nur die feine Horizontlinie), Sonne doppelt so gross */
+.mw-sun-ground, html[data-mode="light"] #card-weather .mw-sun-ground { background: none !important; }
+.mw-sun-scene { height: 132px; }
+.mw-sun-orb { width: 60px; height: 60px; margin: -30px 0 0 -30px; }
+.mw-sun-disc { box-shadow: 0 0 30px 12px rgba(255,140,0,.7); }
+.mw-sun-orb::before { inset: -28px; }
+.mw-sun-orb::after {
+  box-shadow: -2px 0 4px 1px #ffb453 inset, 4px 0 10px 4px #bb6d01c5 inset, -6px 0 12px 6px #ffa265c2 inset, 28px 0 18px 8px #c55f00aa inset;
+}
+.mw-sun-flare { width: 190px; height: 2.5px; margin: -1.25px 0 0 -95px; }
+.mw-sun-flare.is-2 { width: 96px; margin-left: -48px; }
+.mw-sun-glow { width: 280px; height: 120px; }

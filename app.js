@@ -289,6 +289,7 @@ const haptics = (() => {
     },
     // Fläche, über die man wischt (Diagramm), für iPhone-Ticks vorbereiten
     attachDrag,
+    isIOS,
     // Antippen: iPhone über den Schalter, Android über den Klick-Listener oben
     tick() {},
   };
@@ -310,7 +311,10 @@ if (window.Highcharts) {
   // iPhone: jedes Diagramm bekommt den mitwandernden Schalter (gleiches touch-action wie
   // das Diagramm – der wischbare Wetter-Streifen scrollt also weiter wie bisher)
   Highcharts.addEvent(Highcharts.Chart, 'load', function () {
-    haptics.attachDrag(this.container, getComputedStyle(this.container).touchAction);
+    // Stunden-Streifen: auf dem iPhone scrollt er per eigenem Wischen (initStripScroll) – der Schalter
+    // darf den Finger dort ganz behalten, sonst würde der native Schalter das Scrollen blockieren
+    const isStrip = this.renderTo && this.renderTo.id === 'weather-hourly';
+    haptics.attachDrag(this.container, isStrip ? 'none' : getComputedStyle(this.container).touchAction);
   });
 }
 
@@ -1225,7 +1229,7 @@ const sky = (() => {
 
 // Zeit-Zeiger im Stundenstreifen: welche Stunde Himmel + Kopfzeile bestimmt
 const wxFocus = { idx: -1, nowIdx: -1 };
-let skyLive = false;       // Live-Schalter: Himmel folgt beim Wischen jeder Stunde
+let skyLive = false;       // Live an: Streifen fest auf der aktuellen Uhrzeit (Tage wählbar); aus: frei wischen
 try { skyLive = localStorage.getItem('sky-live') === '1'; } catch (e) { /* privates Fenster */ }
 let weatherNow = null;     // aktuelle Werte (current) für "Jetzt"
 let weatherToday = null;   // Tageswerte heute (daily)
@@ -1395,22 +1399,44 @@ function renderDetails(i, force = false) {
   $('#wd-uv-note').text(loading ? 'Lädt …' : !h.is_day[i] ? 'Nachts keine UV-Strahlung.'
     : uv != null && uv >= 3 ? 'Sonnenschutz empfohlen.' : uvMax != null ? `Höchstwert am Tag: ${Math.round(uvMax)}` : dash);
 
-  // Sonne: Auf-/Untergang des Tages, Sonne auf dem Bogen zur gewählten Zeit
+  // Sonne: kleiner Himmel mit Horizont. Die echte Sonne steht auf ihrer Tagesbahn dort,
+  // wo sie zur gewählten Zeit ist – tief und orange bei Auf-/Untergang, nachts unter dem Horizont.
   const rise = k >= 0 ? D.daily.sunrise[k] : null, set = k >= 0 ? D.daily.sunset[k] : null;
   $('#wd-rise').text(rise ? rise.slice(11, 16) : dash);
   $('#wd-set').text(set ? set.slice(11, 16) : dash);
+  const scene = document.getElementById('wd-sun-scene');
   if (rise && set) {
-    const r = wxMin(rise), s = wxMin(set);
+    const r = wxMin(rise), s = wxMin(set), noon = (r + s) / 2;
     const t = isNow ? zurichNowMin() : wxMin(h.time[i]);
-    const f = Math.max(0, Math.min(1, (t - r) / (s - r)));
-    const x = (1 - f) ** 2 * 14 + 2 * (1 - f) * f * 100 + f * f * 186;   // Punkt auf der Bézier-Kurve
-    const y = (1 - f) ** 2 * 56 + 2 * (1 - f) * f * -18 + f * f * 56;
-    document.getElementById('wd-sun-dot').style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
-    document.getElementById('wd-sun-done').style.strokeDashoffset = String(1 - f);
-    const night = t < r || t > s;
-    $('#wd-sun-arc').toggleClass('is-night', night);
-    $('#wd-daylen').text(`Tageslänge ${fmtDur(s - r)}${night ? '' : ` · noch ${fmtDur(s - t)} hell`}`);
+    const raw = (t - r) / (s - r);                       // <0 vor Aufgang, >1 nach Untergang
+    const f = Math.max(0, Math.min(1, raw));
+    // Punkt auf der Bahn (SVG 200×80, Horizont bei y=66) → Prozent der Szene
+    const bx = (1 - f) ** 2 * 10 + 2 * (1 - f) * f * 100 + f * f * 190;
+    let by = (1 - f) ** 2 * 66 + 2 * (1 - f) * f * -14 + f * f * 66;
+    // Nachts: Sonne sinkt hinter den Horizont (je weiter weg vom Auf-/Untergang, desto tiefer)
+    const off = raw < 0 ? r - t : raw > 1 ? t - s : 0;
+    if (off > 0) by = 66 + Math.min(26, 8 + off / 6);
+    scene.style.setProperty('--sx', (bx / 200).toFixed(4));
+    scene.style.setProperty('--sy', (by / 80).toFixed(4));
+    document.getElementById('wd-sun-cliprect').setAttribute('width', bx.toFixed(1));   // bisheriger Weg = Bahn links der Sonne
+    // Goldene Stunde: 0 = hoch am Himmel, 1 = direkt am Horizont (auch kurz davor/danach)
+    const edge = off > 0 ? Math.max(0, 1 - off / 50) : Math.max(0, 1 - Math.min(t - r, s - t) / 75);
+    scene.style.setProperty('--gold', edge.toFixed(2));
+    scene.classList.toggle('is-night', off > 0);
+    // Klarer Satz statt nur einer Kurve
+    const next = D.daily.sunrise[k + 1];
+    let state;
+    if (raw < 0) state = `Sonnenaufgang in ${fmtDur(r - t)}`;
+    else if (raw > 1) state = next ? `Untergegangen · Aufgang morgen ${next.slice(11, 16)}` : 'Die Sonne ist untergegangen';
+    else if (s - t <= 75) state = `Sonnenuntergang in ${fmtDur(s - t)}`;
+    else if (t - r <= 60) state = `Die Sonne ist vor ${fmtDur(t - r)} aufgegangen`;
+    else if (Math.abs(t - noon) <= 40) state = 'Die Sonne steht am höchsten';
+    else state = `Noch ${fmtDur(s - t)} Tageslicht`;
+    $('#wd-sun-state').text(state);
+    const nh = Math.floor(noon / 60) % 24, nm = Math.round(noon % 60);
+    $('#wd-daylen').text(`Tageslänge ${fmtDur(s - r)} · Höchststand ${String(nh).padStart(2, '0')}:${String(nm % 60).padStart(2, '0')}`);
   } else {
+    $('#wd-sun-state').text(loading ? 'Lädt …' : dash);
     $('#wd-daylen').text(loading ? 'Lädt …' : dash);
   }
 
@@ -1786,8 +1812,9 @@ function selectWeatherDay(key) {
   if (!d || !lastForecast) return;
   showStripDay(d);
   const h = lastForecast.hourly;
-  // Heute: jetzt; andere Tage: 12 Uhr – das Wetter des Tages. Himmel + Kopfzeile sofort.
-  const idx = d.isToday ? wxFocus.nowIdx : Math.min(d.from + 12, d.to);
+  // Heute: jetzt. Andere Tage: mit Live dieselbe Uhrzeit wie jetzt, sonst 12 Uhr. Himmel + Kopfzeile sofort.
+  const nowHour = Number(h.time[wxFocus.nowIdx].slice(11, 13));
+  const idx = d.isToday ? wxFocus.nowIdx : Math.min(d.from + (skyLive ? nowHour : 12), d.to);
   setWeatherFocus(idx);
   scrollStripTo(Date.parse(h.time[idx] + 'Z'), 'center', true);
 }
@@ -1799,6 +1826,52 @@ function stripCenterIndex() {
   const t = wxStrip.xAxis[0].toValue(scroller.scrollLeft + scroller.clientWidth / 2);
   const t0 = Date.parse(lastForecast.hourly.time[0] + 'Z');
   return Math.round((t - t0) / 36e5);
+}
+
+// iPhone: Der Streifen scrollt per eigenem Wischen (mit Schwung), damit der unsichtbare
+// Haptik-Schalter unter dem Finger bleiben kann – so tickt jede Stunde, die durch die Mitte
+// läuft. Senkrechtes Wischen scrollt die Seite. Mit Live steht der Streifen still.
+const stripMomentum = { raf: 0 };
+function stopStripMomentum() { cancelAnimationFrame(stripMomentum.raf); stripMomentum.raf = 0; }
+function initStripTouchScroll(el) {
+  let t = null;   // { x, y, left, axis, samples }
+  const glide = (v, apply) => {          // Schwung nach dem Loslassen
+    let last = performance.now();
+    const step = (now) => {
+      const dt = Math.min(40, now - last); last = now;
+      apply(v * dt);
+      v *= Math.pow(0.94, dt / 16);
+      if (Math.abs(v) > 0.02) stripMomentum.raf = requestAnimationFrame(step); else stripMomentum.raf = 0;
+    };
+    stripMomentum.raf = requestAnimationFrame(step);
+  };
+  el.addEventListener('touchstart', (e) => {
+    stopStripMomentum();
+    if (skyLive || e.touches.length !== 1) { t = null; return; }   // Live: Seite scrollt nativ, Streifen steht
+    const p = e.touches[0];
+    t = { x: p.clientX, y: p.clientY, lx: p.clientX, ly: p.clientY, left: el.scrollLeft, axis: null, samples: [] };
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!t || e.touches.length !== 1) return;
+    const p = e.touches[0];
+    const dx = p.clientX - t.x, dy = p.clientY - t.y;
+    if (!t.axis && Math.hypot(dx, dy) > 6) t.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    if (t.axis === 'x') el.scrollLeft = t.left - dx;
+    else if (t.axis === 'y') window.scrollBy(0, t.ly - p.clientY);
+    const now = performance.now();
+    t.samples.push({ now, x: p.clientX, y: p.clientY });
+    while (t.samples.length > 2 && now - t.samples[0].now > 90) t.samples.shift();
+    t.lx = p.clientX; t.ly = p.clientY;
+  }, { passive: true });
+  el.addEventListener('touchend', () => {
+    if (!t || !t.axis || t.samples.length < 2) { t = null; return; }
+    const a = t.samples[0], b = t.samples[t.samples.length - 1];
+    const dt = Math.max(16, b.now - a.now);
+    if (t.axis === 'x') { const v = -(b.x - a.x) / dt; if (Math.abs(v) > 0.1) glide(v, (d) => { el.scrollLeft += d; }); }
+    else { const v = -(b.y - a.y) / dt; if (Math.abs(v) > 0.1) glide(v, (d) => window.scrollBy(0, d)); }
+    t = null;
+  }, { passive: true });
+  el.addEventListener('touchcancel', () => { t = null; }, { passive: true });
 }
 
 // Ziehen mit der Maus, Pfeiltasten und Shift+Mausrad (Touch & Trackpad scrollen nativ)
@@ -1815,18 +1888,18 @@ function initStripScroll() {
     if (hour !== strip.lastHour) {
       if (strip.lastHour != null) haptics.scrub();
       strip.lastHour = hour;
-      if (skyLive) setWeatherFocus(stripCenterIndex(), false, true);   // Live: Himmel + Kopfzeile folgen der Mitte
-      else if (wxDetails.open) renderDetails(stripCenterIndex());     // Details folgen der Mitte immer
+      if (!skyLive) setWeatherFocus(stripCenterIndex(), false, true);  // frei wischen: Himmel, Kopfzeile, Details folgen der Mitte
     }
     const d = stripCenterDay();
     if (d && d.key !== strip.lastKey) showStripDay(d);
   }, { passive: true });
   // Selbst wischen/scrollen bricht eine laufende Fahrt sofort ab
   ['touchstart', 'wheel', 'pointerdown'].forEach((type) => el.addEventListener(type, stopStripAnim, { passive: true }));
+  if (haptics.isIOS) initStripTouchScroll(el);
 
   let drag = null;
   el.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    if (e.pointerType !== 'mouse' || e.button !== 0 || skyLive) return;
     drag = { x: e.clientX, left: el.scrollLeft, moved: false };
   });
   window.addEventListener('pointermove', (e) => {
@@ -1841,6 +1914,7 @@ function initStripScroll() {
     el.classList.remove('is-dragging');
   });
   el.addEventListener('keydown', (e) => {
+    if (skyLive) return;
     const hourPx = el.clientWidth / WX_HOURS_VISIBLE;
     if (e.key === 'ArrowRight') { el.scrollBy({ left: hourPx * 2, behavior: 'smooth' }); e.preventDefault(); }
     if (e.key === 'ArrowLeft') { el.scrollBy({ left: -hourPx * 2, behavior: 'smooth' }); e.preventDefault(); }
@@ -2496,14 +2570,28 @@ $(function () {
   $('#btn-weather').on('click', loadWeather);
   sky.init();
   loadSkyNow();
-  // Live-Schalter: an = Himmel folgt beim Wischen; aus = nur gewählter Tag bzw. Jetzt
+  // Live-Schalter: an = fest auf der aktuellen Uhrzeit (Streifen scrollt nicht, Tage wählbar);
+  // aus = frei durch alle Tage wischen, Himmel + Kopfzeile folgen der Mitte
   const setSkyLive = (on, save = true) => {
     skyLive = on;
     $('#sky-live-toggle').attr('aria-checked', on);
     $('#weather-hourly-wrap').toggleClass('is-live', on);
     if (save) { try { localStorage.setItem('sky-live', on ? '1' : '0'); } catch (e) { /* egal */ } }
-    if (on && lastForecast) setWeatherFocus(stripCenterIndex(), false, true);   // sofort zur Mitte springen
+    if (on && lastForecast) {          // Live an: zurück auf jetzt; danach zeigen Tage dieselbe Uhrzeit
+      stopStripMomentum();
+      const d = weatherDays.find((x) => x.isToday);
+      if (d) selectWeatherDay(d.key);
+    }
   };
+  // Live: jede Minute prüfen, ob eine neue Stunde angefangen hat
+  setInterval(() => {
+    if (!skyLive || !lastForecast) return;
+    const idx = lastForecast.hourly.time.indexOf(zurichHourKey());
+    if (idx < 0 || idx === wxFocus.nowIdx) return;
+    wxFocus.nowIdx = idx;
+    const d = weatherDays.find((x) => x.key === weatherSelDay);
+    if (d) selectWeatherDay(d.key);
+  }, 60000);
   setSkyLive(skyLive, false);
   $('#sky-live-toggle').on('click', () => setSkyLive(!skyLive));
   $('#weather-now').on('click', () => { const d = weatherDays.find((x) => x.isToday); if (d) selectWeatherDay(d.key); });

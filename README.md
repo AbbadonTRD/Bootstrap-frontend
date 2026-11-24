@@ -37,7 +37,7 @@ A live data dashboard built with plain HTML, Bootstrap 5.3 and jQuery. It combin
 
 - **Random cat:** loads a random image from The Cat API, shows its resolution and keeps a history of the last four images.
 - **Bitcoin price:** shows the current price in USD and CHF, the 24-hour change and a price chart with ranges from one hour to one year. The chart is green above the current price and red below it, and marks the high and low.
-- **Weather:** current conditions from the MeteoSwiss ICON-CH2 model, for Zurich by default. The search button next to the city name switches to any Swiss town or postcode, with quick picks such as Bern, Basel and Geneva, and remembers the choice. A swipeable hourly chart shows temperature and rain; the hour under its center pointer drives the header and a live sky. That sky (clear, clouds, fog, rain, thunder, snow, day and night) fills the card and is mirrored subtly in the page background. Rain and snow fall from the clouds themselves, low cloud settles into the Alps, and the mountains change with the scene and temperature. A five-day forecast below the chart jumps to noon of the chosen day. The arrow next to it opens detail tiles for the hour under the pointer: wind with a compass, humidity and dew point, precipitation and its probability, feels-like temperature, UV index, sunrise and sunset, pressure trend and visibility.
+- **Weather:** current conditions from the MeteoSwiss ICON-CH2 model, for Zurich by default. The search button next to the city name switches to any Swiss town or postcode, with quick picks such as Bern, Basel and Geneva, and remembers the choice. A swipeable hourly chart shows temperature and rain; the hour under its center pointer drives the header and a live sky. With the Live switch on, the chart stays locked to the current time and the day buttons show that same hour on other days; with it off, you can swipe freely through all five days. That sky (clear, clouds, fog, rain, thunder, snow, day and night) fills the card and is mirrored subtly in the page background. Rain and snow fall from the clouds themselves, low cloud settles into the Alps, and the mountains change with the scene and temperature. A five-day forecast below the chart jumps to noon of the chosen day. The arrow next to it opens detail tiles for the hour under the pointer: wind with a compass, humidity and dew point, precipitation and its probability, feels-like temperature, UV index, sunrise and sunset, pressure trend and visibility.
 
 ### EV charging stations and map
 
@@ -168,6 +168,7 @@ bootstrap-frontend/
 
 ## Credits
 
+- **Sun in the detail view:** based on the sun by [reyrojo2 on uiverse.io](https://uiverse.io/reyrojo2/afraid-horse-8) (MIT, also credited to Lakshay-art).
 - **Terminal windows:** based on components by [mihocsaszilard on uiverse.io](https://uiverse.io/mihocsaszilard) (MIT).
 - **Hero board and content card:** inspired by [Aceternity UI](https://ui.aceternity.com/).
 - **Liquid glass parameters:** based on the [Liquid Glass CSS Generator](https://hiredigital.com/tools/liquid-glass-css-generator) by Hire Digital.

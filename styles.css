@@ -3286,3 +3286,89 @@ html[data-mode="light"] #card-weather .mw-sun-horizon { stroke: rgba(14,28,51,.2
 html[data-mode="light"] #card-weather .mw-sun-path { stroke: rgba(14,28,51,.28); }
 html[data-mode="light"] #card-weather .mw-sun-done { stroke: #f0a21c; }
 html[data-mode="light"] #card-weather .mw-sun-dot { fill: #f5a623; filter: drop-shadow(0 0 5px rgba(245,166,35,.7)); }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Sonne-Kachel v2: kleiner Himmel mit Horizont, echte Sonne auf ihrer Tagesbahn
+   Sonne: Foto-Textur + Glut nach uiverse.io/reyrojo2 "afraid-horse-8" (MIT,
+   © reyrojo2 / Lakshay-art), verkleinert und an die Tageszeit angepasst.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.mw-sun-state { margin: 1px 0 0; font-size: 17px; font-weight: 500; line-height: 1.25; }
+.mw-sun-scene { --gold: 0; --sx: .5; --sy: .3; position: relative; height: 104px; margin: 4px -12px 2px; overflow: hidden; }
+.mw-sun-svg { position: absolute; inset: 0 12px; width: calc(100% - 24px); height: 100%; overflow: visible; }
+.mw-sun-scene .mw-sun-path { fill: none; stroke: rgba(255,255,255,.34); stroke-width: 1.4; stroke-dasharray: 3 5; vector-effect: non-scaling-stroke; transition: opacity .6s; }
+.mw-sun-scene .mw-sun-done {
+  fill: none; stroke: rgba(255,208,110,.95); stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke;
+  stroke-dasharray: none; stroke-dashoffset: 0; transition: opacity .6s;
+}
+/* Abendrot/Morgenrot am Horizont, nur nahe Auf- und Untergang */
+.mw-sun-glow {
+  position: absolute; z-index: 0; left: calc(12px + (100% - 24px) * var(--sx)); top: 82.5%;
+  width: 190px; height: 84px; transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(closest-side, rgba(255,150,70,.6), rgba(255,110,70,.18) 60%, rgba(255,110,70,0));
+  opacity: var(--gold); transition: opacity 700ms, left 700ms var(--ease-out);
+}
+/* Die Sonne selbst */
+.mw-sun-orb {
+  position: absolute; z-index: 1; left: calc(12px + (100% - 24px) * var(--sx)); top: calc(100% * var(--sy));
+  width: 30px; height: 30px; margin: -15px 0 0 -15px;
+  filter: saturate(calc(1 + var(--gold) * .45)) hue-rotate(calc(var(--gold) * -16deg)) brightness(calc(1 - var(--gold) * .06));
+  transition: left 700ms var(--ease-out), top 700ms var(--ease-out), filter 700ms;
+}
+/* Sonnenscheibe über den Lichtstrahlen (Strahlen kommen von hinten) */
+.mw-sun-disc {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: #ffb347 url("img/sun-surface.jpg") 0 0 / cover;
+  box-shadow:
+    0 0 16px 6px rgba(255,140,0,.75),
+    -1px 0 2px 0 #ffb453 inset,
+    2px 0 5px 2px #bb6d01c5 inset,
+    -3px 0 6px 3px #ffa265c2 inset,
+    14px 0 9px 4px #c55f00aa inset;
+  animation: mw-sun-spin 30s linear infinite, mw-sun-pulse 5s ease-in-out infinite;
+}
+@keyframes mw-sun-spin { to { background-position: 40px 0; } }
+@keyframes mw-sun-pulse {
+  50% { box-shadow: 0 0 24px 9px rgba(255,140,0,.9), -1px 0 3px 1px #ffb453 inset, 2px 0 7px 3px #bb6d01c5 inset, -3px 0 8px 4px #ffa265c2 inset, 14px 0 11px 5px #c55f00aa inset; }
+}
+/* Lichtkreuz (Blendenstern) */
+.mw-sun-flare {
+  position: absolute; left: 50%; top: 50%; width: 110px; height: 2px; margin: -1px 0 0 -55px; pointer-events: none;
+  border-radius: 50%; filter: blur(.6px);
+  background: linear-gradient(90deg, rgba(255,230,180,0), rgba(255,240,205,.85) 50%, rgba(255,230,180,0));
+  animation: mw-sun-twinkle 3s ease-in-out infinite;
+}
+.mw-sun-flare.is-2 { width: 54px; margin-left: -27px; transform: rotate(90deg); opacity: .5; animation-duration: 4.2s; }
+@keyframes mw-sun-twinkle { 0%, 100% { opacity: .25; } 50% { opacity: .9; } }
+/* Boden unter dem Horizont: verdeckt die Sonne, wenn sie untergeht */
+.mw-sun-ground {
+  position: absolute; z-index: 2; left: 0; right: 0; top: 82.5%; bottom: 0;
+  border-top: 1px solid rgba(255,255,255,.4);
+  background: linear-gradient(rgba(12,22,42,.42), rgba(12,22,42,.18));
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.mw-sun-tick {
+  position: absolute; z-index: 3; bottom: 2px; display: inline-flex; align-items: baseline; gap: 5px;
+  font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.mw-sun-tick small { font-size: 10.5px; opacity: .75; }
+.mw-sun-tick b { font-weight: 500; }
+.mw-sun-tick.is-rise { left: 12px; }
+.mw-sun-tick.is-set { right: 12px; }
+/* Nacht: Sonne hinter dem Horizont, Bahn nur noch angedeutet */
+.mw-sun-scene.is-night .mw-sun-path { opacity: .45; }
+.mw-sun-scene.is-night .mw-sun-done { opacity: 0; }
+.mw-sun-scene.is-night .mw-sun-flare { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .mw-sun-disc, .mw-sun-flare { animation: none; }
+  .mw-sun-orb, .mw-sun-glow, .mw-sun-scene .mw-sun-done { transition: none; }
+}
+/* Hell-Modus */
+html[data-mode="light"] #card-weather .mw-sun-scene .mw-sun-path { stroke: rgba(14,28,51,.3); }
+html[data-mode="light"] #card-weather .mw-sun-scene .mw-sun-done { stroke: #f0a21c; }
+html[data-mode="light"] #card-weather .mw-sun-ground { border-top-color: rgba(14,28,51,.22); background: linear-gradient(rgba(255,255,255,.55), rgba(255,255,255,.25)); }
+
+/* Live = Streifen steht fest auf der aktuellen Uhrzeit: kein seitliches Scrollen,
+   der Haptik-Schalter lässt den Finger los (die Seite scrollt nativ weiter) */
+.mw-hourly.is-live .mw-scroll { overflow-x: hidden; touch-action: pan-y; cursor: default; }
+.mw-hourly.is-live [data-haptic-drag] { pointer-events: none !important; }
+.mw-hourly:not(.is-live) .mw-focus { opacity: 1; }

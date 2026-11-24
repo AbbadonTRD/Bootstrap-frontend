@@ -2438,11 +2438,6 @@ input::-webkit-search-decoration, input::-webkit-search-cancel-button { -webkit-
 /* Kein Safari-"?" für Bilder ohne Quelle oder mit Ladefehler */
 img:not([src]), img[src=""], img.img-broken { visibility: hidden; }
 
-/* Unsichtbarer Schalter für den iPhone-Haptik-Tick (muss gerendert sein, darf nicht display:none sein) */
-.haptic-switch {
-  position: fixed; left: 0; bottom: 0; width: 1px; height: 1px;
-  overflow: hidden; opacity: .001; pointer-events: none; clip-path: inset(50%);
-}
 
 /* ═════════════════════════════════════════════════════════════════════════════
    Wetter: Live-Himmel – der Hintergrund folgt dem aktuellen Wetter und der Tageszeit
@@ -2833,3 +2828,15 @@ html[data-sky="partly-day"] .page-sky-rays { opacity: .3; }
 /* Kopfzeile bleibt immer gleich hoch – lange Texte werden gekürzt statt umzubrechen */
 .mw-desc { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .mw-caption-meta { white-space: nowrap; }
+
+/* iPhone-Haptik: unsichtbarer echter Schalter über dem ganzen Tap-Element.
+   Der Finger trifft ihn direkt → iOS spielt seinen Tick; der Klick läuft zum Element weiter. */
+.haptic-overlay {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0;
+  opacity: .001; cursor: pointer; z-index: 5;
+  -webkit-appearance: auto; appearance: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Ton-Schalter neben "Live" */
+.mw-sound-toggle { padding-left: 6px; }
+.mw-sound-toggle .ic { width: 13px; height: 13px; }

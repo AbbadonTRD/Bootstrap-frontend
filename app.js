@@ -117,96 +117,116 @@ function geocode(text, origins) {
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  Haptisches Feedback: kleine "Ticks" beim Durchfahren der Diagramme mit dem Finger
-//  (wie das Rad beim iPhone-Timer). Nur bei Touch-Bedienung, nie mit der Maus.
-//  - Android: navigator.vibrate()
-//  - iPhone (iOS 18+): Safari hat keine Vibrations-API; ein verstecktes Schalter-Feld
-//    (<input type="checkbox" switch>) löst beim Umschalten den System-Tick aus.
-//  - Dazu ein sehr leiser Klick-Ton (Web Audio, respektiert den Lautlos-Schalter).
+//  Haptisches Feedback (Stand Recherche Nov. 2026)
+//  - iPhone: Seit iOS 26.5 löst Apple Haptik NICHT mehr per Code aus (label.click() &
+//    Co. sind blockiert, auch bei web-haptics/ios-haptics). Was noch geht: der Finger
+//    tippt selbst auf einen echten <input type="checkbox" switch>. Darum liegt in jedem
+//    antippbaren Element ein unsichtbarer Schalter, den der Tipp direkt trifft.
+//    → Haptik bei Taps, nicht beim Wischen durch Diagramme (geht auf iOS nicht).
+//  - Android: navigator.vibrate() – bei Taps und fein beim Wischen.
+//  - Ton (optional, Standard aus): weiches "Tock" wie das iOS-Auswahlrad, nur beim
+//    Wischen; je schneller, desto leiser und etwas heller, nie ein Dauerrattern.
 // ═════════════════════════════════════════════════════════════════════════════
 const haptics = (() => {
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const canVibrate = typeof navigator.vibrate === 'function';
+  // Elemente mit Haptik beim Antippen
+  const TAP = '.mw-day, .wallet-range, .wallet-toggle, .mw-live-toggle, .ml-item, .mw-city-chip, .mw-now-btn, .ps-choice, .tui-seg .tui-btn';
   let touch = false;
-  let last = 0;
+  let lastScrub = 0;
   let audio = null;
+  let noise = null;
+  let soundOn = false;
+  try { soundOn = localStorage.getItem('tick-sound') === '1'; } catch (e) { /* privates Fenster */ }
 
-  // Audio darf erst nach einer Berührung starten (Browser-Regel)
-  const unlock = () => {
-    if (!touch) return;
+  document.addEventListener('pointerdown', (e) => { touch = e.pointerType === 'touch'; }, { capture: true, passive: true });
+  document.addEventListener('touchstart', () => { touch = true; }, { capture: true, passive: true });
+
+  // ── iPhone: unsichtbarer echter Schalter als Tipp-Ziel in jedem Tap-Element ──
+  const attach = () => {
+    document.querySelectorAll(TAP).forEach((el) => {
+      if (el.querySelector(':scope > .haptic-overlay')) return;
+      if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+      const sw = document.createElement('input');
+      sw.type = 'checkbox';
+      sw.setAttribute('switch', '');
+      sw.className = 'haptic-overlay';
+      sw.tabIndex = -1;
+      sw.setAttribute('aria-hidden', 'true');
+      el.appendChild(sw);
+    });
+  };
+  if (isIOS) {
+    const start = () => {
+      attach();
+      let t = 0;
+      new MutationObserver(() => { clearTimeout(t); t = setTimeout(attach, 60); }).observe(document.body, { childList: true, subtree: true });
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+  }
+
+  // ── Android: kurze Vibration beim Antippen ──
+  document.addEventListener('click', (e) => {
+    if (touch && canVibrate && e.target.closest && e.target.closest(`${TAP}, button`)) { try { navigator.vibrate(8); } catch (err) { /* egal */ } }
+  }, true);
+
+  // ── Ton: weiches, kurzes "Tock" (gefiltertes Rauschen statt Piepton) ──
+  const ensureAudio = () => {
     try {
       if (!audio) {
-        if (navigator.audioSession) navigator.audioSession.type = 'ambient'; // Lautlos-Schalter gilt, Musik läuft weiter
+        if (navigator.audioSession) navigator.audioSession.type = 'ambient';   // Lautlos-Schalter gilt
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (!Ctx) return;
         audio = new Ctx();
+        noise = audio.createBuffer(1, Math.round(audio.sampleRate * 0.03), audio.sampleRate);
+        const d = noise.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
       }
       if (audio.state === 'suspended') audio.resume();
     } catch (e) { audio = null; }
   };
-  document.addEventListener('pointerdown', (e) => { touch = e.pointerType === 'touch'; unlock(); }, { capture: true, passive: true });
-  document.addEventListener('touchstart', () => { touch = true; }, { capture: true, passive: true });
-  document.addEventListener('touchend', unlock, { capture: true, passive: true });
+  document.addEventListener('touchend', () => { if (soundOn) ensureAudio(); }, { capture: true, passive: true });
 
-  const click = () => {
+  const tock = (rate) => {
     if (!audio || audio.state !== 'running') return;
     const t = audio.currentTime;
-    const osc = audio.createOscillator();
+    const src = audio.createBufferSource();
+    src.buffer = noise;
+    const band = audio.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = 1500 + Math.min(1300, rate * 55);   // schneller → etwas heller
+    band.Q.value = 6;
     const gain = audio.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(1700, t);
+    const peak = 0.55 * (1 - Math.min(0.65, rate / 40));          // schneller → leiser
     gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.03, t + 0.002);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.022);
-    osc.connect(gain).connect(audio.destination);
-    osc.start(t);
-    osc.stop(t + 0.03);
+    gain.gain.exponentialRampToValueAtTime(peak, t + 0.0015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.028);
+    src.connect(band).connect(gain).connect(audio.destination);
+    src.start(t);
+    src.stop(t + 0.03);
   };
 
-  // Ein echter (unsichtbarer, aber gerenderter) Schalter – mit display:none spielt iOS keinen Tick
-  let sw = null;
-  const iosTick = () => {
-    if (!sw) {
-      sw = document.createElement('label');
-      sw.className = 'haptic-switch';
-      sw.setAttribute('aria-hidden', 'true');
-      const input = document.createElement('input');
-      input.type = 'checkbox';
-      input.setAttribute('switch', '');
-      input.tabIndex = -1;
-      sw.appendChild(input);
-      document.body.appendChild(sw);
-    }
-    const active = document.activeElement;
-    sw.click();
-    if (active && active !== document.activeElement && active.focus) active.focus({ preventScroll: true });
-  };
-
-  // iPhone erlaubt den Tick nur direkt nach einer Berührung (Tippen bzw. Finger loslassen),
-  // nicht während der Finger über ein Diagramm fährt. Darum:
-  // 1) jedes Antippen von Knöpfen/Auswahlen tickt,
-  // 2) nach dem Durchfahren eines Diagramms gibt es beim Loslassen einen Tick.
-  let scrubbed = false;
-  document.addEventListener('click', (e) => {
-    if (touch && e.target.closest && e.target.closest('button, [role="switch"], [role="option"], .mw-day, .ps-choice')) api.tick();
-  }, true);
-  document.addEventListener('touchend', () => { if (scrubbed) { scrubbed = false; api.tick(true); } }, { capture: true, passive: true });
-
-  const api = {
-    scrub() { scrubbed = true; this.tick(); },
-    tick(force) {
+  return {
+    // Ein Schritt beim Wischen (Diagramm-Punkt, Stunde im Streifen)
+    scrub() {
       if (!touch) return;
       const now = performance.now();
-      if (!force && now - last < 40) return;       // höchstens ~25 Ticks pro Sekunde
-      last = now;
-      try {
-        if (canVibrate) navigator.vibrate(6);
-        else if (isIOS) iosTick();
-      } catch (e) { /* kein Feedback möglich */ }
-      click();
+      const gap = now - lastScrub;
+      if (gap < 28) return;                       // nie mehr als ~35 Ticks pro Sekunde
+      lastScrub = now;
+      const rate = gap > 600 ? 1 : 1000 / gap;    // Ticks pro Sekunde
+      if (canVibrate) { try { navigator.vibrate(rate > 18 ? 3 : 5); } catch (e) { /* egal */ } }
+      if (soundOn) tock(rate);
+    },
+    // Antippen: iPhone über den Schalter, Android über den Klick-Listener oben
+    tick() {},
+    get sound() { return soundOn; },
+    setSound(on) {
+      soundOn = on;
+      try { localStorage.setItem('tick-sound', on ? '1' : '0'); } catch (e) { /* egal */ }
+      if (on) { ensureAudio(); tock(2); }        // kurze Hörprobe
     },
   };
-  return api;
 })();
 
 // Beim Wischen über einen Diagramm-Punkt ticken – höchstens alle 12 px, damit dichte
@@ -1931,6 +1951,11 @@ $(function () {
   };
   setSkyLive(skyLive, false);
   $('#sky-live-toggle').on('click', () => setSkyLive(!skyLive));
+  // Ton beim Wischen (Standard aus)
+  $('#tick-sound-toggle').attr('aria-checked', haptics.sound).on('click', function () {
+    haptics.setSound(!haptics.sound);
+    $(this).attr('aria-checked', haptics.sound);
+  });
   $('#weather-now').on('click', () => { const d = weatherDays.find((x) => x.isToday); if (d) selectWeatherDay(d.key); });
 
   // Wetter: Ort wählen

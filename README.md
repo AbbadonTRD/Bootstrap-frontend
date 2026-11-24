@@ -158,6 +158,8 @@ bootstrap-frontend/
 
 ## Known limitations
 
+- **Haptics on iPhone:** since iOS 26.5, websites can no longer trigger haptics from code. The page places an invisible native switch inside tappable elements, so a real tap still produces the system tick. Ticks while scrubbing a chart work on Android only.
+
 - **Liquid glass:** shows the full refraction effect only in Chromium-based browsers. Other browsers get a simpler frosted look.
 - **Train formation:** the free timetable APIs do not include car order, so the sector bar is schematic. It is based on the train type and number, and the display labels it that way.
 - **CoinGecko rate limits:** the free CoinGecko API limits requests. Rapid repeated clicks can briefly return no data.

@@ -25,7 +25,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-24i" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-24j" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -48,6 +48,11 @@
     <symbol id="i-map" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="m8.875.865l-3.75-.75v13.02l3.75.75zm1.25 12.994l3.496-.874A.5.5 0 0 0 14 12.5V.5a.5.5 0 0 0-.621-.485l-3.254.813zM.379 1.015L3.875.14v13.03l-3.254.814A.5.5 0 0 1 0 13.5v-12a.5.5 0 0 1 .379-.485" clip-rule="evenodd"/></symbol>
     <symbol id="i-layers" viewBox="0 0 14 14"><path fill="currentColor" d="M6.55.12a1 1 0 0 1 .9 0l6.1 3.12a.6.6 0 0 1 0 1.07l-6.1 3.12a1 1 0 0 1-.9 0L.45 4.31a.6.6 0 0 1 0-1.07zM1.38 6.2 7 9.08l5.62-2.88.93.48a.6.6 0 0 1 0 1.07l-6.1 3.12a1 1 0 0 1-.9 0L.45 7.75a.6.6 0 0 1 0-1.07zm0 3.06L7 12.14l5.62-2.88.93.48a.6.6 0 0 1 0 1.07l-6.1 3.12a1 1 0 0 1-.9 0L.45 10.8a.6.6 0 0 1 0-1.07z"/></symbol>
     <symbol id="i-chart" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M1 11.5l3.5-4 3 2.5L13 3.5M9.5 3.5H13V7"/></symbol>
+    <symbol id="i-wind" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M1.5 5h7.2a1.9 1.9 0 1 0-1.9-1.9M1.5 8.2h9.6a1.9 1.9 0 1 1-1.9 1.9M1.5 11.2h4.4"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 14 14"><path fill="currentColor" d="M7 .9c.3 0 .5.1.7.4 1.6 2.2 4.2 5.3 4.2 7.6A4.9 4.9 0 0 1 7 13.8a4.9 4.9 0 0 1-4.9-4.9c0-2.3 2.6-5.4 4.2-7.6.2-.3.4-.4.7-.4z"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M2.2 10.6a5.8 5.8 0 1 1 9.6 0M7 7.6l2.4-2.6"/><circle cx="7" cy="7.6" r="1.1" fill="currentColor"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M.9 7S3.2 2.8 7 2.8 13.1 7 13.1 7 10.8 11.2 7 11.2.9 7 .9 7z"/><circle cx="7" cy="7" r="1.8" fill="currentColor"/></symbol>
+    <symbol id="i-sunrise" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M1 11.4h12M3.8 11.4a3.2 3.2 0 0 1 6.4 0M7 2v2.2M2.3 5.6l1.4 1M11.7 5.6l-1.4 1"/></symbol>
     <symbol id="i-pin" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7 0c2.622 0 4.806 2.184 4.806 4.805c0 .856-.294 1.7-.705 2.464c-.413.768-.959 1.484-1.501 2.094a16 16 0 0 1-1.521 1.49a9 9 0 0 1-.546.433a3 3 0 0 1-.195.13a1 1 0 0 1-.174.083a.54.54 0 0 1-.405-.03a1 1 0 0 1-.098-.053a3 3 0 0 1-.196-.133a9 9 0 0 1-.545-.435A16 16 0 0 1 4.4 9.352c-.542-.612-1.088-1.33-1.5-2.095c-.411-.762-.706-1.603-.706-2.452C2.194 2.184 4.378 0 7 0m0 6.24a1.435 1.435 0 1 1 0-2.87a1.435 1.435 0 0 1 0 2.87m3.1 3.916q.276-.31.55-.65h1.343c.2 0 .38.12.46.303l1.497 3.495a.5.5 0 0 1-.46.697H.51a.5.5 0 0 1-.46-.697l1.498-3.495a.5.5 0 0 1 .46-.303h1.355q.266.33.537.636c.662.746 1.33 1.376 1.85 1.821c.26.223.487.402.661.528q.13.095.232.157q.049.03.11.06q.03.014.079.03a.55.55 0 0 0 .414-.03q.06-.029.11-.059q.101-.061.231-.155c.174-.126.4-.304.661-.525c.52-.442 1.19-1.069 1.851-1.813" clip-rule="evenodd"/></symbol>
     <symbol id="i-warning" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M6.218.226a1.5 1.5 0 0 1 2.117.596l.002.004l5.5 10.999A1.5 1.5 0 0 1 12.5 14h-11a1.5 1.5 0 0 1-1.336-2.174v-.001L5.664.826l.002-.004a1.5 1.5 0 0 1 .553-.596M7 4.125a.75.75 0 0 1 .75.75v3.25a.75.75 0 0 1-1.5 0v-3.25a.75.75 0 0 1 .75-.75m1 6.75a1 1 0 1 1-2 0a1 1 0 0 1 2 0" clip-rule="evenodd"/></symbol>
     <symbol id="i-cursor" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M3.658.162a.75.75 0 0 1 .918.53l.449 1.673a.75.75 0 1 1-1.45.389L3.129 1.08a.75.75 0 0 1 .53-.919M.072 3.755a.75.75 0 0 0 .53.918l1.673.448a.75.75 0 1 0 .388-1.448L.99 3.224a.75.75 0 0 0-.918.53m4.4 1.965a1 1 0 0 1 1.264-1.265l7.12 2.375c.92.307.908 1.612-.018 1.902l-2.026.637l2.7 2.7a1 1 0 0 1-1.415 1.414l-2.706-2.707l-.642 2.046c-.29.925-1.596.937-1.903.017zM2.066 8.755a.75.75 0 1 1-1.061-1.06L2.231 6.47a.75.75 0 0 1 1.06 1.06zm6.46-6.591a.75.75 0 0 0-1.06-1.061L6.24 2.328a.75.75 0 0 0 1.061 1.06z" clip-rule="evenodd"/></symbol>
@@ -289,12 +294,101 @@
             </div>
           </div>
 
+          <!-- Unterer Bereich: 5-Tage-Prognose ODER Wetterdetails (gleicher Platz) -->
+          <div id="weather-lower" class="mw-lower">
           <!-- 5-Tage-Prognose: gleiches Glas wie oben, ein Tag steuert den Streifen oben -->
           <div id="weather-chart-card" class="mw-days mw-glass liquid-glass mw-reveal d-none" data-scale="70" data-bevel="14">
-            <p class="mw-caption"><span>5-Tage-Prognose</span><span>Tag wählen</span></p>
+            <p class="mw-caption"><span>5-Tage-Prognose</span><span class="mw-caption-end">Tag wählen
+              <button id="weather-details-open" class="mw-details-open" type="button" aria-label="Wetterdetails anzeigen" aria-expanded="false" aria-controls="weather-details">›</button></span></p>
             <div id="weather-days" class="mw-days-grid" role="group" aria-label="Tag für den Verlauf oben wählen"></div>
             <!-- Wochenverlauf: bleibt immer gleich, egal welcher Tag gewählt ist -->
             <div id="weather-week" class="mw-week-chart" role="img" aria-label="Temperatur und Niederschlag der nächsten 5 Tage"></div>
+          </div>
+
+          <!-- Wetterdetails (Bento-Kacheln) zur gewählten Stunde – folgt dem Streifen oben -->
+          <div id="weather-details" class="mw-details" role="region" aria-labelledby="wd-title" hidden>
+            <div class="mw-details-head">
+              <button id="weather-details-close" class="mw-details-back" type="button" aria-label="Zurück zur 5-Tage-Prognose">‹ 5 Tage</button>
+              <p id="wd-title" class="mw-details-title">Details</p>
+            </div>
+            <div class="mw-bento">
+              <section class="mw-tile mw-tile-wide mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-wind"/></svg>Wind</p>
+                <div class="mw-wind">
+                  <div class="mw-wind-info">
+                    <dl class="mw-wind-list">
+                      <div><dt>Wind</dt><dd id="wd-wind">–</dd></div>
+                      <div><dt>Böen</dt><dd id="wd-gust">–</dd></div>
+                      <div><dt>Richtung</dt><dd id="wd-dir">–</dd></div>
+                    </dl>
+                    <p id="wd-wind-note" class="mw-tile-sub">–</p>
+                  </div>
+                  <svg class="mw-compass" viewBox="0 0 100 100" aria-hidden="true">
+                    <circle cx="50" cy="50" r="41" class="mw-compass-ring"/>
+                    <g class="mw-compass-ticks">
+                      <line x1="50" y1="9" x2="50" y2="15"/><line x1="91" y1="50" x2="85" y2="50"/><line x1="50" y1="91" x2="50" y2="85"/><line x1="9" y1="50" x2="15" y2="50"/>
+                      <line x1="79" y1="21" x2="76.2" y2="23.8"/><line x1="79" y1="79" x2="76.2" y2="76.2"/><line x1="21" y1="79" x2="23.8" y2="76.2"/><line x1="21" y1="21" x2="23.8" y2="23.8"/>
+                    </g>
+                    <text x="50" y="25" class="mw-compass-l">N</text><text x="76" y="53.5" class="mw-compass-l">O</text>
+                    <text x="50" y="82" class="mw-compass-l">S</text><text x="24" y="53.5" class="mw-compass-l">W</text>
+                    <g id="wd-arrow" class="mw-compass-arrow"><line x1="50" y1="88" x2="50" y2="14"/><path d="M50 9 L44.5 19 L55.5 19 Z"/><circle cx="50" cy="88" r="3.2"/></g>
+                    <circle cx="50" cy="50" r="17" class="mw-compass-hub"/>
+                    <text id="wd-wind-c" x="50" y="51" class="mw-compass-v">–</text><text x="50" y="61.5" class="mw-compass-u">km/h</text>
+                  </svg>
+                </div>
+              </section>
+              <section class="mw-tile mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-drop"/></svg>Luftfeuchtigkeit</p>
+                <p id="wd-hum" class="mw-tile-big">–</p>
+                <div class="mw-meter mw-meter-hum" aria-hidden="true"><span id="wd-hum-bar"></span></div>
+                <p id="wd-dew" class="mw-tile-sub">–</p>
+              </section>
+              <section class="mw-tile mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-rain"/></svg>Niederschlag</p>
+                <p id="wd-prec" class="mw-tile-big">–</p>
+                <div class="mw-meter mw-meter-rain" aria-hidden="true"><span id="wd-prob-bar"></span></div>
+                <p id="wd-prob" class="mw-tile-sub">–</p>
+                <p id="wd-prec-day" class="mw-tile-sub">–</p>
+              </section>
+              <section class="mw-tile mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-thermo"/></svg>Gefühlt</p>
+                <p id="wd-feels" class="mw-tile-big">–</p>
+                <p id="wd-feels-note" class="mw-tile-sub">–</p>
+              </section>
+              <section class="mw-tile mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-sun"/></svg>UV-Index</p>
+                <p class="mw-tile-big"><span id="wd-uv">–</span> <small id="wd-uv-label"></small></p>
+                <div class="mw-uv-bar" aria-hidden="true"><span id="wd-uv-dot"></span></div>
+                <p id="wd-uv-note" class="mw-tile-sub">–</p>
+              </section>
+              <section class="mw-tile mw-tile-wide mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-sunrise"/></svg>Sonne</p>
+                <div class="mw-sun-row">
+                  <p class="mw-sun-time"><small>Aufgang</small><span id="wd-rise">–</span></p>
+                  <svg id="wd-sun-arc" class="mw-sun-arc" viewBox="0 0 200 64" aria-hidden="true">
+                    <line x1="6" y1="56" x2="194" y2="56" class="mw-sun-horizon"/>
+                    <path d="M14 56 Q100 -18 186 56" class="mw-sun-path"/>
+                    <path id="wd-sun-done" d="M14 56 Q100 -18 186 56" class="mw-sun-done" pathLength="1"/>
+                    <circle id="wd-sun-dot" cx="0" cy="0" r="5.5" class="mw-sun-dot"/>
+                  </svg>
+                  <p class="mw-sun-time"><small>Untergang</small><span id="wd-set">–</span></p>
+                </div>
+                <p id="wd-daylen" class="mw-tile-sub">–</p>
+              </section>
+              <section class="mw-tile mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-gauge"/></svg>Luftdruck</p>
+                <p id="wd-press" class="mw-tile-big">–</p>
+                <div class="mw-scale" aria-hidden="true"><span id="wd-press-dot"></span></div>
+                <p id="wd-press-trend" class="mw-tile-sub">–</p>
+              </section>
+              <section class="mw-tile mw-glass liquid-glass" data-scale="40" data-bevel="12">
+                <p class="mw-tile-cap"><svg class="ic" aria-hidden="true"><use href="#i-eye"/></svg>Sichtweite</p>
+                <p id="wd-vis" class="mw-tile-big">–</p>
+                <div class="mw-meter" aria-hidden="true"><span id="wd-vis-bar"></span></div>
+                <p id="wd-vis-note" class="mw-tile-sub">–</p>
+              </section>
+            </div>
+          </div>
           </div>
 
           <!-- Skeleton während des Ladens -->
@@ -543,6 +637,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-24i"></script>
+  <script src="app.js?v=2026-11-24j"></script>
 </body>
 </html>

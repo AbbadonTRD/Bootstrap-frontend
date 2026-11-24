@@ -130,7 +130,7 @@ const haptics = (() => {
   const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   const canVibrate = typeof navigator.vibrate === 'function';
   // Elemente mit Haptik beim Antippen
-  const TAP = '.mw-day, .wallet-range, .wallet-toggle, .mw-live-toggle, .ml-item, .mw-city-chip, .mw-now-btn, .ps-choice, .tui-seg .tui-btn, .haptic-test-btn';
+  const TAP = '.mw-day, .wallet-range, .wallet-toggle, .mw-live-toggle, .ml-item, .mw-city-chip, .mw-now-btn, .mw-details-open, .mw-details-back, .ps-choice, .tui-seg .tui-btn, .haptic-test-btn';
   let touch = false;
   let lastScrub = 0;
 
@@ -169,6 +169,70 @@ const haptics = (() => {
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
   }
 
+  // ── iPhone: Ticks beim Wischen über Diagramme ──
+  // Technik von haptick (github.com/jcruzfff/haptick, MIT), geprüft im WebKit-Code:
+  // WebKit verfolgt einen Schalter, auf dem ein echter Finger aufsetzt, während des
+  // ganzen Wischens und vergleicht den Finger bei jeder Bewegung mit der *aktuellen*
+  // Lage des Schalters. Schieben wir den (unsichtbaren) Schalter auf die andere Seite
+  // des Fingers, kippt er bei der Bewegung → iOS spielt den System-Tick. Kein Klick aus
+  // Code nötig, darum geht das auch auf iOS 26.5.
+  // Wichtig: nie .checked per JS setzen (WebKit hört dann auf zu verfolgen) und
+  // touchstart/touchmove nicht mit preventDefault() abbrechen.
+  const ARM_MS = 260;     // WebKit verfolgt erst ~200 ms nach dem Aufsetzen
+  const PARK = 10000;     // so weit weg, dass der Schalter ganz auf einer Seite des Fingers liegt
+  let drag = null;        // laufendes Wischen: { sw, on, armedAt, queued, moves, parked }
+  // left = Schalter links vom Finger → Finger liegt "rechts" auf der Bahn → Daumen nach rechts (an)
+  const place = (d, left) => { d.sw.style.transform = `translateX(${left ? -PARK : PARK}px)`; };
+  const release = (d, now) => {
+    if (!d.queued || now < d.armedAt || d.moves < 2) return false;   // nie zwei Kipper direkt hintereinander
+    d.queued = 0;
+    d.moves = 0;
+    d.parked = true;
+    place(d, !d.on);       // auf die Seite, die den Daumen umlegt → Tick
+    d.on = !d.on;
+    return true;
+  };
+  const attachDrag = (host, touchAction) => {
+    if (!isIOS || !host || host.querySelector(':scope > [data-haptic-drag]')) return;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    const sw = document.createElement('input');
+    sw.type = 'checkbox';
+    sw.setAttribute('switch', '');
+    sw.setAttribute('data-haptic-drag', '');
+    sw.setAttribute('aria-hidden', 'true');
+    sw.tabIndex = -1;
+    sw.style.cssText = 'position:absolute;inset:0;z-index:3;width:100%;height:100%;margin:0;padding:0;border:0;'
+      + '-webkit-appearance:auto;appearance:auto;opacity:0;cursor:inherit;-webkit-tap-highlight-color:transparent;';
+    sw.style.touchAction = touchAction || 'none';   // gleich wie das Diagramm: Seite scrollt wie vorher
+    sw.addEventListener('touchstart', (e) => {
+      if (e.touches.length !== 1) { drag = null; return; }
+      drag = { sw, on: sw.checked, armedAt: performance.now() + ARM_MS, queued: 0, moves: Infinity, parked: false };
+    }, { passive: true });
+    // WebKit "klickt" den Schalter am Ende jedes Wischens – das ist kein Tipp aufs Diagramm
+    sw.addEventListener('click', (e) => e.stopPropagation());
+    host.appendChild(sw);
+  };
+  if (isIOS) {
+    // Vor den Diagrammen (Capture): jede Fingerbewegung zählen, ggf. Tick auslösen,
+    // sonst den Schalter einmal aus der Reichweite parken (damit er nicht zufällig kippt)
+    window.addEventListener('touchmove', () => {
+      if (!drag) return;
+      const now = performance.now();
+      drag.moves += 1;
+      if (release(drag, now) || drag.parked || now < drag.armedAt) return;
+      drag.parked = true;
+      place(drag, drag.on);
+    }, { capture: true, passive: true });
+    const end = () => {
+      if (!drag) return;
+      const { sw } = drag;
+      drag = null;
+      setTimeout(() => { sw.style.transform = ''; }, 0);   // erst nachdem WebKit das Ende verarbeitet hat
+    };
+    window.addEventListener('touchend', end, { capture: true, passive: true });
+    window.addEventListener('touchcancel', end, { capture: true, passive: true });
+  }
+
   // ── Android: kurze Vibration beim Antippen ──
   document.addEventListener('click', (e) => {
     if (touch && canVibrate && e.target.closest && e.target.closest(`${TAP}, button`)) { try { navigator.vibrate(8); } catch (err) { /* egal */ } }
@@ -185,20 +249,37 @@ const haptics = (() => {
         <p class="haptic-test-info">iOS ${ver} · Schalter-Element: ${'switch' in HTMLInputElement.prototype ? 'ja' : 'nein'} · Vibration: ${canVibrate ? 'ja' : 'nein'}</p>
         <label class="haptic-test-row">1 · Sichtbarer iPhone-Schalter <input type="checkbox" switch></label>
         <button type="button" class="haptic-test-btn">2 · Knopf mit unsichtbarem Schalter</button>
+        <div class="haptic-test-drag" aria-label="3 · Hier hin und her wischen"><span>3 · Hier hin und her wischen</span><i></i></div>
         <p class="haptic-test-hint">Kein Tick bei 1 → Einstellungen › Töne &amp; Haptik › System-Haptik einschalten.<br>Tick bei 1, aber nicht bei 2 → bitte melden.</p>
         <p class="haptic-test-log" aria-live="polite"></p>`;
       document.body.appendChild(box);
       const log = box.querySelector('.haptic-test-log');
       let n = 0;
       box.querySelector('.haptic-test-btn').addEventListener('click', () => { log.textContent = `Knopf ${++n}× getippt`; });
+      // Wischtest: alle 24 px ein Tick, wie beim Wischen durch ein Diagramm
+      const pad = box.querySelector('.haptic-test-drag');
+      const dot = pad.querySelector('i');
+      let lastStep = null, ticks = 0;
+      attachDrag(pad, 'none');
+      pad.addEventListener('touchmove', (e) => {
+        const r = pad.getBoundingClientRect();
+        const x = Math.max(0, Math.min(r.width, e.touches[0].clientX - r.left));
+        dot.style.transform = `translateX(${x}px)`;
+        const step = Math.floor(x / 24);
+        if (lastStep != null && step !== lastStep) { ticks += 1; haptics.scrub(); log.textContent = `Wischen: ${ticks} Ticks angefordert`; }
+        lastStep = step;
+      }, { passive: true });
+      pad.addEventListener('touchend', () => { lastStep = null; }, { passive: true });
       box.querySelector('.haptic-test-close').addEventListener('click', () => box.remove());
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', show); else show();
   }
 
   return {
-    // Ein Schritt beim Wischen (Diagramm-Punkt, Stunde im Streifen) – nur Android kann das
+    // Ein Schritt beim Wischen (Diagramm-Punkt, Stunde im Streifen):
+    // iPhone über den mitwandernden Schalter, Android über vibrate()
     scrub() {
+      if (drag) { drag.queued = 1; release(drag, performance.now()); return; }
       if (!touch || !canVibrate) return;
       const now = performance.now();
       const gap = now - lastScrub;
@@ -206,6 +287,8 @@ const haptics = (() => {
       lastScrub = now;
       try { navigator.vibrate(gap < 55 ? 3 : 5); } catch (e) { /* egal */ }
     },
+    // Fläche, über die man wischt (Diagramm), für iPhone-Ticks vorbereiten
+    attachDrag,
     // Antippen: iPhone über den Schalter, Android über den Klick-Listener oben
     tick() {},
   };
@@ -224,6 +307,11 @@ function hapticScrub(point) {
 // Für alle Diagramme (Serien mit eigenem mouseOver rufen hapticScrub selbst auf)
 if (window.Highcharts) {
   Highcharts.setOptions({ plotOptions: { series: { point: { events: { mouseOver() { hapticScrub(this); } } } } } });
+  // iPhone: jedes Diagramm bekommt den mitwandernden Schalter (gleiches touch-action wie
+  // das Diagramm – der wischbare Wetter-Streifen scrollt also weiter wie bisher)
+  Highcharts.addEvent(Highcharts.Chart, 'load', function () {
+    haptics.attachDrag(this.container, getComputedStyle(this.container).touchAction);
+  });
 }
 
 // Bilder, die nicht laden (Netz, Inhaltsblocker), ausblenden – Safari zeigt sonst ein blaues "?"
@@ -626,15 +714,15 @@ function wmoLabel(code, isDay) {
 
 // Was eine Szene zeichnet: Wolkenfarbe (light/dark/night), Nebel, Niederschlag
 const SKY_LOOK = {
-  'clear-day':    { tone: [1, 0, 0], fog: 0, rain: 0, snow: 0 },
-  'partly-day':   { tone: [1, 0, 0], fog: 0, rain: 0, snow: 0 },
-  overcast:       { tone: [0.7, 0.3, 0], fog: 0, rain: 0, snow: 0 },
-  fog:            { tone: [0.85, 0.15, 0], fog: 1, rain: 0, snow: 0 },
-  rain:           { tone: [0.15, 0.85, 0], fog: 0.15, rain: 1, snow: 0 },
-  thunder:        { tone: [0, 1, 0], fog: 0, rain: 1, snow: 0 },
-  snow:           { tone: [0.9, 0.1, 0], fog: 0.2, rain: 0, snow: 1 },
-  'clear-night':  { tone: [0, 0, 1], fog: 0, rain: 0, snow: 0 },
-  'cloudy-night': { tone: [0, 0.2, 0.8], fog: 0, rain: 0, snow: 0 },
+  'clear-day':    { tone: [1, 0, 0], fog: 0, rain: 0, snow: 0, low: 0 },
+  'partly-day':   { tone: [1, 0, 0], fog: 0, rain: 0, snow: 0, low: 0 },
+  overcast:       { tone: [0.7, 0.3, 0], fog: 0, rain: 0, snow: 0, low: 0.45 },
+  fog:            { tone: [0.85, 0.15, 0], fog: 1, rain: 0, snow: 0, low: 0.6 },
+  rain:           { tone: [0.15, 0.85, 0], fog: 0.15, rain: 1, snow: 0, low: 0.85 },
+  thunder:        { tone: [0, 1, 0], fog: 0, rain: 1, snow: 0, low: 0.75 },
+  snow:           { tone: [0.9, 0.1, 0], fog: 0.2, rain: 0, snow: 1, low: 0.7 },
+  'clear-night':  { tone: [0, 0, 1], fog: 0, rain: 0, snow: 0, low: 0 },
+  'cloudy-night': { tone: [0, 0.2, 0.8], fog: 0, rain: 0, snow: 0, low: 0.4 },
 };
 
 // Weiche Wolken-Vorlage (Offscreen-Canvas) in einer Farbe; wird pro Frame nur noch kopiert
@@ -683,9 +771,15 @@ function makeCloudSprite(seed, body, shade) {
 function createSkyFx(canvas, opt) {
   const ctx = canvas.getContext('2d');
   // cloudBand: [oben, unten] – Zahlen < 1 = Anteil der Höhe, sonst Pixel
-  const o = { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [0.04, 0.45], lightAlpha: 1, drops: 130, flakes: 80, ...opt };
+  // fogBand: Höhe der Nebelbänder · curtain: Länge der Regen-/Schneefahnen unter den Wolken
+  // mountainY/lowY: (nur Karte) Höhe der Wolkenschatten auf den Alpen bzw. der tiefen Wolken in den Bergen
+  const o = { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [0.04, 0.45], lightAlpha: 1, drops: 130, flakes: 80,
+    fogBand: [0.58, 0.84], curtain: 0.4, mountainY: null, lowY: null, ...opt };
+  const px = (v) => (v >= 0 && v < 1 ? v * h : v);   // 0..1 = Anteil der Höhe, sonst Pixel
   let w = 0, h = 0, raf = 0, last = 0, visible = true, idleSince = 0, tau = 380;
-  const cur = { cloud: 0, l: 1, d: 0, n: 0, fog: 0, rain: 0, snow: 0 };
+  const cur = { cloud: 0, l: 1, d: 0, n: 0, fog: 0, rain: 0, snow: 0, low: 0 };
+  let vis = [];          // sichtbare Wolken (für Regen aus den Wolken)
+  let flashT = 0, flashCloud = null;
   let tgt = { ...cur };
   const sprites = { l: [], d: [], n: [] };
   for (let i = 0; i < 5; i++) {
@@ -699,11 +793,25 @@ function createSkyFx(canvas, opt) {
     v: 0, img: k % 5,
   })).sort((a, b) => a.s - b.s);
   clouds.forEach((c) => { c.v = 0.002 + c.s * 0.007; c.y = Math.min(1, Math.max(0, (c.s - 0.5) / 0.8 * 0.7 + Math.random() * 0.3)); });
-  const fogBands = [0, 1, 2].map((i) => ({ x: Math.random(), y: 0.58 + i * 0.13, v: 0.006 + i * 0.003 }));
+  const fogBands = [0, 1, 2].map((i) => ({ x: Math.random(), y: i / 2, v: 0.006 + i * 0.003 }));
+  const lowClouds = [0, 1, 2].map((i) => ({ x: i / 3, v: 0.003 + i * 0.0015, img: (i * 2) % 5, dy: (i - 1) * 9 }));
   const drops = [];
   const flakes = [];
-  const newDrop = (any) => ({ x: Math.random() * (w + 80), y: any ? Math.random() * h : -30 - Math.random() * 60, l: 10 + Math.random() * 14, v: 420 + Math.random() * 300, a: 0.18 + Math.random() * 0.3 });
-  const newFlake = (any) => ({ x: Math.random() * w, y: any ? Math.random() * h : -8, r: 1 + Math.random() * 2.2, v: 22 + Math.random() * 40, p: Math.random() * 6.28, a: 0.55 + Math.random() * 0.4 });
+  // Tropfen/Flocken starten meist an der Unterseite einer sichtbaren Wolke (die Wolke regnet),
+  // ein Teil fällt von oben (Regen über die ganze Karte)
+  const fromCloud = () => (vis.length && Math.random() < 0.75 ? vis[(Math.random() * vis.length) | 0] : null);
+  const newDrop = (any) => {
+    const c = fromCloud();
+    const x = c ? c.x + c.cw * (0.18 + Math.random() * 0.64) : Math.random() * (w + 80);
+    const top = c ? c.base : -30 - Math.random() * 60;
+    return { x, y: any ? top + Math.random() * (h - top) : top, l: 10 + Math.random() * 14, v: 420 + Math.random() * 300, a: 0.18 + Math.random() * 0.3 };
+  };
+  const newFlake = (any) => {
+    const c = fromCloud();
+    const x = c ? c.x + c.cw * (0.15 + Math.random() * 0.7) : Math.random() * w;
+    const top = c ? c.base : -8;
+    return { x, y: any ? top + Math.random() * (h - top) : top, r: 1 + Math.random() * 2.2, v: 22 + Math.random() * 40, p: Math.random() * 6.28, a: 0.55 + Math.random() * 0.4 };
+  };
 
   const resize = () => {
     const dpr = Math.min(o.maxDpr, window.devicePixelRatio || 1);
@@ -733,7 +841,8 @@ function createSkyFx(canvas, opt) {
         ctx.fillStyle = gr; ctx.fillRect(0, 0, w, h * 0.6);
       }
       const base = Math.min(w, 520) * 0.5 * o.size;
-      const band = o.cloudBand.map((v) => (v >= 0 && v < 1 ? v * h : v));   // 0..1 = Anteil, sonst Pixel
+      const band = o.cloudBand.map(px);
+      vis = [];
       for (const c of clouds) {
         // Wolke k erscheint, sobald die Bewölkung ihren Anteil erreicht
         const a = Math.max(0, Math.min(1, (cur.cloud * (o.clouds + 1) - c.k) / 1.5)) * S;
@@ -747,6 +856,64 @@ function createSkyFx(canvas, opt) {
           ctx.globalAlpha = a * (wt / toneSum) * (key === 'l' ? o.lightAlpha : 1) * (0.7 + c.s * 0.3);   // ferne Wolken etwas blasser
           ctx.drawImage(sprites[key][c.img], x, y, cw, chh);
         }
+        vis.push({ x, cw, base: y + chh * 0.8, cy: y + chh * 0.5, a });
+      }
+      ctx.globalAlpha = 1;
+      const toneRGB = (l, d, n) => [0, 1, 2].map((k) => Math.round((l[k] * cur.l + d[k] * cur.d + n[k] * cur.n) / toneSum));
+      // Regen-/Schneefahnen: unter jeder Wolke ein schräger, weicher Vorhang
+      if (cur.rain > 0.03 || cur.snow > 0.03) {
+        const H = px(o.curtain);
+        const [r, g2, b] = cur.snow > cur.rain ? [236, 242, 250] : toneRGB([206, 214, 228], [88, 98, 114], [60, 70, 96]);
+        const amt = cur.snow > cur.rain ? 0.13 * cur.snow : 0.22 * cur.rain;
+        for (const c of vis) {
+          const x0 = c.x + c.cw * 0.19, x1 = c.x + c.cw * 0.81, y0 = c.base;
+          const gr = ctx.createLinearGradient(0, y0, 0, y0 + H);
+          gr.addColorStop(0, `rgba(${r},${g2},${b},${amt * c.a})`);
+          gr.addColorStop(1, `rgba(${r},${g2},${b},0)`);
+          ctx.fillStyle = gr;
+          ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y0); ctx.lineTo(x1 - H * 0.22, y0 + H); ctx.lineTo(x0 - H * 0.22, y0 + H); ctx.closePath(); ctx.fill();
+        }
+      }
+      // Wolkenschatten ziehen über die Alpen (nur bei Sonne mit einzelnen Wolken)
+      const sh = o.mountainY != null ? (cur.l / toneSum) * Math.max(0, 1 - cur.cloud * 1.1) * 2 : 0;
+      if (sh > 0.02) {
+        const my = px(o.mountainY);
+        for (const c of vis) {
+          const cx = c.x + c.cw * 0.5 - 24, rx = c.cw * 0.5;
+          const gr = ctx.createRadialGradient(cx, my, 0, cx, my, rx);
+          gr.addColorStop(0, `rgba(10,24,48,${0.2 * Math.min(1, sh) * c.a})`);
+          gr.addColorStop(1, 'rgba(10,24,48,0)');
+          ctx.save(); ctx.translate(cx, my); ctx.scale(1, 0.22); ctx.translate(-cx, -my);
+          ctx.fillStyle = gr; ctx.fillRect(cx - rx, my - rx, rx * 2, rx * 2);
+          ctx.restore();
+        }
+      }
+      // Blitz im Inneren einer Wolke
+      if (flashT > 0) {
+        const c = (flashCloud && vis.find((v) => Math.abs(v.x - flashCloud.x) < 60)) || vis[0];
+        if (c) {
+          const gr = ctx.createRadialGradient(c.x + c.cw / 2, c.cy, 0, c.x + c.cw / 2, c.cy, c.cw * 0.55);
+          gr.addColorStop(0, `rgba(235,230,255,${0.85 * flashT})`);
+          gr.addColorStop(1, 'rgba(235,230,255,0)');
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.fillStyle = gr; ctx.fillRect(c.x, c.cy - c.cw * 0.55, c.cw, c.cw * 1.1);
+          ctx.globalCompositeOperation = 'source-over';
+        }
+        flashT = Math.max(0, flashT - dt / 260);
+      }
+    }
+    // Tiefe Wolken hängen in den Bergen (Regen, Schnee, bedeckt)
+    if (o.lowY != null && cur.low > 0.01) {
+      const toneSum = cur.l + cur.d + cur.n || 1;
+      const ly = px(o.lowY), lw = w * 0.8, lh = lw * 0.3;
+      for (const c of lowClouds) {
+        c.x += c.v * dt / 1000; if (c.x > 1.2) c.x = -0.6;
+        const x = c.x * (w + lw) - lw * 0.6;
+        for (const [key, wt] of [['l', cur.l], ['d', cur.d], ['n', cur.n]]) {
+          if (wt / toneSum < 0.02) continue;
+          ctx.globalAlpha = cur.low * 0.5 * (wt / toneSum) * o.strength;
+          ctx.drawImage(sprites[key][c.img], x, ly - lh / 2 + c.dy, lw, lh);
+        }
       }
       ctx.globalAlpha = 1;
     }
@@ -754,7 +921,8 @@ function createSkyFx(canvas, opt) {
     if (cur.fog > 0.01) {
       for (const f of fogBands) {
         f.x += f.v * dt / 1000; if (f.x > 1) f.x -= 1;
-        const y = f.y * h, bw = w * 1.6;
+        const fb = o.fogBand.map(px);
+        const y = fb[0] + f.y * (fb[1] - fb[0]), bw = w * 1.6;
         for (const off of [f.x * bw - bw, f.x * bw]) {
           const gr = ctx.createRadialGradient(off + bw / 2, y, 0, off + bw / 2, y, bw / 2);
           gr.addColorStop(0, `rgba(236,240,245,${0.38 * cur.fog * S})`);
@@ -807,7 +975,7 @@ function createSkyFx(canvas, opt) {
       if (Math.abs(d) > 0.002) { cur[key] += d * k; moving = true; } else cur[key] = tgt[key];
     }
     draw(dt);
-    const animated = cur.cloud > 0.01 || cur.fog > 0.01 || drops.length || flakes.length;
+    const animated = cur.cloud > 0.01 || cur.fog > 0.01 || cur.low > 0.01 || drops.length || flakes.length || flashT > 0;
     if (!animated && !moving) { if (!idleSince) idleSince = now; } else idleSince = 0;
     if (visible && !document.hidden && (animated || moving)) raf = requestAnimationFrame(step);
     else last = 0;
@@ -825,10 +993,11 @@ function createSkyFx(canvas, opt) {
     set(look, cloudCover, amount, fast = false) {
       tau = fast ? 130 : 380;   // beim Wischen schneller nachziehen
       const [l, d, n] = look.tone;
-      tgt = { cloud: cloudCover, l, d, n, fog: look.fog, rain: look.rain * amount, snow: look.snow * amount };
+      tgt = { cloud: cloudCover, l, d, n, fog: look.fog, rain: look.rain * amount, snow: look.snow * amount, low: look.low * Math.min(1, cloudCover + 0.2) };
       kick();
     },
     setVisible(v) { visible = v; if (v) kick(); },
+    flash() { flashT = 1; flashCloud = vis.length ? vis[(Math.random() * vis.length) | 0] : null; kick(); },
   };
 }
 
@@ -989,6 +1158,7 @@ const sky = (() => {
     const a = document.querySelector('#card-weather .mw-flash');
     const b = document.querySelector('.page-sky-flash');
     if (a && a.animate) a.animate(frames(0.38), { duration: 700, easing: 'ease-out' });
+    if (card) card.flash();
     if (b && b.animate) b.animate(frames(0.14), { duration: 700, easing: 'ease-out' });
     flashTimer = setTimeout(flash, 5000 + Math.random() * 8000);
   };
@@ -999,7 +1169,8 @@ const sky = (() => {
       const a = document.getElementById('mw-alps');
       if (a && a.getContext) alps = createAlps(a);
       if (c && c.getContext) {
-        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.7, drops: 130, flakes: 80 });
+        card = createSkyFx(c, { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [-10, 110], lightAlpha: 0.7, drops: 130, flakes: 80,
+          fogBand: [150, 290], curtain: 260, mountainY: 228, lowY: 182 });
         new IntersectionObserver(([e]) => card.setVisible(e.isIntersecting)).observe(c);
       }
       if (p && p.getContext) page = createSkyFx(p, { strength: 0.38, size: 1.9, maxDpr: 1, clouds: 6, cloudBand: [0.02, 0.32], drops: 70, flakes: 50 });
@@ -1071,11 +1242,218 @@ function setWeatherFocus(i, animate = false, fast = false) {
   if (!lastForecast) return;
   const n = lastForecast.hourly.time.length;
   i = Math.max(0, Math.min(n - 1, i));
+  // Details zuerst: sie folgen dem Streifen und können auf einer anderen Stunde stehen als der Fokus
+  if (wxDetails.open) renderDetails(i);
   if (i === wxFocus.idx && !animate) return;
   wxFocus.idx = i;
   const isNow = i === wxFocus.nowIdx;
   sky.set(isNow && weatherNow ? weatherNow : hourConditions(i), fast);
   renderFocusHeader(animate);
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+//  Wetterdetails: Bento-Kacheln hinter dem kleinen Pfeil neben "Tag wählen".
+//  Zeigen die Stunde unter dem Zeit-Zeiger im Streifen oben (wischen = Details folgen).
+//  Temperatur + Niederschlag kommen aus dem MeteoSwiss-Verlauf (gleiche Zahlen wie
+//  im Streifen), der Rest (Wind, Feuchte, UV, Sonne, Druck, Sicht) aus einer
+//  zweiten, kleinen Anfrage – die gibt ICON-CH2 nicht her.
+// ═════════════════════════════════════════════════════════════════════════════
+const wxDetails = { open: false, busy: false, key: '', data: null, req: null, idx: -1, arrow: null };
+const WIND_DIRS = ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'];
+const WIND_FROM = ['Norden', 'Nordosten', 'Osten', 'Südosten', 'Süden', 'Südwesten', 'Westen', 'Nordwesten'];
+// Beaufort-Skala (Obergrenze in km/h → Bezeichnung)
+const BEAUFORT = [[2, 'Windstill'], [6, 'Leiser Zug'], [12, 'Leichte Brise'], [20, 'Schwache Brise'], [29, 'Mässige Brise'],
+  [39, 'Frische Brise'], [50, 'Starker Wind'], [62, 'Steifer Wind'], [75, 'Stürmischer Wind'], [89, 'Sturm'],
+  [103, 'Schwerer Sturm'], [118, 'Orkanartiger Sturm'], [Infinity, 'Orkan']];
+
+function loadWeatherDetails() {
+  const key = `${weatherLoc.lat},${weatherLoc.lon}`;
+  if (wxDetails.key === key && (wxDetails.data || wxDetails.req)) return;
+  wxDetails.key = key;
+  wxDetails.data = null;
+  wxDetails.req = $.getJSON(WEATHER_API, {
+    latitude: weatherLoc.lat,
+    longitude: weatherLoc.lon,
+    hourly: 'temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation_probability,'
+      + 'wind_speed_10m,wind_gusts_10m,wind_direction_10m,pressure_msl,visibility,uv_index',
+    daily: 'sunrise,sunset,uv_index_max',
+    forecast_days: 5,
+    timezone: 'Europe/Zurich',
+  }).done((data) => {
+    if (wxDetails.key !== key || !data.hourly) return;
+    data.at = new Map(data.hourly.time.map((t, i) => [t, i]));   // Stunde → Index (Zeiten als Schlüssel)
+    wxDetails.data = data;
+    if (wxDetails.open) renderDetails(wxDetails.idx, true);
+  }).always(() => { if (wxDetails.key === key) wxDetails.req = null; });
+}
+
+// Minuten seit 1970 für "YYYY-MM-DDTHH:MM" (Ortszeit als UTC gelesen – nur für Differenzen)
+const wxMin = (s) => Date.parse(`${s}Z`) / 6e4;
+function zurichNowMin() {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Zurich', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date()).map((x) => [x.type, x.value]));
+  return wxMin(`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`);
+}
+const fmtDur = (m) => {
+  m = Math.round(m);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')} min`;
+};
+
+function renderDetails(i, force = false) {
+  if (!lastForecast || !weatherDays.length) return;
+  const h = lastForecast.hourly;
+  i = Math.max(0, Math.min(h.time.length - 1, i));
+  if (i === wxDetails.idx && !force) return;
+  wxDetails.idx = i;
+  const isNow = i === wxFocus.nowIdx;
+  const day = weatherDays.find((d) => i >= d.from && i <= d.to) || weatherDays[0];
+  $('#wd-title').text(isNow ? 'Jetzt' : `${day.isToday ? 'Heute' : day.name} ${h.time[i].slice(11, 16)}`);
+
+  const D = wxDetails.data;
+  const j = D ? D.at.get(h.time[i]) : undefined;
+  const v = (k, at = j) => (at != null && D.hourly[k] && D.hourly[k][at] != null ? D.hourly[k][at] : null);
+  const dash = '–';
+  const loading = !D;
+  const temp = isNow && weatherNow && weatherNow.temperature_2m != null ? weatherNow.temperature_2m : h.temperature_2m[i];
+
+  // Wind: Werte, Beaufort in Worten, Pfeil zeigt wohin der Wind weht
+  const ws = v('wind_speed_10m'), wg = v('wind_gusts_10m'), wdir = v('wind_direction_10m');
+  const sector = wdir == null ? -1 : Math.round(wdir / 45) % 8;
+  $('#wd-wind').text(ws == null ? dash : `${Math.round(ws)} km/h`);
+  $('#wd-gust').text(wg == null ? dash : `${Math.round(wg)} km/h`);
+  $('#wd-dir').text(sector < 0 ? dash : `${WIND_DIRS[sector]} · ${Math.round(wdir)}°`);
+  $('#wd-wind-c').text(ws == null ? dash : Math.round(ws));
+  $('#wd-wind-note').text(loading ? 'Lädt …' : ws == null ? dash
+    : `${BEAUFORT.find(([max]) => ws < max)[1]}${ws >= 2 && sector >= 0 ? ` aus ${WIND_FROM[sector]}` : ''}`);
+  if (wdir != null) {
+    let deg = wdir + 180;
+    // kürzester Weg: nie einmal rundherum drehen (350° → 10° = +20°)
+    if (wxDetails.arrow != null) deg = wxDetails.arrow + ((((deg - wxDetails.arrow) % 360) + 540) % 360 - 180);
+    wxDetails.arrow = deg;
+    document.getElementById('wd-arrow').style.transform = `rotate(${deg}deg)`;
+  }
+
+  // Luftfeuchtigkeit + Taupunkt
+  const rh = v('relative_humidity_2m'), dew = v('dew_point_2m');
+  $('#wd-hum').text(rh == null ? dash : `${Math.round(rh)} %`);
+  $('#wd-hum-bar').css('transform', `scaleX(${rh == null ? 0 : rh / 100})`);
+  $('#wd-dew').text(dew == null ? (loading ? 'Lädt …' : dash) : `Der Taupunkt liegt bei ${Math.round(dew)}°.`);
+
+  // Niederschlag: diese Stunde (wie die Balken im Streifen) + Wahrscheinlichkeit + ganzer Tag
+  const pr = h.precipitation[i] || 0, pp = v('precipitation_probability');
+  const snow = pr > 0 && temp <= 0.5;
+  $('#wd-prec').html(`${pr.toFixed(1)} <small>mm${snow ? ' Schnee' : ''}</small>`);
+  $('#wd-prob-bar').css('transform', `scaleX(${pp == null ? 0 : pp / 100})`);
+  $('#wd-prob').text(pp == null ? (loading ? 'Lädt …' : dash) : `${Math.round(pp)} % Wahrscheinlichkeit`);
+  $('#wd-prec-day').text(`${day.isToday ? 'Heute' : day.name} insgesamt ${day.rain.toFixed(1)} mm`);
+
+  // Gefühlt: Unterschied aus dem Modell auf die Streifen-Temperatur rechnen (bleibt stimmig)
+  const at = v('apparent_temperature'), tb = v('temperature_2m');
+  const diff = at != null && tb != null ? at - tb : null;
+  $('#wd-feels').text(diff == null ? dash : `${Math.round(temp + diff)}°`);
+  let why = 'Fühlt sich etwa so an wie gemessen.';
+  if (diff != null && diff <= -1.5) why = ws != null && ws >= 10 ? 'Der Wind lässt es kühler wirken.' : 'Fühlt sich kühler an.';
+  if (diff != null && diff >= 1.5) why = rh != null && rh >= 65 ? 'Die feuchte Luft lässt es wärmer wirken.' : 'Die Sonne lässt es wärmer wirken.';
+  $('#wd-feels-note').text(diff == null ? (loading ? 'Lädt …' : dash) : `Gemessen ${Math.round(temp)}°. ${why}`);
+
+  // UV-Index
+  const k = D ? D.daily.time.indexOf(day.key) : -1;
+  const uv = v('uv_index');
+  const uvMax = k >= 0 ? D.daily.uv_index_max[k] : null;
+  const uvWord = (x) => (x < 3 ? 'Niedrig' : x < 6 ? 'Mässig' : x < 8 ? 'Hoch' : x < 11 ? 'Sehr hoch' : 'Extrem');
+  $('#wd-uv').text(uv == null ? dash : Math.round(uv));
+  $('#wd-uv-label').text(uv == null ? '' : uvWord(uv));
+  $('#wd-uv-dot').css('left', `${uv == null ? 0 : Math.min(100, (uv / 11) * 100)}%`);
+  $('#wd-uv-note').text(loading ? 'Lädt …' : !h.is_day[i] ? 'Nachts keine UV-Strahlung.'
+    : uv != null && uv >= 3 ? 'Sonnenschutz empfohlen.' : uvMax != null ? `Höchstwert am Tag: ${Math.round(uvMax)}` : dash);
+
+  // Sonne: Auf-/Untergang des Tages, Sonne auf dem Bogen zur gewählten Zeit
+  const rise = k >= 0 ? D.daily.sunrise[k] : null, set = k >= 0 ? D.daily.sunset[k] : null;
+  $('#wd-rise').text(rise ? rise.slice(11, 16) : dash);
+  $('#wd-set').text(set ? set.slice(11, 16) : dash);
+  if (rise && set) {
+    const r = wxMin(rise), s = wxMin(set);
+    const t = isNow ? zurichNowMin() : wxMin(h.time[i]);
+    const f = Math.max(0, Math.min(1, (t - r) / (s - r)));
+    const x = (1 - f) ** 2 * 14 + 2 * (1 - f) * f * 100 + f * f * 186;   // Punkt auf der Bézier-Kurve
+    const y = (1 - f) ** 2 * 56 + 2 * (1 - f) * f * -18 + f * f * 56;
+    document.getElementById('wd-sun-dot').style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    document.getElementById('wd-sun-done').style.strokeDashoffset = String(1 - f);
+    const night = t < r || t > s;
+    $('#wd-sun-arc').toggleClass('is-night', night);
+    $('#wd-daylen').text(`Tageslänge ${fmtDur(s - r)}${night ? '' : ` · noch ${fmtDur(s - t)} hell`}`);
+  } else {
+    $('#wd-daylen').text(loading ? 'Lädt …' : dash);
+  }
+
+  // Luftdruck + Tendenz der letzten 3 Stunden
+  const p = v('pressure_msl'), p3 = j != null && j >= 3 ? v('pressure_msl', j - 3) : null;
+  $('#wd-press').html(p == null ? dash : `${Math.round(p)} <small>hPa</small>`);
+  $('#wd-press-dot').css('left', `${p == null ? 50 : Math.max(0, Math.min(100, ((p - 980) / 60) * 100))}%`);
+  let trend = loading ? 'Lädt …' : dash;
+  if (p != null && p3 != null) {
+    const dp = p - p3;
+    trend = dp >= 1 ? `Steigend, +${dp.toFixed(1)} hPa in 3 Std.` : dp <= -1 ? `Fallend, ${dp.toFixed(1)} hPa in 3 Std.` : 'Gleichbleibend';
+  } else if (p != null) trend = p >= 1020 ? 'Hochdruck' : p <= 1005 ? 'Tiefdruck' : 'Normaler Luftdruck';
+  $('#wd-press-trend').text(trend);
+
+  // Sichtweite
+  const vis = v('visibility');
+  const km = vis == null ? null : vis / 1000;
+  $('#wd-vis').html(km == null ? dash : `${km >= 10 ? Math.round(km) : km.toFixed(1)} <small>km</small>`);
+  $('#wd-vis-bar').css('transform', `scaleX(${km == null ? 0 : Math.min(1, km / 30)})`);
+  $('#wd-vis-note').text(km == null ? (loading ? 'Lädt …' : dash)
+    : km >= 10 ? 'Klare Sicht.' : km >= 4 ? 'Gute Sicht.' : km >= 1 ? 'Dunstig.' : 'Nebel, kaum Sicht.');
+}
+
+// 5-Tage-Prognose ⇄ Details am gleichen Platz: kurz ausblenden, Höhe gleitet mit, Kacheln kommen gestaffelt.
+// Ab 1200px steht die Karte neben Katze + Bitcoin: dort bleibt die Höhe gleich und die
+// Kacheln scrollen im Panel – sonst würden die Nachbarkarten leer mitwachsen.
+const wxWideRow = window.matchMedia('(min-width: 1200px)');
+function setDetailsOpen(open, instant = false) {
+  if (open === wxDetails.open || (wxDetails.busy && !instant)) return;
+  wxDetails.open = open;
+  const lower = document.getElementById('weather-lower');
+  const days = document.getElementById('weather-chart-card');
+  const det = document.getElementById('weather-details');
+  const from = open ? days : det, to = open ? det : days;
+  $('#weather-details-open').attr('aria-expanded', String(open));
+  if (open) {
+    const dh = days.hidden ? 0 : days.getBoundingClientRect().height;   // exakt, sonst 1px-Sprung
+    if (dh) lower.style.setProperty('--mw-lower-h', `${dh}px`);
+    det.querySelector('.mw-bento').scrollTop = 0;
+    loadWeatherDetails();
+    renderDetails(wxStrip ? stripCenterIndex() : wxFocus.idx, true);
+  }
+  const swap = () => {
+    from.hidden = true;
+    to.hidden = false;
+    lower.classList.toggle('is-fixed', open && wxWideRow.matches);
+    if (!open) { const ch = Highcharts.charts.find((c) => c && c.renderTo.id === 'weather-week'); if (ch) ch.reflow(); }
+  };
+  if (instant || reduceMotion.matches || !lower.animate) { swap(); return; }
+  wxDetails.busy = true;
+  const ease = 'cubic-bezier(.22,1,.36,1)';
+  const h0 = lower.offsetHeight;
+  const out = from.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(.985)' }], { duration: 130, easing: 'ease-in', fill: 'forwards' });
+  out.onfinish = () => {
+    swap();
+    out.cancel();
+    const h1 = lower.offsetHeight;
+    lower.style.overflow = 'hidden';
+    const grow = lower.animate([{ height: `${h0}px` }, { height: `${h1}px` }], { duration: 380, easing: ease });
+    grow.onfinish = () => { lower.style.overflow = ''; wxDetails.busy = false; };
+    if (open) {
+      det.querySelector('.mw-details-head').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out' });
+      det.querySelectorAll('.mw-tile').forEach((t, n) => t.animate(
+        [{ opacity: 0, transform: 'translateY(12px) scale(.97)' }, { opacity: 1, transform: 'none' }],
+        { duration: 420, delay: 35 * n, easing: ease, fill: 'backwards' }));
+    } else {
+      to.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 320, easing: ease });
+    }
+    document.getElementById(open ? 'weather-details-close' : 'weather-details-open').focus({ preventScroll: true });
+  };
 }
 
 // Beim Öffnen der Seite: nur den aktuellen Himmel holen (kein Laden der Wetterdaten)
@@ -1089,7 +1467,8 @@ function loadSkyNow() {
 function loadWeather() {
   const $btn = $('#btn-weather');
   setLoading($btn, true);
-  // Skeleton statt hartem Aufspringen
+  // Skeleton statt hartem Aufspringen (offene Details schliessen: neuer Ort, neue Daten)
+  setDetailsOpen(false, true);
   $('#weather-empty, #weather-hourly-wrap, #weather-chart-card').addClass('d-none');
   $('#weather-skeleton').removeClass('d-none');
 
@@ -1121,6 +1500,7 @@ function loadWeather() {
   $.when(today, forecast).done(() => {
     if (wxFocus.idx === wxFocus.nowIdx || wxFocus.idx < 0) setWeatherFocus(wxFocus.nowIdx, true);
     else renderFocusHeader(true);
+    loadWeatherDetails();   // Details schon mal holen → Pfeil öffnet sofort
   });
   $.when(today, forecast)
     .fail(() => {
@@ -1407,6 +1787,7 @@ function initStripScroll() {
       if (strip.lastHour != null) haptics.scrub();
       strip.lastHour = hour;
       if (skyLive) setWeatherFocus(stripCenterIndex(), false, true);   // Live: Himmel + Kopfzeile folgen der Mitte
+      else if (wxDetails.open) renderDetails(stripCenterIndex());     // Details folgen der Mitte immer
     }
     const d = stripCenterDay();
     if (d && d.key !== strip.lastKey) showStripDay(d);
@@ -2084,6 +2465,11 @@ $(function () {
   setSkyLive(skyLive, false);
   $('#sky-live-toggle').on('click', () => setSkyLive(!skyLive));
   $('#weather-now').on('click', () => { const d = weatherDays.find((x) => x.isToday); if (d) selectWeatherDay(d.key); });
+  // Wetterdetails: Pfeil neben "Tag wählen" öffnet, "‹ 5 Tage" bzw. Esc schliesst
+  $('#weather-details-open').on('click', () => setDetailsOpen(true));
+  $('#weather-details-close').on('click', () => setDetailsOpen(false));
+  $('#weather-details').on('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); setDetailsOpen(false); } });
+  wxWideRow.addEventListener('change', () => { document.getElementById('weather-lower').classList.toggle('is-fixed', wxDetails.open && wxWideRow.matches); });
 
   // Wetter: Ort wählen
   $('#weather-place').text(weatherLoc.name);

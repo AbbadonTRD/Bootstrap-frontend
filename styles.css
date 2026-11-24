@@ -3419,3 +3419,20 @@ html[data-mode="light"] #card-weather .mw-sun-ground::before { background: linea
 .mw-sun-flare { width: 190px; height: 2.5px; margin: -1.25px 0 0 -95px; }
 .mw-sun-flare.is-2 { width: 96px; margin-left: -48px; }
 .mw-sun-glow { width: 280px; height: 120px; }
+
+/* Safari/Firefox-Glas: Ränder deutlich dezenter (waren zu weiss) */
+.lg-fallback .liquid-glass::after {
+  padding: 1px;
+  background: linear-gradient(140deg,
+    rgba(255,255,255,.42) 0%, rgba(255,255,255,.14) 22%, rgba(150,160,180,.06) 50%,
+    rgba(255,255,255,.1) 78%, rgba(255,255,255,.28) 100%) !important;
+}
+.lg-fallback .liquid-glass::before {
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.08),
+    inset 1px 1px 1px -1px rgba(255,255,255,.5),
+    inset 0 0 18px 1px rgba(255,255,255,.1),
+    inset 0 -10px 16px -10px rgba(0,0,0,.22),
+    inset 3px 0 6px -4px rgba(255,90,90,.25),
+    inset -3px 0 6px -4px rgba(80,160,255,.28) !important;
+}

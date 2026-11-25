@@ -27,7 +27,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-25c" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-25f" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -375,7 +375,11 @@
                   <span id="wd-sun" class="mw-sun-orb"><i class="mw-sun-flare"></i><span class="mw-sun-disc"></span></span>
                   </span>
                   <span class="mw-sun-ground"></span>
-                  <span class="mw-sun-tick is-rise"><small>Aufgang</small><b id="wd-rise">–</b></span>
+                </div>
+                <!-- Zeitleiste Aufgang → Untergang: vergangener Teil des Tages leuchtet, Punkt = gewählte Zeit -->
+                <div class="mw-sun-line" aria-hidden="true">
+                  <span class="mw-sun-tick"><small>Aufgang</small><b id="wd-rise">–</b></span>
+                  <span class="mw-sun-bar"><i id="wd-sun-fill"></i><i id="wd-sun-mark"></i></span>
                   <span class="mw-sun-tick is-set"><small>Untergang</small><b id="wd-set">–</b></span>
                 </div>
                 <p id="wd-daylen" class="mw-tile-sub">–</p>
@@ -642,6 +646,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-25c"></script>
+  <script src="app.js?v=2026-11-25f"></script>
 </body>
 </html>

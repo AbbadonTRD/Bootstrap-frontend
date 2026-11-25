@@ -1478,19 +1478,22 @@ function renderDetails(i, force = false) {
     const t = isNow ? zurichNowMin() : wxMin(h.time[i]);
     const raw = (t - r) / (s - r);                       // <0 vor Aufgang, >1 nach Untergang
     const f = Math.max(0, Math.min(1, raw));
-    // Punkt auf der Bahn (SVG 200×80, Horizont bei y=66) → Prozent der Szene
-    const bx = (1 - f) ** 2 * 10 + 2 * (1 - f) * f * 100 + f * f * 190;
-    let by = (1 - f) ** 2 * 66 + 2 * (1 - f) * f * -14 + f * f * 66;
-    // Nachts: Sonne sinkt hinter den Horizont (je weiter weg vom Auf-/Untergang, desto tiefer)
-    const off = raw < 0 ? r - t : raw > 1 ? t - s : 0;
-    if (off > 0) by = 66 + Math.min(30, 10 + off / 4);   // hinter dem Horizont verschwunden
-    scene.style.setProperty('--sx', (bx / 200).toFixed(4));
-    scene.style.setProperty('--sy', (by / 80).toFixed(4));
+    const off = raw < 0 ? r - t : raw > 1 ? t - s : 0;   // Minuten vor Aufgang bzw. nach Untergang
+    const elev = noonElevation(weatherLoc.lat, day.key);
     // Goldene Stunde: 0 = hoch am Himmel, 1 = direkt am Horizont (auch kurz davor/danach)
     const edge = off > 0 ? Math.max(0, 1 - off / 50) : Math.max(0, 1 - Math.min(t - r, s - t) / 75);
     scene.style.setProperty('--gold', edge.toFixed(2));
     scene.classList.toggle('is-night', off > 0);
-    sunTrail.draw({ f, gold: edge, night: off > 0 });
+    // volle Stunden zwischen Auf- und Untergang als Punkte auf der Bahn
+    const hours = [];
+    for (let m = Math.ceil(r / 60) * 60; m <= s; m += 60) hours.push({ f: (m - r) / (s - r), h: ((Math.round(m / 60) % 24) + 24) % 24 });
+    sunTrail.draw({ f, gold: edge, night: off > 0, elev, side: raw < 0 ? 0 : 1, hours });
+    // Zeitleiste: vergangener Teil des Tages + Punkt (nachts: leer bzw. voll, ohne Punkt)
+    const done = raw < 0 ? 0 : raw > 1 ? 1 : f;
+    document.getElementById('wd-sun-fill').style.transform = `scaleX(${done.toFixed(4)})`;
+    const mark = document.getElementById('wd-sun-mark');
+    mark.style.left = `${(f * 100).toFixed(2)}%`;
+    mark.classList.toggle('is-off', off > 0);
     // Klarer Satz statt nur einer Kurve
     const next = D.daily.sunrise[k + 1];
     let state;
@@ -1502,7 +1505,7 @@ function renderDetails(i, force = false) {
     else state = `Noch ${fmtDur(s - t)} Tageslicht`;
     $('#wd-sun-state').text(state);
     const nh = Math.floor(noon / 60) % 24, nm = Math.round(noon % 60);
-    $('#wd-daylen').text(`Tageslänge ${fmtDur(s - r)} · Höchststand ${String(nh).padStart(2, '0')}:${String(nm % 60).padStart(2, '0')}`);
+    $('#wd-daylen').text(`Tageslänge ${fmtDur(s - r)} · Höchststand ${String(nh).padStart(2, '0')}:${String(nm % 60).padStart(2, '0')}, ${Math.round(elev)}° hoch`);
   } else {
     $('#wd-sun-state').text(loading ? 'Lädt …' : dash);
     $('#wd-daylen').text(loading ? 'Lädt …' : dash);
@@ -1528,9 +1531,20 @@ function renderDetails(i, force = false) {
     : km >= 10 ? 'Klare Sicht.' : km >= 4 ? 'Gute Sicht.' : km >= 1 ? 'Dunstig.' : 'Nebel, kaum Sicht.');
 }
 
-// Sonnenbahn wie eine Langzeitbelichtung: bisheriger Weg als Lichtspur, die zur Sonne hin
-// heller und wärmer wird; der restliche Weg nur angedeutet; Horizont als Dunst statt Strich.
+// Mittagshöhe der Sonne in Grad für Breite + Datum (Näherung über die Deklination)
+function noonElevation(lat, dateKey) {
+  const d = new Date(`${dateKey}T12:00Z`);
+  const doy = Math.floor((d - Date.UTC(d.getUTCFullYear(), 0, 0)) / 864e5);
+  const decl = -23.44 * Math.cos((2 * Math.PI / 365) * (doy + 10));
+  return Math.max(3, Math.min(90, 90 - lat + decl));
+}
+
+// Sonnenhimmel: die Sonne steht dort, wo sie zur gewählten Zeit wirklich ist (Höhe ~ Sinus
+// über den Tag, flach im Winter, hoch im Sommer). Ihre Bahn ist eine feine Linie mit
+// Stundenpunkten wie in Sonnenstand-Apps, der Himmel um sie wird hell, der Horizont ist Dunst.
 // Canvas, damit das Leuchten überall (auch Safari) gleich aussieht.
+const SUN_R = 18;          // Radius der Sonnenscheibe (px)
+const SUN_GLOW = 16;       // Schein ausserhalb der Scheibe (px)
 const sunTrail = (() => {
   let cv = null, ctx = null, W = 0, H = 0, last = null;
   const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
@@ -1544,49 +1558,84 @@ const sunTrail = (() => {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return true;
   }
+  function geom(elev) {
+    const pad = SUN_R + SUN_GLOW + 6;                    // Platz für Sonne + Schein an den Enden
+    const x0 = pad, x1 = W - pad, hy = Math.round(H - 10);
+    const maxPeak = hy - (SUN_R + SUN_GLOW + 6);          // höchster Punkt: Schein bleibt in der Szene
+    const peak = maxPeak * (0.42 + 0.58 * Math.min(1, elev / 66));   // Winter flach, Sommer hoch
+    const pt = (t) => [x0 + (x1 - x0) * t, hy - peak * Math.sin(Math.PI * t)];
+    return { x0, x1, hy, pt };
+  }
   function draw(p) {
     if (p) last = p;
     if (!last || !size()) return;
-    const { f, gold, night } = last;
+    const { f, gold, night, elev = 30, side = 1, hours = [] } = last;
     const light = isLightMode();
-    // Bahn: gleiche Kurve wie die Sonnen-Position (Seitenrand 12px, Horizont bei 82.5 %)
-    const x0 = 12, x1 = W - 12, hy = H * 0.825, cy = H * (-14 / 80), mx = (x0 + x1) / 2;
-    const pt = (t) => [(1 - t) ** 2 * x0 + 2 * (1 - t) * t * mx + t * t * x1, (1 - t) ** 2 * hy + 2 * (1 - t) * t * cy + t * t * hy];
-    const path = (a, b) => { ctx.beginPath(); for (let i = 0; i <= 48; i++) { const [x, y] = pt(a + (b - a) * i / 48); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
+    const g = geom(elev);
+    const { x0, x1, hy, pt } = g;
+    // Sonne + Horizontschein an dieselbe Kurve hängen
+    const scene = cv.parentElement;
+    let [sx, sy] = pt(f);
+    if (night) { sx = side ? x1 : x0; sy = hy + SUN_R + 24; }   // hinter dem Horizont
+    scene.style.setProperty('--px', `${sx.toFixed(1)}px`);
+    scene.style.setProperty('--py', `${sy.toFixed(1)}px`);
+    scene.style.setProperty('--hy', `${hy}px`);
     ctx.clearRect(0, 0, W, H);
     ctx.lineCap = 'round'; ctx.lineJoin = 'round';
-    // Farben: Tag warmweiss, Gold-Stunde orange, Hell-Modus bernstein
     const warm = light ? mixC([232, 150, 30], [226, 96, 24], gold) : mixC([255, 238, 205], [255, 162, 82], gold);
     const haze = night ? (light ? [120, 140, 190] : [150, 175, 255]) : light ? [255, 255, 255] : mixC([215, 230, 255], [255, 178, 110], gold);
     // 1) Horizont-Dunst: weiches Lichtband, an den Rändern ausgeblendet
-    const band = ctx.createLinearGradient(0, hy - 30, 0, hy + 16);
+    const band = ctx.createLinearGradient(0, hy - 26, 0, hy + 14);
     band.addColorStop(0, rgba(haze, 0));
-    band.addColorStop(0.68, rgba(haze, night ? (light ? 0.1 : 0.07) : light ? 0.5 : 0.13 + gold * 0.12));
+    band.addColorStop(0.7, rgba(haze, night ? (light ? 0.1 : 0.07) : light ? 0.45 : 0.12 + gold * 0.12));
     band.addColorStop(1, rgba(haze, 0));
-    ctx.fillStyle = band; ctx.fillRect(0, hy - 30, W, 46);
+    ctx.fillStyle = band; ctx.fillRect(0, hy - 26, W, 40);
     ctx.globalCompositeOperation = 'destination-in';
     const edgeFade = ctx.createLinearGradient(0, 0, W, 0);
-    edgeFade.addColorStop(0, 'rgba(0,0,0,0)'); edgeFade.addColorStop(0.18, '#000'); edgeFade.addColorStop(0.82, '#000'); edgeFade.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = edgeFade; ctx.fillRect(0, hy - 30, W, 46);
+    edgeFade.addColorStop(0, 'rgba(0,0,0,0)'); edgeFade.addColorStop(0.16, '#000'); edgeFade.addColorStop(0.84, '#000'); edgeFade.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = edgeFade; ctx.fillRect(0, hy - 26, W, 40);
     ctx.globalCompositeOperation = 'source-over';
-    // 2) Noch kommender Weg: nur ein Hauch, läuft zum Ende aus
-    const [sx] = pt(f);
-    const ahead = ctx.createLinearGradient(sx, 0, x1, 0);
+    // 2) Himmelslicht um die Sonne (wie echtes Streulicht), nur am Tag
+    if (!night) {
+      const r = 150 + gold * 40;
+      const sky = ctx.createRadialGradient(sx, sy, SUN_R, sx, sy, r);
+      sky.addColorStop(0, rgba(warm, light ? 0.24 : 0.16 + gold * 0.08));
+      sky.addColorStop(0.45, rgba(warm, light ? 0.1 : 0.05 + gold * 0.04));
+      sky.addColorStop(1, rgba(warm, 0));
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, W, hy);
+      ctx.globalCompositeOperation = 'destination-in';     // weich zu den Rändern hin
+      const fadeX = ctx.createLinearGradient(0, 0, W, 0);
+      fadeX.addColorStop(0, 'rgba(0,0,0,0)'); fadeX.addColorStop(0.08, '#000'); fadeX.addColorStop(0.92, '#000'); fadeX.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = fadeX; ctx.fillRect(0, 0, W, hy);
+      const fadeY = ctx.createLinearGradient(0, 0, 0, 34);   // auch oben weich, keine Kante
+      fadeY.addColorStop(0, 'rgba(0,0,0,0)'); fadeY.addColorStop(1, '#000');
+      ctx.fillStyle = fadeY; ctx.fillRect(0, 0, W, hy);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    // 3) Sonnenbahn als feine, klare Linie mit Stundenpunkten (wie in Sonnenstand-Apps über
+    //    einem Kamerabild): ganzer Tag dünn, bisheriger Weg warm. Kein Leuchten, keine Striche.
     const ink = light ? [14, 28, 51] : [255, 255, 255];
-    ahead.addColorStop(0, rgba(ink, night ? 0.1 : 0.16));
-    ahead.addColorStop(1, rgba(ink, 0.02));
-    path(night ? 0 : f, 1);
-    ctx.strokeStyle = night ? rgba(ink, 0.08) : ahead; ctx.lineWidth = 1; ctx.stroke();
-    if (night || f <= 0.002) return;
-    // 3) Lichtspur bis zur Sonne: weicher Schein + heller Kern, beide von 0 zur Sonne hin
-    const trail = (a) => { const g = ctx.createLinearGradient(x0, 0, sx, 0); g.addColorStop(0, rgba(warm, 0)); g.addColorStop(0.55, rgba(warm, a * 0.35)); g.addColorStop(1, rgba(warm, a)); return g; };
-    path(0, f);
-    ctx.save();
-    ctx.shadowColor = rgba(warm, light ? 0.35 : 0.8); ctx.shadowBlur = 14;
-    ctx.strokeStyle = trail(light ? 0.28 : 0.32); ctx.lineWidth = 7; ctx.stroke();
-    ctx.restore();
-    path(0, f);
-    ctx.strokeStyle = trail(light ? 0.9 : 0.95); ctx.lineWidth = 1.8; ctx.stroke();
+    const path = (a, b) => { ctx.beginPath(); for (let i = 0; i <= 72; i++) { const [x, y] = pt(a + (b - a) * i / 72); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
+    path(0, 1);
+    ctx.strokeStyle = rgba(ink, night ? 0.2 : light ? 0.3 : 0.36); ctx.lineWidth = 1; ctx.stroke();
+    if (!night && f > 0.002) {
+      path(0, f);
+      ctx.strokeStyle = rgba(warm, light ? 0.95 : 0.92); ctx.lineWidth = 1.6; ctx.stroke();
+    }
+    ctx.font = '500 9px Ubuntu, system-ui, sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+    for (const { f: hf, h } of hours) {
+      const [x, y] = pt(hf);
+      const passed = !night && hf <= f;
+      const major = h % 3 === 0;
+      ctx.fillStyle = passed ? rgba(warm, 1) : rgba(ink, night ? 0.3 : light ? 0.45 : 0.55);
+      ctx.beginPath(); ctx.arc(x, y, major ? 2.2 : 1.4, 0, 6.283); ctx.fill();
+      if (major && Math.abs(hf - f) > 0.07) {   // Beschriftung alle 3 Stunden (nicht unter der Sonne)
+        ctx.fillStyle = rgba(ink, night ? 0.35 : light ? 0.55 : 0.62);
+        ctx.fillText(String(h), x, y - 7);
+      }
+    }
   }
   return { draw };
 })();

@@ -3497,3 +3497,57 @@ html[data-mode="light"] body { background: #e3f0ff; }
 }
 html[data-mode="dark"] .page-sky { background: linear-gradient(165deg, var(--pgd1) 0%, var(--pgd2) 50%, var(--pgd3) 100%); }
 .sky-fast .page-sky { transition-duration: .3s; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Sonne v6: kleinere Sonne (36px), Bahn = echte Tageskurve (Höhe je Jahreszeit),
+   Position in Pixeln aus derselben Kurve wie die Lichtspur (--px/--py/--hy aus JS).
+   Genug Luft nach oben + weich ausgeblendete Ränder → nirgends harte Kanten.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.mw-sun-scene { height: 124px; --hy: 102px; --px: 50%; --py: 40px; }
+.mw-sun-sky {
+  top: 0; height: var(--hy);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+}
+.mw-sun-sky .mw-sun-orb, .mw-sun-orb {
+  left: var(--px); top: var(--py);
+  width: 36px; height: 36px; margin: -18px 0 0 -18px;
+}
+.mw-sun-disc { box-shadow: 0 0 12px 4px rgba(255,140,0,.65); }
+.mw-sun-orb::before { inset: -16px; background: radial-gradient(closest-side, rgba(255,150,40,.5), rgba(255,140,0,0)); }
+.mw-sun-orb::after {
+  box-shadow: -1px 0 2px 0 #ffb453 inset, 2px 0 6px 2px #bb6d01c5 inset, -4px 0 7px 4px #ffa265c2 inset, 17px 0 11px 5px #c55f00aa inset;
+}
+.mw-sun-flare { width: 96px; margin-left: -48px; }
+.mw-sun-sky .mw-sun-glow, .mw-sun-glow { left: var(--px); top: 100%; width: 200px; height: 90px; }
+.mw-sun-ground { top: var(--hy); }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Sonne v7 – freier Himmel: keine gezeichnete Bahn, die Sonne steht frei am Himmel,
+   darunter eine schlanke Zeitleiste Aufgang → Untergang mit Punkt für die Zeit.
+   ═════════════════════════════════════════════════════════════════════════════ */
+.mw-sun-scene { height: 104px; margin-bottom: 0; }
+.mw-sun-line { display: flex; align-items: center; gap: 12px; margin: 4px 0 6px; }
+.mw-sun-line .mw-sun-tick {
+  position: static; display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  font-size: 15px; line-height: 1.1;
+}
+.mw-sun-line .mw-sun-tick.is-set { align-items: flex-end; }
+.mw-sun-line .mw-sun-tick small { font-size: 10.5px; opacity: .72; }
+.mw-sun-line .mw-sun-tick b { font-weight: 500; font-variant-numeric: tabular-nums; }
+.mw-sun-bar { position: relative; flex: 1; height: 3px; border-radius: 99px; background: rgba(255,255,255,.16); }
+#wd-sun-fill {
+  position: absolute; inset: 0; border-radius: inherit; transform-origin: left center; transform: scaleX(0);
+  background: linear-gradient(90deg, rgba(255,196,120,.2), #ffcf7a);
+  transition: transform 600ms var(--ease-out);
+}
+#wd-sun-mark {
+  position: absolute; top: 50%; left: 0; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: #ffe2a6; box-shadow: 0 0 0 2px rgba(255,190,90,.25), 0 0 10px 2px rgba(255,170,60,.6);
+  transition: left 600ms var(--ease-out), opacity 300ms;
+}
+#wd-sun-mark.is-off { opacity: 0; }
+html[data-mode="light"] #card-weather .mw-sun-bar { background: rgba(14,28,51,.14); }
+html[data-mode="light"] #card-weather #wd-sun-fill { background: linear-gradient(90deg, rgba(240,160,40,.2), #f0a21c); }
+html[data-mode="light"] #card-weather #wd-sun-mark { background: #f5a623; box-shadow: 0 0 0 2px rgba(245,166,35,.25), 0 0 8px 1px rgba(245,140,20,.45); }
+@media (prefers-reduced-motion: reduce) { #wd-sun-fill, #wd-sun-mark { transition: none; } }

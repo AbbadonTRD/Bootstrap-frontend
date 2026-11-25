@@ -185,7 +185,7 @@ const haptics = (() => {
   const place = (d, left) => { d.sw.style.transform = `translateX(${left ? -PARK : PARK}px)`; };
   const release = (d, now) => {
     if (!d.queued || now < d.armedAt || d.moves < 2) return false;   // nie zwei Kipper direkt hintereinander
-    d.queued = 0;
+    d.queued -= 1;
     d.moves = 0;
     d.parked = true;
     place(d, !d.on);       // auf die Seite, die den Daumen umlegt → Tick
@@ -278,14 +278,14 @@ const haptics = (() => {
   return {
     // Ein Schritt beim Wischen (Diagramm-Punkt, Stunde im Streifen):
     // iPhone über den mitwandernden Schalter, Android über vibrate()
-    scrub() {
-      if (drag) { drag.queued = 1; release(drag, performance.now()); return; }
+    // strong = Akzent (Hoch-/Tiefpunkt der Linie, Kreuzen des aktuellen Preises, Mitternacht)
+    scrub(strong = false) {
+      if (drag) { drag.queued = Math.max(drag.queued, strong ? 2 : 1); release(drag, performance.now()); return; }
       if (!touch || !canVibrate) return;
       const now = performance.now();
-      const gap = now - lastScrub;
-      if (gap < 28) return;                       // nie mehr als ~35 Ticks pro Sekunde
+      if (now - lastScrub < 24 && !strong) return;   // höchstens ~40 Ticks pro Sekunde
       lastScrub = now;
-      try { navigator.vibrate(gap < 55 ? 3 : 5); } catch (e) { /* egal */ }
+      try { navigator.vibrate(strong ? [7, 40, 7] : 4); } catch (e) { /* egal */ }   // immer gleich lang → gleichmässig
     },
     // Fläche, über die man wischt (Diagramm), für iPhone-Ticks vorbereiten
     attachDrag,
@@ -295,15 +295,53 @@ const haptics = (() => {
   };
 })();
 
-// Beim Wischen über einen Diagramm-Punkt ticken – höchstens alle 12 px, damit dichte
-// Kurven (z.B. 290 Bitcoin-Punkte) nicht dauernd brummen
+// ── Haptik entlang der Linie ──────────────────────────────────────────────────
+// 1) Gleichmässig: ein Tick alle k Datenpunkte der Linie (z. B. jede Stunde, alle 6 h, alle 14 Tage) –
+//    pro Diagramm so gewählt, dass ein Tick etwa alle 14–24 px Fingerweg kommt. Gleiche
+//    Stelle = gleicher Tick, egal wo man anfängt oder wie schnell man wischt.
+// 2) Die Form fühlen: echte Hoch- und Tiefpunkte der Kurve (und beim Bitcoin das Kreuzen
+//    des aktuellen Preises) geben einen doppelten, kräftigeren Tick.
+// Tick alle k Datenpunkte: k aus "runden" Anzahlen (6 h, 12 × 5 min = 1 h, 14 Tage …),
+// klein genug für ~14 px Abstand. Gleich viele Punkte = immer genau gleicher Fingerweg.
+const HAPTIC_K = [1, 2, 3, 4, 6, 8, 12, 14, 24, 36, 48, 72, 96, 144, 288];
+function hapticGrid(chart) {
+  // Linie für Raster + Form: Temperatur bzw. der Kurs (meiste Punkte, keine Säulen)
+  const line = chart.series.filter((sr) => sr.type !== 'column' && sr.type !== 'scatter' && sr.points && sr.points.length > 2)
+    .sort((a, b) => b.points.length - a.points.length)[0];
+  if (!line) return null;
+  const pts = line.points;
+  const x0 = pts[0].x;
+  const interval = (pts[pts.length - 1].x - x0) / (pts.length - 1) || 1;
+  const pxPerPoint = chart.plotWidth / Math.max(1, pts.length - 1);
+  const k = HAPTIC_K.find((n) => n * pxPerPoint >= 14) || Math.ceil(14 / pxPerPoint);
+  const cellOf = (x) => Math.floor((x - x0) / (k * interval) + 1e-6);
+  // Wendepunkte mit Gewicht: mindestens 12 % der Spannweite Auf- bzw. Abstieg seit dem letzten
+  const ys = pts.map((p) => p.y);
+  const lo = Math.min(...ys), hi = Math.max(...ys), range = (hi - lo) || 1;
+  const turns = new Set([cellOf(pts[ys.indexOf(hi)].x), cellOf(pts[ys.indexOf(lo)].x)]);   // Höchst- und Tiefstwert immer
+  let ext = 0, dir = 0;
+  for (let i = 1; i < ys.length; i++) {
+    if (dir >= 0 && ys[i] > ys[ext]) { ext = i; continue; }
+    if (dir <= 0 && ys[i] < ys[ext]) { ext = i; continue; }
+    if (Math.abs(ys[i] - ys[ext]) / range >= 0.12) { turns.add(cellOf(pts[ext].x)); dir = ys[i] > ys[ext] ? 1 : -1; ext = i; }
+  }
+  return { k, cellOf, turns, step: k * interval };
+}
 function hapticScrub(point) {
   const chart = point.series.chart;
-  const x = point.plotX;
-  if (chart.hapticX == null || Math.abs(x - chart.hapticX) >= 12) {
-    chart.hapticX = x;
-    haptics.scrub();
-  }
+  if (chart.hapticGrid === undefined || chart.hapticW !== chart.plotWidth) { chart.hapticGrid = hapticGrid(chart); chart.hapticW = chart.plotWidth; }
+  const g = chart.hapticGrid;
+  if (!g) return;
+  const cell = g.cellOf(point.x);
+  if (cell === chart.hapticCell) return;
+  // Bitcoin: Linie des aktuellen Preises gekreuzt?
+  const ref = point.series.options.zones && point.series.options.zones[0] && point.series.options.zones[0].value;
+  const side = ref != null ? Math.sign(point.y - ref) : 0;
+  const crossed = ref != null && chart.hapticSide != null && side !== 0 && side !== chart.hapticSide;
+  if (side !== 0) chart.hapticSide = side;
+  const first = chart.hapticCell == null;
+  chart.hapticCell = cell;
+  if (!first) haptics.scrub(g.turns.has(cell) || crossed);
 }
 // Für alle Diagramme (Serien mit eigenem mouseOver rufen hapticScrub selbst auf)
 if (window.Highcharts) {
@@ -315,6 +353,10 @@ if (window.Highcharts) {
     // darf den Finger dort ganz behalten, sonst würde der native Schalter das Scrollen blockieren
     const isStrip = this.renderTo && this.renderTo.id === 'weather-hourly';
     haptics.attachDrag(this.container, isStrip ? 'none' : getComputedStyle(this.container).touchAction);
+    // Neues Wischen: Raster-Position vergessen, damit es nicht sofort beim Aufsetzen tickt
+    const chart = this;
+    const reset = () => { chart.hapticCell = null; chart.hapticSide = null; };
+    ['touchstart', 'mouseleave'].forEach((t) => this.container.addEventListener(t, reset, { passive: true, capture: true }));
   });
 }
 
@@ -774,13 +816,20 @@ function makeCloudSprite(seed, body, shade) {
 
 // Ein Himmel-Renderer (Wolken, Nebel, Regen, Schnee) für ein Canvas.
 // strength = Deckkraft (Karte 1, Seite dezent), size = Wolkengrösse, maxDpr = Schärfe
+// ── Leistung: solange man den Stunden-Streifen wischt, treten die Deko-Ebenen zurück ──
+// (Punkte-Raster + Seiten-Himmel pausieren, Wolken/Regen der Karte laufen mit 30 fps).
+// Auf Touch-Geräten laufen Punkte + Seiten-Himmel generell mit weniger Bildern pro Sekunde.
+const fxGate = { until: 0 };
+const fxBusy = () => performance.now() < fxGate.until;
+const isCoarse = window.matchMedia('(pointer: coarse)').matches;
+
 function createSkyFx(canvas, opt) {
   const ctx = canvas.getContext('2d');
   // cloudBand: [oben, unten] – Zahlen < 1 = Anteil der Höhe, sonst Pixel
   // fogBand: Höhe der Nebelbänder · curtain: Länge der Regen-/Schneefahnen unter den Wolken
   // mountainY/lowY: (nur Karte) Höhe der Wolkenschatten auf den Alpen bzw. der tiefen Wolken in den Bergen
   const o = { strength: 1, size: 1, maxDpr: 2, clouds: 7, cloudBand: [0.04, 0.45], lightAlpha: 1, drops: 130, flakes: 80,
-    fogBand: [0.58, 0.84], curtain: 0.4, mountainY: null, lowY: null, ...opt };
+    fogBand: [0.58, 0.84], curtain: 0.4, mountainY: null, lowY: null, fps: 60, busyFps: 30, ...opt };
   const px = (v) => (v >= 0 && v < 1 ? v * h : v);   // 0..1 = Anteil der Höhe, sonst Pixel
   let w = 0, h = 0, raf = 0, last = 0, visible = true, idleSince = 0, tau = 380;
   const cur = { cloud: 0, l: 1, d: 0, n: 0, fog: 0, rain: 0, snow: 0, low: 0 };
@@ -972,6 +1021,12 @@ function createSkyFx(canvas, opt) {
   // Werte gleiten zum Ziel (kein harter Wechsel), dann zeichnen
   function step(now) {
     raf = 0;
+    // Bildrate begrenzen (Touch-Geräte, beim Wischen): Frame auslassen, nächsten abwarten
+    const fps = fxBusy() ? o.busyFps : o.fps;
+    if (last && fps < 60 && now - last < 1000 / fps - 3) {
+      if (visible && !document.hidden) raf = requestAnimationFrame(step);
+      return;
+    }
     const dt = last ? Math.min(64, now - last) : 16;
     last = now;
     const k = 1 - Math.exp(-dt / tau);
@@ -1029,7 +1084,8 @@ function createAlps(canvas) {
   let w = 0, h = 0, dpr = 1, layers = null, raf = 0;
   let current = null;                 // { scene, temp }
   const shown = document.createElement('canvas');   // was gerade zu sehen ist (für Überblendung)
-  const next = document.createElement('canvas');
+  let next = document.createElement('canvas');
+  const cache = new Map();             // fertig gemalte Berge je Szene/Temperatur/Grösse/Modus
 
   // Deterministischer Zufall + fraktaler Kamm (Mittelpunktverschiebung)
   const rng = (seed) => () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -1129,7 +1185,14 @@ function createAlps(canvas) {
     // Bisheriges Bild merken, neues zeichnen, dann überblenden
     shown.width = canvas.width; shown.height = canvas.height;
     shown.getContext('2d').drawImage(canvas, 0, 0);
-    paint(next, current.scene, current.temp);
+    const key = `${current.scene}|${current.temp}|${w}x${h}@${dpr}|${isLightMode() ? 'l' : 'd'}`;
+    next = cache.get(key);
+    if (!next) {
+      next = document.createElement('canvas');
+      paint(next, current.scene, current.temp);
+      cache.set(key, next);
+      if (cache.size > 18) cache.delete(cache.keys().next().value);
+    }
     cancelAnimationFrame(raf);
     if (!fade || reduceMotion.matches) { draw(1); return; }
     const t0 = performance.now();
@@ -1197,7 +1260,8 @@ const sky = (() => {
           fogBand: [150, 290], curtain: 260, mountainY: 228, lowY: 182 });
         new IntersectionObserver(([e]) => card.setVisible(e.isIntersecting)).observe(c);
       }
-      if (p && p.getContext) page = createSkyFx(p, { strength: 0.38, size: 1.9, maxDpr: 1, clouds: 6, cloudBand: [0.02, 0.32], drops: 70, flakes: 50 });
+      if (p && p.getContext) page = createSkyFx(p, { strength: 0.38, size: 1.9, maxDpr: 1, clouds: 6, cloudBand: [0.02, 0.32], drops: 70, flakes: 50,
+        fps: isCoarse ? 30 : 60, busyFps: 4 });
     },
     // c = { weather_code, is_day, cloud_cover, precipitation }
     set(c, fast = false) {
@@ -1212,10 +1276,14 @@ const sky = (() => {
       const look = isLightMode() ? { ...base, tone: lightTone(base.tone) } : base;
       const cover = Math.max(0, Math.min(1, (Number(c.cloud_cover) || 0) / 100));
       const amount = Math.min(1, 0.3 + (Number(c.precipitation) || 0) / 3);   // mm/h → Dichte
-      document.getElementById('card-weather').dataset.sky = next;
-      document.documentElement.dataset.sky = next;
+      const cardEl = document.getElementById('card-weather');
+      if (cardEl.dataset.sky !== next) cardEl.dataset.sky = next;
+      if (document.documentElement.dataset.sky !== next) document.documentElement.dataset.sky = next;   // sonst rechnet die ganze Seite neu
       if (card) card.set(look, cover, amount, fast);
-      if (alps) alps.set(next, c.temperature_2m != null ? Number(c.temperature_2m) : null, fast);
+      const temp = c.temperature_2m != null ? Number(c.temperature_2m) : null;
+      clearTimeout(this.alpsTimer);
+      if (alps && fast) this.alpsTimer = setTimeout(() => alps.set(next, temp, false), 220);   // beim Wischen: erst wenn man innehält
+      else if (alps) alps.set(next, temp, fast);
       if (page) page.set(look, cover, amount, fast);
       if (next !== scene) { scene = next; if (scene === 'thunder') flashTimer = setTimeout(flash, 1200); else clearTimeout(flashTimer); }
     },
@@ -1418,11 +1486,11 @@ function renderDetails(i, force = false) {
     if (off > 0) by = 66 + Math.min(30, 10 + off / 4);   // hinter dem Horizont verschwunden
     scene.style.setProperty('--sx', (bx / 200).toFixed(4));
     scene.style.setProperty('--sy', (by / 80).toFixed(4));
-    document.getElementById('wd-sun-cliprect').setAttribute('width', bx.toFixed(1));   // bisheriger Weg = Bahn links der Sonne
     // Goldene Stunde: 0 = hoch am Himmel, 1 = direkt am Horizont (auch kurz davor/danach)
     const edge = off > 0 ? Math.max(0, 1 - off / 50) : Math.max(0, 1 - Math.min(t - r, s - t) / 75);
     scene.style.setProperty('--gold', edge.toFixed(2));
     scene.classList.toggle('is-night', off > 0);
+    sunTrail.draw({ f, gold: edge, night: off > 0 });
     // Klarer Satz statt nur einer Kurve
     const next = D.daily.sunrise[k + 1];
     let state;
@@ -1459,6 +1527,69 @@ function renderDetails(i, force = false) {
   $('#wd-vis-note').text(km == null ? (loading ? 'Lädt …' : dash)
     : km >= 10 ? 'Klare Sicht.' : km >= 4 ? 'Gute Sicht.' : km >= 1 ? 'Dunstig.' : 'Nebel, kaum Sicht.');
 }
+
+// Sonnenbahn wie eine Langzeitbelichtung: bisheriger Weg als Lichtspur, die zur Sonne hin
+// heller und wärmer wird; der restliche Weg nur angedeutet; Horizont als Dunst statt Strich.
+// Canvas, damit das Leuchten überall (auch Safari) gleich aussieht.
+const sunTrail = (() => {
+  let cv = null, ctx = null, W = 0, H = 0, last = null;
+  const rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+  const mixC = (a, b, t) => a.map((v, k) => Math.round(v + (b[k] - v) * t));
+  function size() {
+    if (!cv) { cv = document.getElementById('wd-sun-canvas'); if (!cv) return false; ctx = cv.getContext('2d'); new ResizeObserver(() => draw()).observe(cv); }
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight;
+    if (!W || !H) return false;
+    if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return true;
+  }
+  function draw(p) {
+    if (p) last = p;
+    if (!last || !size()) return;
+    const { f, gold, night } = last;
+    const light = isLightMode();
+    // Bahn: gleiche Kurve wie die Sonnen-Position (Seitenrand 12px, Horizont bei 82.5 %)
+    const x0 = 12, x1 = W - 12, hy = H * 0.825, cy = H * (-14 / 80), mx = (x0 + x1) / 2;
+    const pt = (t) => [(1 - t) ** 2 * x0 + 2 * (1 - t) * t * mx + t * t * x1, (1 - t) ** 2 * hy + 2 * (1 - t) * t * cy + t * t * hy];
+    const path = (a, b) => { ctx.beginPath(); for (let i = 0; i <= 48; i++) { const [x, y] = pt(a + (b - a) * i / 48); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); } };
+    ctx.clearRect(0, 0, W, H);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // Farben: Tag warmweiss, Gold-Stunde orange, Hell-Modus bernstein
+    const warm = light ? mixC([232, 150, 30], [226, 96, 24], gold) : mixC([255, 238, 205], [255, 162, 82], gold);
+    const haze = night ? (light ? [120, 140, 190] : [150, 175, 255]) : light ? [255, 255, 255] : mixC([215, 230, 255], [255, 178, 110], gold);
+    // 1) Horizont-Dunst: weiches Lichtband, an den Rändern ausgeblendet
+    const band = ctx.createLinearGradient(0, hy - 30, 0, hy + 16);
+    band.addColorStop(0, rgba(haze, 0));
+    band.addColorStop(0.68, rgba(haze, night ? (light ? 0.1 : 0.07) : light ? 0.5 : 0.13 + gold * 0.12));
+    band.addColorStop(1, rgba(haze, 0));
+    ctx.fillStyle = band; ctx.fillRect(0, hy - 30, W, 46);
+    ctx.globalCompositeOperation = 'destination-in';
+    const edgeFade = ctx.createLinearGradient(0, 0, W, 0);
+    edgeFade.addColorStop(0, 'rgba(0,0,0,0)'); edgeFade.addColorStop(0.18, '#000'); edgeFade.addColorStop(0.82, '#000'); edgeFade.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = edgeFade; ctx.fillRect(0, hy - 30, W, 46);
+    ctx.globalCompositeOperation = 'source-over';
+    // 2) Noch kommender Weg: nur ein Hauch, läuft zum Ende aus
+    const [sx] = pt(f);
+    const ahead = ctx.createLinearGradient(sx, 0, x1, 0);
+    const ink = light ? [14, 28, 51] : [255, 255, 255];
+    ahead.addColorStop(0, rgba(ink, night ? 0.1 : 0.16));
+    ahead.addColorStop(1, rgba(ink, 0.02));
+    path(night ? 0 : f, 1);
+    ctx.strokeStyle = night ? rgba(ink, 0.08) : ahead; ctx.lineWidth = 1; ctx.stroke();
+    if (night || f <= 0.002) return;
+    // 3) Lichtspur bis zur Sonne: weicher Schein + heller Kern, beide von 0 zur Sonne hin
+    const trail = (a) => { const g = ctx.createLinearGradient(x0, 0, sx, 0); g.addColorStop(0, rgba(warm, 0)); g.addColorStop(0.55, rgba(warm, a * 0.35)); g.addColorStop(1, rgba(warm, a)); return g; };
+    path(0, f);
+    ctx.save();
+    ctx.shadowColor = rgba(warm, light ? 0.35 : 0.8); ctx.shadowBlur = 14;
+    ctx.strokeStyle = trail(light ? 0.28 : 0.32); ctx.lineWidth = 7; ctx.stroke();
+    ctx.restore();
+    path(0, f);
+    ctx.strokeStyle = trail(light ? 0.9 : 0.95); ctx.lineWidth = 1.8; ctx.stroke();
+  }
+  return { draw };
+})();
 
 // 5-Tage-Prognose ⇄ Details am gleichen Platz: kurz ausblenden, Höhe gleitet mit, Kacheln kommen gestaffelt.
 // Ab 1200px steht die Karte neben Katze + Bitcoin: dort bleibt die Höhe gleich und die
@@ -1888,13 +2019,14 @@ function initStripScroll() {
   // Beim Scrollen nur reagieren, wenn der Tag in der Mitte wechselt (günstig).
   // Während einer Fahrt nach Antippen bleibt der angetippte Tag stehen.
   el.addEventListener('scroll', () => {
+    fxGate.until = performance.now() + 350;
     if (!wxStrip || strip.busy) return;
     // Selbst seitlich wischen schaltet Live aus (Live = fest auf jetzt)
     if (skyLive && performance.now() - (strip.userAt || 0) < 1500 && window.setSkyLiveFn) window.setSkyLiveFn(false);
     // Wie das Timer-Rad: jede Stunde, die durch die Mitte läuft, gibt einen Tick
     const hour = Math.round(wxStrip.xAxis[0].toValue(el.scrollLeft + el.clientWidth / 2) / 36e5);
     if (hour !== strip.lastHour) {
-      if (strip.lastHour != null) haptics.scrub();
+      if (strip.lastHour != null) haptics.scrub(((hour % 24) + 24) % 24 === 0);   // neuer Tag = Akzent
       strip.lastHour = hour;
       if (!skyLive) setWeatherFocus(stripCenterIndex(), false, true);  // frei wischen: Himmel, Kopfzeile, Details folgen der Mitte
     }
@@ -2529,6 +2661,17 @@ function applyMode() {
   if (lastForecast) renderWeatherChart(lastForecast);
   if (btcSeries) renderBtcChart(btcSeries);
   sky.refresh();
+  sunTrail.draw();
+  // Karte: Dunkel ⇄ Monochrom wechseln mit dem Farbschema (andere Kartentypen bleiben)
+  const swap = mode === 'light' ? { dark: 'mono' } : { mono: 'dark' };
+  if (map) {
+    if (swap[mapState.type]) setMapType(swap[mapState.type]);
+  } else {
+    try {
+      const p = JSON.parse(localStorage.getItem('map-layers') || 'null');
+      if (p && swap[p.type]) { p.type = swap[p.type]; localStorage.setItem('map-layers', JSON.stringify(p)); }
+    } catch (e) { /* kein Speicher */ }
+  }
 }
 // Ohne eigene Wahl folgt die Seite dem System (z. B. automatisch dunkel am Abend)
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
@@ -2905,7 +3048,10 @@ function setupGlass(el) {
     img.setAttribute('width', w); img.setAttribute('height', h);
     img.setAttribute('href', glassMap(w, h, radius, bezel));
     filter.querySelectorAll('feDisplacementMap').forEach((d, i) => d.setAttribute('scale', refraction + ab - i * ab));
-    const bf = `blur(0.5px) url(#${id}) blur(1px) saturate(1.5) brightness(1.1)`;
+    // Wetterkarte: neutrales Glas (ohne Farb-Verstärkung) – sonst haben Panels/Kacheln einen eigenen Blauton
+    const bf = el.closest('#card-weather')
+      ? `blur(0.5px) url(#${id}) blur(1.5px)`
+      : `blur(0.5px) url(#${id}) blur(1px) saturate(1.5) brightness(1.1)`;
     el.style.backdropFilter = bf;
     el.style.webkitBackdropFilter = bf;
     el.classList.add('is-refracting');
@@ -3003,8 +3149,10 @@ const dotBg = (() => {
     ctx.globalAlpha = 1;
   }
 
+  let lastDraw = 0;
   function loop(t) {
-    draw(t);
+    const gap = fxBusy() ? 400 : isCoarse ? 50 : 0;   // Touch: 20 fps, beim Wischen fast Stillstand
+    if (!gap || t - lastDraw >= gap) { draw(t); lastDraw = t; }
     raf = document.hidden || reduce.matches ? 0 : requestAnimationFrame(loop);
   }
   const start = () => { if (!raf && !reduce.matches) raf = requestAnimationFrame(loop); };

@@ -2595,15 +2595,15 @@ body { background: linear-gradient(165deg, var(--pg1) 0%, var(--pg2) 45%, var(--
   :root:not([data-theme="light"]) body { background: linear-gradient(165deg, var(--pgd1) 0%, var(--pgd2) 50%, var(--pgd3) 100%) fixed; }
 }
 /* Pro Szene: hell (pg) und dunkel (pgd), jeweils oben → Mitte → unten */
-html[data-sky="clear-day"]    { --pg1: #dcecff; --pg2: #a9cdf3; --pg3: #6fa3dc; --pgd1: #0e2139; --pgd2: #183860; --pgd3: #285790; }
-html[data-sky="partly-day"]   { --pg1: #e1ebf6; --pg2: #b7cde4; --pg3: #86a6c9; --pgd1: #13223a; --pgd2: #1e3556; --pgd3: #324f78; }
-html[data-sky="overcast"]     { --pg1: #e4e8ee; --pg2: #c3ccd7; --pg3: #98a6b6; --pgd1: #151c27; --pgd2: #222d3c; --pgd3: #364457; }
-html[data-sky="fog"]          { --pg1: #eceff2; --pg2: #d3d9df; --pg3: #aeb8c2; --pgd1: #1a2028; --pgd2: #2a323d; --pgd3: #414b58; }
-html[data-sky="rain"]         { --pg1: #d6dee7; --pg2: #a9b7c6; --pg3: #74879c; --pgd1: #0f1722; --pgd2: #1b2735; --pgd3: #2c3c50; }
-html[data-sky="thunder"]      { --pg1: #c8d0da; --pg2: #929fae; --pg3: #5d6a7a; --pgd1: #0b1018; --pgd2: #151d29; --pgd3: #243041; }
-html[data-sky="snow"]         { --pg1: #eef3f8; --pg2: #d4e0ec; --pg3: #a9bdd1; --pgd1: #18212d; --pgd2: #283547; --pgd3: #43546b; }
-html[data-sky="clear-night"]  { --pg1: #d6dcf0; --pg2: #a3aed6; --pg3: #6676b0; --pgd1: #050a18; --pgd2: #0c1733; --pgd3: #1a2c55; }
-html[data-sky="cloudy-night"] { --pg1: #d8dce5; --pg2: #a9b1c2; --pg3: #77829c; --pgd1: #0a0f1a; --pgd2: #141c2c; --pgd3: #232f45; }
+html[data-sky="clear-day"] .page-sky { --pg1: #dcecff; --pg2: #a9cdf3; --pg3: #6fa3dc; --pgd1: #0e2139; --pgd2: #183860; --pgd3: #285790; }
+html[data-sky="partly-day"] .page-sky { --pg1: #e1ebf6; --pg2: #b7cde4; --pg3: #86a6c9; --pgd1: #13223a; --pgd2: #1e3556; --pgd3: #324f78; }
+html[data-sky="overcast"] .page-sky { --pg1: #e4e8ee; --pg2: #c3ccd7; --pg3: #98a6b6; --pgd1: #151c27; --pgd2: #222d3c; --pgd3: #364457; }
+html[data-sky="fog"] .page-sky { --pg1: #eceff2; --pg2: #d3d9df; --pg3: #aeb8c2; --pgd1: #1a2028; --pgd2: #2a323d; --pgd3: #414b58; }
+html[data-sky="rain"] .page-sky { --pg1: #d6dee7; --pg2: #a9b7c6; --pg3: #74879c; --pgd1: #0f1722; --pgd2: #1b2735; --pgd3: #2c3c50; }
+html[data-sky="thunder"] .page-sky { --pg1: #c8d0da; --pg2: #929fae; --pg3: #5d6a7a; --pgd1: #0b1018; --pgd2: #151d29; --pgd3: #243041; }
+html[data-sky="snow"] .page-sky { --pg1: #eef3f8; --pg2: #d4e0ec; --pg3: #a9bdd1; --pgd1: #18212d; --pgd2: #283547; --pgd3: #43546b; }
+html[data-sky="clear-night"] .page-sky { --pg1: #d6dcf0; --pg2: #a3aed6; --pg3: #6676b0; --pgd1: #050a18; --pgd2: #0c1733; --pgd3: #1a2c55; }
+html[data-sky="cloudy-night"] .page-sky { --pg1: #d8dce5; --pg2: #a9b1c2; --pg3: #77829c; --pgd1: #0a0f1a; --pgd2: #141c2c; --pgd3: #232f45; }
 
 .page-sky { position: fixed; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
 .page-sky > * { position: absolute; inset: 0; }
@@ -3439,3 +3439,61 @@ html[data-mode="light"] #card-weather .mw-sun-ground::before { background: linea
 /* Wolken-Symbol in der 5-Tage-Leiste: hell auf dem Glas */
 .mw-glass .ic-cloud { color: #d3dbe6; }
 html[data-mode="light"] #card-weather .mw-glass .ic-cloud { color: #7d8aa0; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Wetter-Glas einheitlich: Panels + Bento-Kacheln tragen die Farbe des eigenen
+   Himmels (tiefster Ton der Karte) und ändern sich mit dem Live-Himmel mit.
+   Kein Saturate/Brightness im Hintergrundfilter → kein eigener Blauton mehr.
+   ═════════════════════════════════════════════════════════════════════════════ */
+#card-weather .mw-glass.liquid-glass {
+  background: rgba(6,12,26,.16) !important;      /* neutraler Schleier: Farbe kommt vom Himmel dahinter */
+}
+.lg-fallback #card-weather .liquid-glass,
+.lg-fallback #card-weather .mw-glass.liquid-glass {
+  -webkit-backdrop-filter: blur(7px) !important;
+          backdrop-filter: blur(7px) !important;
+}
+html[data-mode="light"] #card-weather .mw-glass.liquid-glass {
+  background: rgba(255,255,255,.3) !important;
+}
+
+/* Sonne v5: Bahn als Lichtspur (Canvas) statt Strich, nur noch ein feiner Lichtstreif */
+.mw-sun-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+.mw-sun-ground::before { opacity: .55; }
+.mw-sun-flare { width: 150px; height: 2px; margin: -1px 0 0 -75px; animation-name: mw-sun-streak; }
+@keyframes mw-sun-streak { 0%, 100% { opacity: .18; } 50% { opacity: .5; } }
+
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Leistung: Himmelsfarben NICHT vererben. Sonst rechnet der Browser bei jedem
+   Farbübergang (beim Wischen jede Stunde) die Styles der ganzen Karte bzw. der
+   ganzen Seite in jedem Bild neu. Jetzt malt nur das jeweilige Element selbst.
+   ═════════════════════════════════════════════════════════════════════════════ */
+@property --mw-top    { syntax: "<color>"; inherits: false; initial-value: #55677d; }
+@property --mw-mid    { syntax: "<color>"; inherits: false; initial-value: #7d8ea2; }
+@property --mw-bottom { syntax: "<color>"; inherits: false; initial-value: #a7b6c6; }
+@property --mw-tint   { syntax: "<color>"; inherits: false; initial-value: rgba(255,255,255,0); }
+@property --pg1  { syntax: "<color>"; inherits: false; initial-value: #e3f0ff; }
+@property --pg2  { syntax: "<color>"; inherits: false; initial-value: #bcd6f5; }
+@property --pg3  { syntax: "<color>"; inherits: false; initial-value: #8fb3e3; }
+@property --pgd1 { syntax: "<color>"; inherits: false; initial-value: #0f1b2d; }
+@property --pgd2 { syntax: "<color>"; inherits: false; initial-value: #16294a; }
+@property --pgd3 { syntax: "<color>"; inherits: false; initial-value: #1f3a66; }
+/* Karte malt Verlauf + Farbakzent selbst (der Akzent lag vorher auf einer Kind-Ebene) */
+#card-weather {
+  background:
+    radial-gradient(85% 55% at 88% 0%, var(--mw-tint) 0%, rgba(255,255,255,0) 72%),
+    radial-gradient(70% 45% at 0% 100%, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 70%),
+    linear-gradient(170deg, var(--mw-top) 0%, var(--mw-mid) 46%, var(--mw-bottom) 100%);
+}
+.mw-sky::before { background: none !important; }
+/* Seitenhimmel: Verlauf auf der festen Ebene .page-sky statt auf body */
+:root { transition: none; }
+body, :root[data-theme="dark"] body { background: #0f1b2d; }
+html[data-mode="light"] body { background: #e3f0ff; }
+.page-sky {
+  background: linear-gradient(165deg, var(--pg1) 0%, var(--pg2) 45%, var(--pg3) 100%);
+  transition: --pg1 1.6s ease, --pg2 1.6s ease, --pg3 1.6s ease, --pgd1 1.6s ease, --pgd2 1.6s ease, --pgd3 1.6s ease;
+}
+html[data-mode="dark"] .page-sky { background: linear-gradient(165deg, var(--pgd1) 0%, var(--pgd2) 50%, var(--pgd3) 100%); }
+.sky-fast .page-sky { transition-duration: .3s; }

@@ -27,7 +27,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-24q" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-25c" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -368,15 +368,11 @@
                 <p id="wd-sun-state" class="mw-sun-state">–</p>
                 <!-- Himmel mit Horizont: die Sonne steht dort, wo sie zur gewählten Zeit ist -->
                 <div id="wd-sun-scene" class="mw-sun-scene" aria-hidden="true">
-                  <svg class="mw-sun-svg" viewBox="0 0 200 80" preserveAspectRatio="none">
-                    <path d="M10 66 Q100 -14 190 66" class="mw-sun-path"/>
-                    <clipPath id="wd-sun-clip"><rect id="wd-sun-cliprect" x="0" y="-20" width="0" height="120"/></clipPath>
-                    <path id="wd-sun-done" d="M10 66 Q100 -14 190 66" class="mw-sun-done" clip-path="url(#wd-sun-clip)"/>
-                  </svg>
+                  <canvas id="wd-sun-canvas" class="mw-sun-canvas"></canvas>
                   <span class="mw-sun-sky"><!-- alles über dem Horizont: Sonne + Glut werden am Horizont abgeschnitten -->
                   <span id="wd-sun-glow" class="mw-sun-glow"></span>
                   <!-- Sonne: Foto-Textur + Glut (nach uiverse.io/reyrojo2 "afraid-horse-8", MIT) -->
-                  <span id="wd-sun" class="mw-sun-orb"><i class="mw-sun-flare"></i><i class="mw-sun-flare is-2"></i><span class="mw-sun-disc"></span></span>
+                  <span id="wd-sun" class="mw-sun-orb"><i class="mw-sun-flare"></i><span class="mw-sun-disc"></span></span>
                   </span>
                   <span class="mw-sun-ground"></span>
                   <span class="mw-sun-tick is-rise"><small>Aufgang</small><b id="wd-rise">–</b></span>
@@ -646,6 +642,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-24q"></script>
+  <script src="app.js?v=2026-11-25c"></script>
 </body>
 </html>

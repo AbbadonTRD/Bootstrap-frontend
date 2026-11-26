@@ -372,6 +372,16 @@ const fmtUSD = new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'US
 const fmtCHF = new Intl.NumberFormat('de-CH', { style: 'currency', currency: 'CHF', maximumFractionDigits: 0 });
 
 // ── a) Zufälliges Katzenbild ─────────────────────────────────────────────────
+// ── Aufgabe f: Google-Bildersuche zum Lieblingstier ──────────────────────────
+// Öffnet die Google-Bildersuche (tbm=isch = Bilder) mit der Suchanfrage in einem neuen
+// Fenster. Die Anfrage wird über URLSearchParams sauber kodiert.
+const FAVORITE_ANIMAL = 'Katzen';
+function openAnimalImageSearch() {
+  const url = `https://www.google.com/search?${new URLSearchParams({ q: FAVORITE_ANIMAL, tbm: 'isch' })}`;
+  // eigenes Fenster (auf dem Handy: neuer Tab); noopener: die Google-Seite bekommt keinen Zugriff auf unsere
+  window.open(url, '_blank', 'popup,width=1100,height=800,noopener,noreferrer');
+}
+
 function loadCat() {
   const $btn = $('#btn-cat');
   setLoading($btn, true);
@@ -2748,6 +2758,7 @@ $(function () {
   $('#ev-plz, #map-place').on('input', function () { $(this).removeAttr('aria-invalid'); });
 
   $('#btn-cat').on('click', loadCat);
+  $('#btn-google-cats').on('click', openAnimalImageSearch);
   $('#cat-history').on('click', '.cat-thumb:not(.is-empty)', function () { showCatFromHistory($(this).data('cat')); });
   $('#btn-btc').on('click', loadBitcoin);
   $('.wallet-range').on('click', function () { haptics.tick(); loadBtcChart(String($(this).data('range'))); });
@@ -3852,6 +3863,7 @@ const CMDK_STATIC = [
   { group: 'Springen zu', icon: 'map', label: 'Karte', keys: 'karte map ort', run: () => goToCard('card-map') },
   { group: 'Springen zu', icon: 'train', label: 'Abfahrten', keys: 'öv sbb zug tram bus abfahrt', run: () => goToCard('card-sbb') },
   { group: 'Aktionen', icon: 'reload', label: 'Neues Katzenbild laden', keys: 'katze cat', run: () => { goToCard('card-cat'); loadCat(); } },
+  { group: 'Aktionen', icon: 'search', label: 'Katzenbilder bei Google suchen', keys: 'katze google bilder suche', run: openAnimalImageSearch },
   { group: 'Aktionen', icon: 'reload', label: 'Bitcoin-Preis abrufen', keys: 'btc preis', run: () => { goToCard('card-btc'); loadBitcoin(); } },
   { group: 'Aktionen', icon: 'reload', label: 'Wetter laden', keys: 'wetter', run: () => { goToCard('card-weather'); loadWeather(); } },
   { group: 'Aktionen', icon: 'reload', label: 'Ladestationen laden (Winterthur)', keys: 'laden strom winterthur', run: () => { goToCard('card-ev'); loadStations(); } },

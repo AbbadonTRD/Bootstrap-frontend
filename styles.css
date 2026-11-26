@@ -3551,3 +3551,8 @@ html[data-mode="light"] #card-weather .mw-sun-bar { background: rgba(14,28,51,.1
 html[data-mode="light"] #card-weather #wd-sun-fill { background: linear-gradient(90deg, rgba(240,160,40,.2), #f0a21c); }
 html[data-mode="light"] #card-weather #wd-sun-mark { background: #f5a623; box-shadow: 0 0 0 2px rgba(245,166,35,.25), 0 0 8px 1px rgba(245,140,20,.45); }
 @media (prefers-reduced-motion: reduce) { #wd-sun-fill, #wd-sun-mark { transition: none; } }
+
+/* Katzen-Karte: zweiter Button (Google-Bildersuche) neben "Neues Katzenbild laden" */
+#card-cat .ui-card-footer { flex-wrap: wrap; }
+#card-cat #btn-cat { flex: 1 1 200px; width: auto; }
+.cat-google-btn { flex: 1 1 140px; white-space: nowrap; }

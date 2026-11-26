@@ -35,7 +35,7 @@ A live data dashboard built with plain HTML, Bootstrap 5.3 and jQuery. It combin
 |:---:|:---:|:---:|
 | ![Random cat card](docs/screenshots/cat.webp) | ![Bitcoin price card](docs/screenshots/bitcoin.webp) | ![Weather card](docs/screenshots/weather.webp) |
 
-- **Random cat:** loads a random image from The Cat API, shows its resolution and keeps a history of the last four images.
+- **Random cat:** loads a random image from The Cat API, shows its resolution and keeps a history of the last four images. The "Google-Bilder" button opens a Google image search for cats in a new window.
 - **Bitcoin price:** shows the current price in USD and CHF, the 24-hour change and a price chart with ranges from one hour to one year. The chart is green above the current price and red below it, and marks the high and low.
 - **Weather:** current conditions from the MeteoSwiss ICON-CH2 model, for Zurich by default. The search button next to the city name switches to any Swiss town or postcode, with quick picks such as Bern, Basel and Geneva, and remembers the choice. A swipeable hourly chart shows temperature and rain; the hour under its center pointer drives the header and a live sky. With the Live switch on, the chart stays locked to the current time and the day buttons show that same hour on other days; with it off, you can swipe freely through all five days. That sky (clear, clouds, fog, rain, thunder, snow, day and night) fills the card and is mirrored subtly in the page background. Rain and snow fall from the clouds themselves, low cloud settles into the Alps, and the mountains change with the scene and temperature. A five-day forecast below the chart jumps to noon of the chosen day. The arrow next to it opens detail tiles for the hour under the pointer: wind with a compass, humidity and dew point, precipitation and its probability, feels-like temperature, UV index, sunrise and sunset, pressure trend and visibility.
 
@@ -87,6 +87,7 @@ The command palette (`Ctrl+K`) jumps to any section, runs actions such as reload
 | c | Current weather in Zurich and a 5-day chart | Open-Meteo (MeteoSwiss model), Highcharts |
 | d | Five nearest EV charging stations from Winterthur, search by postcode | data.geo.admin.ch, api3.geo.admin.ch |
 | e | Map section with place search | Leaflet, swisstopo |
+| f | Button that opens a Google image search for your favourite animal in a new window | "Google-Bilder" button in the cat card (`window.open`, query "Katzen", image search) |
 | Advanced | Clicking a charging station centers the map | Done, with marker and popup |
 | Extras | Beyond the assignment | Public transport board, map layers and 3D view, command palette, scroll animations |
 

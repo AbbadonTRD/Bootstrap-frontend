@@ -80,10 +80,14 @@ Selecting a train opens a platform display modelled on the SBB screens:
 A Bootstrap form for internship applications in a calm settings-style layout (inspired by a shadcn form layout): each section has its title and a short description on the left and its fields on the right, and every field has a label and a short help text.
 
 - **Personal details:** first name, last name, gender (select) and date of birth.
-- **Address:** street and number, postcode and town.
+- **Address:** street and number, postcode and town. Typing a street suggests real Swiss addresses from the official building address register (swisstopo); picking one fills in all four fields. The postcode must match the town and the street must exist there.
 - **Contact:** email, Swiss mobile number and the preferred way to be contacted (radio group).
 - **Application:** cover letter with a character counter, CV as a PDF upload (max. 5 MB) and an optional portfolio link.
 - **Privacy:** a required consent checkbox with a link to an external privacy policy.
+
+The form opens step by step so it never shows everything at once: only the first section is visible at first, and "Weiter" checks the current section and expands the next one below it on the same page (Enter works too). A badge shows the current step, and the send button appears with the last step.
+
+Every field is also checked for plausibility: names and towns without digits, email addresses with a real domain ending, portfolio links as full web addresses, and a cover letter of real sentences (at least 150 characters and 25 words). Fields and buttons use the site's liquid glass look.
 
 Fields are checked with HTML5 validation and Bootstrap's validation classes; only errors are highlighted, with short German messages. The send button carries a mail icon. The form is prepared for sending to an endpoint (`multipart/form-data`); until that exists, it confirms locally.
 

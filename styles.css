@@ -3674,3 +3674,75 @@ html[data-mode="dark"] .apply .was-validated .form-select:valid {
   .apply-status { flex-basis: 100%; }
   .apply-reset, .apply-submit { flex: 1 1 0; }
 }
+
+/* Formular Schritt für Schritt: "Weiter" unter jedem Schritt, der nächste klappt darunter auf */
+.apply-section { scroll-margin-top: 88px; }
+.apply-next { display: flex; justify-content: flex-end; margin-top: 20px; }
+.apply-next[hidden] { display: none !important; }
+.apply-next-btn {
+  height: 36px; padding: 0 12px 0 16px; gap: 6px; font-size: 14px;
+  background: var(--background); color: var(--foreground); border: 1px solid var(--input);
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+.apply-next-btn:hover { background: var(--accent); color: var(--accent-foreground); }
+.apply-next-btn .ic { width: 14px; height: 14px; }
+.apply-next-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.apply-actions[hidden] { display: none !important; }
+@media (max-width: 575px) { .apply-next-btn { width: 100%; justify-content: center; } }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Bewerbung: Liquid-Glass-Look wie im Rest der Seite + Adressvorschläge
+   ═════════════════════════════════════════════════════════════════════════════ */
+/* Felder als mattes Glas mit feiner Lichtkante oben */
+.apply .form-control, .apply .form-select, .apply .form-check-input {
+  background-color: rgba(255,255,255,.055);
+  border-color: rgba(255,255,255,.13);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), inset 0 0 0 1px rgba(255,255,255,.02), 0 1px 3px rgba(0,0,0,.12);
+}
+.apply .form-control:hover, .apply .form-select:hover { border-color: rgba(255,255,255,.22); }
+.apply .form-control:focus, .apply .form-select:focus {
+  background-color: rgba(255,255,255,.08);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 0 0 3px color-mix(in srgb, var(--ring) 32%, transparent);
+}
+html[data-mode="light"] .apply .form-control, html[data-mode="light"] .apply .form-select, html[data-mode="light"] .apply .form-check-input {
+  background-color: rgba(255,255,255,.58);
+  border-color: rgba(28,24,48,.12);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 1px 3px rgba(40,30,90,.06);
+}
+html[data-mode="light"] .apply .form-control:hover, html[data-mode="light"] .apply .form-select:hover { border-color: rgba(28,24,48,.22); }
+html[data-mode="light"] .apply .form-control:focus, html[data-mode="light"] .apply .form-select:focus { background-color: rgba(255,255,255,.8); }
+.apply .form-control::file-selector-button { background: rgba(255,255,255,.08); border-right-color: rgba(255,255,255,.12); }
+html[data-mode="light"] .apply .form-control::file-selector-button { background: rgba(255,255,255,.7); border-right-color: rgba(28,24,48,.1); }
+.apply .form-check-input:checked { background-color: var(--foreground); border-color: var(--foreground); }
+
+/* Knöpfe: die Glas-Pillen der Seite (wie "Neues Katzenbild laden") */
+.apply .apply-next-btn.liquid-glass, .apply .apply-submit.liquid-glass { border: 0; height: 40px; padding: 0 18px; gap: 8px; font-weight: 500; }
+.apply .apply-submit.liquid-glass { padding: 0 22px; }
+.apply .apply-reset { height: 40px; border-radius: 999px; }
+
+/* Adressvorschläge: Glas-Panel unter dem Strassenfeld */
+.apply-addr { position: relative; }
+.apply-addr-list {
+  position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 6px);
+  margin: 0; padding: 6px; list-style: none; max-height: 280px; overflow-y: auto;
+  border-radius: calc(var(--radius) + 6px);
+  background: rgba(28,28,34,.95);
+  -webkit-backdrop-filter: blur(18px) saturate(1.6); backdrop-filter: blur(18px) saturate(1.6);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(255,255,255,.1), 0 18px 40px rgba(0,0,0,.35);
+}
+.apply-addr-list[hidden] { display: none !important; }
+html[data-mode="light"] .apply-addr-list {
+  background: rgba(255,255,255,.96);
+  box-shadow: inset 0 1px 0 #fff, inset 0 0 0 1px rgba(28,24,48,.08), 0 18px 40px rgba(40,30,90,.16);
+}
+.apply-addr-list li {
+  display: flex; flex-direction: column; gap: 1px; padding: 8px 10px; border-radius: var(--radius); cursor: pointer;
+}
+.apply-addr-list li b { font-size: 14px; font-weight: 500; }
+.apply-addr-list li span { font-size: 12px; color: var(--muted-foreground); }
+.apply-addr-list li.is-active, .apply-addr-list li:hover { background: rgba(255,255,255,.1); }
+html[data-mode="light"] .apply-addr-list li.is-active, html[data-mode="light"] .apply-addr-list li:hover { background: rgba(28,24,48,.06); }
+/* Bootstraps grünes "gültig"-Leuchten beim Fokus durch unseren neutralen Ring ersetzen */
+.apply .was-validated .form-control:valid:focus, .apply .was-validated .form-select:valid:focus, .apply .form-control.is-valid:focus {
+  border-color: var(--ring); box-shadow: inset 0 1px 0 rgba(255,255,255,.1), 0 0 0 3px color-mix(in srgb, var(--ring) 32%, transparent);
+}

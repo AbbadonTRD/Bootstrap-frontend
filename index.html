@@ -27,7 +27,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-26d" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-26l" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -59,6 +59,7 @@
     <symbol id="i-phone" viewBox="0 0 14 14"><path fill="currentColor" d="M4.2.5h5.6c.8 0 1.4.6 1.4 1.4v10.2c0 .8-.6 1.4-1.4 1.4H4.2c-.8 0-1.4-.6-1.4-1.4V1.9c0-.8.6-1.4 1.4-1.4zm0 1.4v10.2h5.6V1.9H4.2zm1.8 8.4h2a.6.6 0 0 1 0 1.2H6a.6.6 0 0 1 0-1.2z"/></symbol>
     <symbol id="i-chat" viewBox="0 0 14 14"><path fill="currentColor" d="M2.5 1h9A1.5 1.5 0 0 1 13 2.5v6.3a1.5 1.5 0 0 1-1.5 1.5H6.4L3.3 12.8a.6.6 0 0 1-1-.5v-2H2.5A1.5 1.5 0 0 1 1 8.8V2.5A1.5 1.5 0 0 1 2.5 1zm1.6 3.6a.8.8 0 1 0 0 1.6.8.8 0 0 0 0-1.6zm2.9 0a.8.8 0 1 0 0 1.6.8.8 0 0 0 0-1.6zm2.9 0a.8.8 0 1 0 0 1.6.8.8 0 0 0 0-1.6z"/></symbol>
     <symbol id="i-external" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M8 1.7h4.3V6M12.2 1.8 6.4 7.6M10.6 8.6v2.6c0 .6-.5 1.1-1.1 1.1H2.8c-.6 0-1.1-.5-1.1-1.1V4.5c0-.6.5-1.1 1.1-1.1h2.6"/></symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 14 14"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="m3.5 5.5 3.5 3.5 3.5-3.5"/></symbol>
     <symbol id="i-pin" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M7 0c2.622 0 4.806 2.184 4.806 4.805c0 .856-.294 1.7-.705 2.464c-.413.768-.959 1.484-1.501 2.094a16 16 0 0 1-1.521 1.49a9 9 0 0 1-.546.433a3 3 0 0 1-.195.13a1 1 0 0 1-.174.083a.54.54 0 0 1-.405-.03a1 1 0 0 1-.098-.053a3 3 0 0 1-.196-.133a9 9 0 0 1-.545-.435A16 16 0 0 1 4.4 9.352c-.542-.612-1.088-1.33-1.5-2.095c-.411-.762-.706-1.603-.706-2.452C2.194 2.184 4.378 0 7 0m0 6.24a1.435 1.435 0 1 1 0-2.87a1.435 1.435 0 0 1 0 2.87m3.1 3.916q.276-.31.55-.65h1.343c.2 0 .38.12.46.303l1.497 3.495a.5.5 0 0 1-.46.697H.51a.5.5 0 0 1-.46-.697l1.498-3.495a.5.5 0 0 1 .46-.303h1.355q.266.33.537.636c.662.746 1.33 1.376 1.85 1.821c.26.223.487.402.661.528q.13.095.232.157q.049.03.11.06q.03.014.079.03a.55.55 0 0 0 .414-.03q.06-.029.11-.059q.101-.061.231-.155c.174-.126.4-.304.661-.525c.52-.442 1.19-1.069 1.851-1.813" clip-rule="evenodd"/></symbol>
     <symbol id="i-warning" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M6.218.226a1.5 1.5 0 0 1 2.117.596l.002.004l5.5 10.999A1.5 1.5 0 0 1 12.5 14h-11a1.5 1.5 0 0 1-1.336-2.174v-.001L5.664.826l.002-.004a1.5 1.5 0 0 1 .553-.596M7 4.125a.75.75 0 0 1 .75.75v3.25a.75.75 0 0 1-1.5 0v-3.25a.75.75 0 0 1 .75-.75m1 6.75a1 1 0 1 1-2 0a1 1 0 0 1 2 0" clip-rule="evenodd"/></symbol>
     <symbol id="i-cursor" viewBox="0 0 14 14"><path fill="currentColor" fill-rule="evenodd" d="M3.658.162a.75.75 0 0 1 .918.53l.449 1.673a.75.75 0 1 1-1.45.389L3.129 1.08a.75.75 0 0 1 .53-.919M.072 3.755a.75.75 0 0 0 .53.918l1.673.448a.75.75 0 1 0 .388-1.448L.99 3.224a.75.75 0 0 0-.918.53m4.4 1.965a1 1 0 0 1 1.264-1.265l7.12 2.375c.92.307.908 1.612-.018 1.902l-2.026.637l2.7 2.7a1 1 0 0 1-1.415 1.414l-2.706-2.707l-.642 2.046c-.29.925-1.596.937-1.903.017zM2.066 8.755a.75.75 0 1 1-1.061-1.06L2.231 6.47a.75.75 0 0 1 1.06 1.06zm6.46-6.591a.75.75 0 0 0-1.06-1.061L6.24 2.328a.75.75 0 0 0 1.061 1.06z" clip-rule="evenodd"/></symbol>
@@ -553,29 +554,30 @@
           <div class="ui-card-header">
             <div>
               <h2 id="apply-title" class="ui-card-title">Bewerbung für ein Praktikum</h2>
-              <p class="ui-card-description">Fülle das Formular aus, wir melden uns innert einer Woche.</p>
+              <p class="ui-card-description">Fülle das Formular Schritt für Schritt aus, wir melden uns innert einer Woche.</p>
             </div>
+            <span id="apply-progress" class="ui-badge ui-badge-secondary" aria-live="polite">Schritt 1 von 5</span>
           </div>
           <div class="ui-card-content">
             <form id="apply-form" class="apply-form needs-validation" action="#" method="post" enctype="multipart/form-data" novalidate>
 
               <!-- Persönliche Angaben -->
-              <fieldset class="apply-section">
+              <fieldset class="apply-section" id="apply-step-1" data-step="1">
                 <legend class="apply-legend">Persönliche Angaben</legend>
                 <p class="apply-desc">Wie du heisst und wann du geboren bist.</p>
                 <div class="apply-fields">
                   <div class="row g-3">
                     <div class="col-sm-6">
                       <label class="form-label" for="apply-firstname">Vorname</label>
-                      <input type="text" class="form-control" id="apply-firstname" name="vorname" autocomplete="given-name" required minlength="2" maxlength="60" placeholder="Lena" aria-describedby="apply-firstname-help" />
+                      <input type="text" class="form-control" id="apply-firstname" name="vorname" autocomplete="given-name" required minlength="2" maxlength="60" pattern="[A-Za-zÀ-ÖØ-öø-ÿ]+([ '\-\.]+[A-Za-zÀ-ÖØ-öø-ÿ]+)*\.?" placeholder="Lena" aria-describedby="apply-firstname-help" />
                       <div id="apply-firstname-help" class="form-text">Wie im Ausweis</div>
-                      <div class="invalid-feedback">Bitte gib deinen Vornamen ein.</div>
+                      <div class="invalid-feedback">Bitte gib deinen Vornamen ein (nur Buchstaben).</div>
                     </div>
                     <div class="col-sm-6">
                       <label class="form-label" for="apply-lastname">Name</label>
-                      <input type="text" class="form-control" id="apply-lastname" name="name" autocomplete="family-name" required minlength="2" maxlength="60" placeholder="Muster" aria-describedby="apply-lastname-help" />
+                      <input type="text" class="form-control" id="apply-lastname" name="name" autocomplete="family-name" required minlength="2" maxlength="60" pattern="[A-Za-zÀ-ÖØ-öø-ÿ]+([ '\-\.]+[A-Za-zÀ-ÖØ-öø-ÿ]+)*" placeholder="Muster" aria-describedby="apply-lastname-help" />
                       <div id="apply-lastname-help" class="form-text">Wie im Ausweis</div>
-                      <div class="invalid-feedback">Bitte gib deinen Namen ein.</div>
+                      <div class="invalid-feedback">Bitte gib deinen Namen ein (nur Buchstaben).</div>
                     </div>
                     <div class="col-sm-6">
                       <label class="form-label" for="apply-gender">Geschlecht</label>
@@ -596,42 +598,54 @@
                       <div class="invalid-feedback">Bitte wähle ein gültiges Geburtsdatum.</div>
                     </div>
                   </div>
+                  <div class="apply-next">
+                    <button type="button" class="ui-btn ui-btn-default liquid-glass lg-btn apply-next-btn" data-scale="26" data-bevel="10" data-aberration="2" data-next="2" aria-controls="apply-step-2" aria-expanded="false">Weiter zu Adresse<svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
+                  </div>
                 </div>
               </fieldset>
 
               <!-- Adresse -->
-              <fieldset class="apply-section">
+              <fieldset class="apply-section" id="apply-step-2" data-step="2" hidden>
                 <legend class="apply-legend">Adresse</legend>
                 <p class="apply-desc">Wo du wohnst.</p>
                 <div class="apply-fields">
                   <div class="row g-3">
                     <div class="col-8 col-sm-9">
                       <label class="form-label" for="apply-street">Strasse</label>
-                      <input type="text" class="form-control" id="apply-street" name="strasse" autocomplete="address-line1" required maxlength="80" placeholder="Bahnhofstrasse" />
-                      <div class="invalid-feedback">Bitte gib deine Strasse ein.</div>
+                      <div class="apply-addr">
+                        <input type="text" class="form-control" id="apply-street" name="strasse" autocomplete="off" required maxlength="80" placeholder="Adresse suchen, z.B. Bahnhofstrasse 12 Winterthur"
+                               role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="apply-addr-list" aria-describedby="apply-street-help" />
+                        <ul id="apply-addr-list" class="apply-addr-list" role="listbox" aria-label="Adressvorschläge" hidden></ul>
+                        <div class="invalid-feedback" id="apply-street-error">Bitte gib deine Strasse ein.</div>
+                      </div>
+                      <div id="apply-street-help" class="form-text">Tippen und eine Adresse aus der Liste wählen</div>
                     </div>
                     <div class="col-4 col-sm-3">
                       <label class="form-label" for="apply-streetno">Nr.</label>
-                      <input type="text" class="form-control" id="apply-streetno" name="hausnummer" required maxlength="8" pattern="[0-9]{1,4}[a-zA-Z]?" placeholder="12a" />
+                      <input type="text" class="form-control" id="apply-streetno" name="hausnummer" required maxlength="8" pattern="[0-9]{1,4}(\.[0-9]{1,2})?[a-zA-Z]?" placeholder="12a" />
                       <div class="invalid-feedback">z.B. 12 oder 12a</div>
                     </div>
                     <div class="col-4 col-sm-3">
                       <label class="form-label" for="apply-zip">PLZ</label>
                       <input type="text" class="form-control" id="apply-zip" name="plz" autocomplete="postal-code" inputmode="numeric" required pattern="[1-9][0-9]{3}" maxlength="4" placeholder="8400" aria-describedby="apply-zip-help" />
                       <div id="apply-zip-help" class="form-text">4-stellig</div>
-                      <div class="invalid-feedback">4-stellige PLZ</div>
+                      <div class="invalid-feedback" id="apply-zip-error">4-stellige PLZ</div>
                     </div>
                     <div class="col-8 col-sm-9">
                       <label class="form-label" for="apply-city">Ort</label>
-                      <input type="text" class="form-control" id="apply-city" name="ort" autocomplete="address-level2" required maxlength="60" placeholder="Winterthur" />
-                      <div class="invalid-feedback">Bitte gib deinen Wohnort ein.</div>
+                      <input type="text" class="form-control" id="apply-city" name="ort" autocomplete="address-level2" required maxlength="60" placeholder="Winterthur"
+                             pattern="[A-Za-zÀ-ÖØ-öø-ÿ]+([ '\-\.\/]+[A-Za-zÀ-ÖØ-öø-ÿ]+)*\.?" />
+                      <div class="invalid-feedback" id="apply-city-error">Bitte gib deinen Wohnort ein (ohne Zahlen).</div>
                     </div>
+                  </div>
+                  <div class="apply-next">
+                    <button type="button" class="ui-btn ui-btn-default liquid-glass lg-btn apply-next-btn" data-scale="26" data-bevel="10" data-aberration="2" data-next="3" aria-controls="apply-step-3" aria-expanded="false">Weiter zu Kontakt<svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
                   </div>
                 </div>
               </fieldset>
 
               <!-- Kontakt -->
-              <fieldset class="apply-section">
+              <fieldset class="apply-section" id="apply-step-3" data-step="3" hidden>
                 <legend class="apply-legend">Kontakt</legend>
                 <p class="apply-desc">Wie wir dich erreichen.</p>
                 <div class="apply-fields">
@@ -639,7 +653,7 @@
                     <div class="col-12">
                       <label class="form-label" for="apply-email">E-Mail</label>
                       <div class="apply-icon-field">
-                        <input type="email" class="form-control" id="apply-email" name="email" autocomplete="email" required placeholder="name@beispiel.ch" aria-describedby="apply-email-help" />
+                        <input type="email" class="form-control" id="apply-email" name="email" autocomplete="email" required pattern="[^@\s]+@[^@\s]+\.[A-Za-z]{2,}" placeholder="name@beispiel.ch" aria-describedby="apply-email-help" />
                         <svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg>
                         <div class="invalid-feedback">Bitte gib eine gültige E-Mail-Adresse ein.</div>
                       </div>
@@ -673,11 +687,14 @@
                       </div>
                     </div>
                   </div>
+                  <div class="apply-next">
+                    <button type="button" class="ui-btn ui-btn-default liquid-glass lg-btn apply-next-btn" data-scale="26" data-bevel="10" data-aberration="2" data-next="4" aria-controls="apply-step-4" aria-expanded="false">Weiter zu Bewerbung<svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
+                  </div>
                 </div>
               </fieldset>
 
               <!-- Bewerbung -->
-              <fieldset class="apply-section">
+              <fieldset class="apply-section" id="apply-step-4" data-step="4" hidden>
                 <legend class="apply-legend">Bewerbung</legend>
                 <p class="apply-desc">Warum du zu uns passt, dein Lebenslauf und deine Arbeiten.</p>
                 <div class="apply-fields">
@@ -687,7 +704,7 @@
                       <textarea class="form-control" id="apply-motivation" name="motivation" rows="5" required minlength="150" maxlength="3000"
                                 placeholder="Warum möchtest du ein Praktikum bei uns machen? Was bringst du mit?" aria-describedby="apply-motivation-count"></textarea>
                       <div class="form-text apply-counter" id="apply-motivation-count" aria-live="polite">Mindestens 150 Zeichen</div>
-                      <div class="invalid-feedback">Bitte schreibe mindestens 150 Zeichen.</div>
+                      <div class="invalid-feedback" id="apply-motivation-error">Bitte schreibe mindestens 150 Zeichen.</div>
                     </div>
                     <div class="col-sm-6">
                       <label class="form-label" for="apply-cv">Lebenslauf</label>
@@ -698,18 +715,21 @@
                     <div class="col-sm-6">
                       <label class="form-label" for="apply-portfolio">Portfolio <span class="apply-optional">optional</span></label>
                       <div class="apply-icon-field">
-                        <input type="url" class="form-control" id="apply-portfolio" name="portfolio" autocomplete="url" placeholder="https://github.com/…" aria-describedby="apply-portfolio-help" />
+                        <input type="url" class="form-control" id="apply-portfolio" name="portfolio" autocomplete="url" pattern="https?://[^\s\/]+\.[^\s]{2,}" placeholder="https://github.com/…" aria-describedby="apply-portfolio-help" />
                         <svg class="ic" aria-hidden="true"><use href="#i-external"/></svg>
                         <div class="invalid-feedback">Bitte gib eine vollständige Adresse mit https:// ein.</div>
                       </div>
                       <div id="apply-portfolio-help" class="form-text">Link zu GitHub, Behance oder deiner Website</div>
                     </div>
                   </div>
+                  <div class="apply-next">
+                    <button type="button" class="ui-btn ui-btn-default liquid-glass lg-btn apply-next-btn" data-scale="26" data-bevel="10" data-aberration="2" data-next="5" aria-controls="apply-step-5" aria-expanded="false">Weiter zu Datenschutz<svg class="ic" aria-hidden="true"><use href="#i-chevron-down"/></svg></button>
+                  </div>
                 </div>
               </fieldset>
 
               <!-- Datenschutz -->
-              <fieldset class="apply-section">
+              <fieldset class="apply-section" id="apply-step-5" data-step="5" hidden>
                 <legend class="apply-legend">Datenschutz</legend>
                 <p class="apply-desc">Was mit deinen Daten passiert.</p>
                 <div class="apply-fields">
@@ -725,10 +745,10 @@
                 </div>
               </fieldset>
 
-              <div class="apply-actions">
+              <div class="apply-actions" id="apply-actions" hidden>
                 <p id="apply-status" class="apply-status" role="status" aria-live="polite"></p>
                 <button type="reset" class="ui-btn ui-btn-ghost apply-reset">Zurücksetzen</button>
-                <button type="submit" class="ui-btn apply-submit"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg>Bewerbung senden</button>
+                <button type="submit" class="ui-btn ui-btn-default liquid-glass lg-btn apply-submit" data-scale="26" data-bevel="10" data-aberration="2"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg>Bewerbung senden</button>
               </div>
             </form>
           </div>
@@ -845,6 +865,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-26d"></script>
+  <script src="app.js?v=2026-11-26l"></script>
 </body>
 </html>

@@ -2204,6 +2204,15 @@ function initApplyForm() {
     $('#apply-motivation-count')
       .text(n === 0 ? `Mindestens ${APPLY_MIN_TEXT} Zeichen` : n < APPLY_MIN_TEXT ? `Noch ${APPLY_MIN_TEXT - n} Zeichen` : `${n} Zeichen`)
       .toggleClass('is-ok', n >= APPLY_MIN_TEXT);
+    // Sinn-Prüfung: genug echte, verschiedene Wörter (nicht "aaaa aaaa" oder Tastatur-Gehämmer)
+    const words = text.value.toLowerCase().match(/[a-zà-ÿ]{2,}/g) || [];
+    const unique = new Set(words).size;
+    const mashed = /(.)\1{4,}/.test(text.value);
+    let msg = '';
+    if (n > 0 && n < APPLY_MIN_TEXT) msg = `Bitte schreibe mindestens ${APPLY_MIN_TEXT} Zeichen (noch ${APPLY_MIN_TEXT - n}).`;   // auch bei Einfügen
+    else if (n >= APPLY_MIN_TEXT && (words.length < 25 || unique < 15 || mashed)) msg = 'Bitte schreibe ein paar ganze Sätze (mindestens 25 Wörter).';
+    text.setCustomValidity(msg);
+    $('#apply-motivation-error').text(msg || `Bitte schreibe mindestens ${APPLY_MIN_TEXT} Zeichen.`);
   };
   text.addEventListener('input', count);
 
@@ -2213,9 +2222,170 @@ function initApplyForm() {
     if (this.classList.contains('is-invalid') && this.checkValidity()) this.classList.remove('is-invalid');
   });
 
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  // ── Adresse wie bei Shopify: beim Tippen echte Schweizer Adressen vorschlagen (swisstopo,
+  //    amtliches Gebäudeadressverzeichnis). Auswahl füllt Strasse, Nr., PLZ und Ort aus.
+  //    Zusätzlich wird geprüft, ob PLZ und Ort zusammengehören und die Strasse dort existiert.
+  const street = document.getElementById('apply-street');
+  const streetNo = document.getElementById('apply-streetno');
+  const zip = document.getElementById('apply-zip');
+  const city = document.getElementById('apply-city');
+  const $list = $('#apply-addr-list');
+  const plain = (html) => $('<div>').html(html).text().replace(/\s+/g, ' ').trim();
+  const norm = (v) => v.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/str\.?(\s|$)/g, 'strasse$1').replace(/[^a-z0-9]/g, '');
+  // "Feldstrasse 12 8400 Winterthur" → Teile
+  const parseAddr = (label) => {
+    const m = plain(label).match(/^(.*?)(?:\s+(\d+(?:\.\d+)?\s?[a-zA-Z]?))?\s+(\d{4})\s+(.+)$/);
+    return m ? { street: m[1], no: (m[2] || '').replace(/\s/g, ''), zip: m[3], city: m[4] } : null;
+  };
+  const geo = (q, origins, limit = 6) => $.getJSON(GEO_SEARCH, { searchText: q, type: 'locations', origins, limit, sr: 4326 })
+    .then((d) => (d.results || []).map((r) => r.attrs));
+  let addrItems = [], addrActive = -1, addrTimer = 0, addrSeq = 0;
+  const closeList = () => { $list.prop('hidden', true).empty(); street.setAttribute('aria-expanded', 'false'); street.removeAttribute('aria-activedescendant'); addrItems = []; addrActive = -1; };
+  const renderList = () => {
+    $list.empty();
+    addrItems.forEach((a, i) => $('<li role="option">').attr({ id: `apply-addr-${i}`, 'aria-selected': i === addrActive })
+      .toggleClass('is-active', i === addrActive)
+      .append($('<b>').text(`${a.street}${a.no ? ` ${a.no}` : ''}`), $('<span>').text(`${a.zip} ${a.city}`))
+      .appendTo($list));
+    $list.prop('hidden', !addrItems.length);
+    street.setAttribute('aria-expanded', String(!!addrItems.length));
+    if (addrActive >= 0) street.setAttribute('aria-activedescendant', `apply-addr-${addrActive}`);
+  };
+  const pickAddr = (a) => {
+    street.value = a.street; streetNo.value = a.no; zip.value = a.zip; city.value = a.city;
+    [street, streetNo, zip, city].forEach((f) => { f.setCustomValidity(''); f.classList.remove('is-invalid'); });
+    street.dataset.verified = norm(`${a.street}|${a.zip}`);   // aus der Liste = sicher gültig
+    closeList();
+    (a.no ? zip : streetNo).focus();
+    $form.trigger('change');
+  };
+  street.addEventListener('input', () => {
+    delete street.dataset.verified;
+    street.setCustomValidity('');                          // alte Meldung weg, sobald man neu tippt
+    street.classList.remove('is-invalid');
+    $('#apply-street-error').text('Bitte gib deine Strasse ein.');
+    clearTimeout(addrTimer);
+    const q = street.value.trim();
+    if (q.length < 3) { closeList(); return; }
+    addrTimer = setTimeout(() => {
+      const seq = ++addrSeq;
+      geo(q, 'address').then((res) => {
+        if (seq !== addrSeq || document.activeElement !== street) return;   // ältere Antwort / Feld schon verlassen
+        addrItems = res.map((r) => parseAddr(r.label)).filter(Boolean);
+        addrActive = -1;
+        renderList();
+      }).catch(closeList);
+    }, 220);
+  });
+  street.addEventListener('keydown', (e) => {
+    if ($list.prop('hidden')) return;
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      addrActive = (addrActive + (e.key === 'ArrowDown' ? 1 : -1) + addrItems.length) % addrItems.length;
+      renderList();
+    } else if (e.key === 'Enter' && addrActive >= 0) { e.preventDefault(); e.stopPropagation(); pickAddr(addrItems[addrActive]); }
+    else if (e.key === 'Escape') { e.stopPropagation(); closeList(); }
+  });
+  $list.on('mousedown', 'li', (e) => e.preventDefault())          // Fokus im Feld lassen
+    .on('click', 'li', function () { pickAddr(addrItems[$(this).index()]); });
+  street.addEventListener('blur', () => setTimeout(closeList, 150));
+  // PLZ eingegeben, Ort leer → Ort automatisch ergänzen
+  zip.addEventListener('input', () => {
+    if (!/^[1-9]\d{3}$/.test(zip.value) || city.value.trim()) return;
+    geo(zip.value, 'zipcode', 3).then((res) => {
+      const m = res[0] && plain(res[0].label).match(/^\d{4}\s*-\s*(.+)$/);
+      if (m && !city.value.trim()) { city.value = m[1]; $form.trigger('change'); }
+    });
+  });
+  // Prüfung: gehören PLZ und Ort zusammen, gibt es die Strasse dort? (Netzfehler blockieren nie)
+  const setErr = (field, $msg, msg, fallback) => { field.setCustomValidity(msg); $msg.text(msg || fallback); };
+  const checkAddress = async () => {
+    [zip, city, street].forEach((f) => f.setCustomValidity(''));
+    if (!zip.checkValidity() || !city.checkValidity() || !street.value.trim()) return;
+    try {
+      const places = await geo(zip.value, 'zipcode', 5);
+      const names = places.map((r) => (plain(r.label).match(/^\d{4}\s*-\s*(.+)$/) || [])[1]).filter(Boolean);
+      if (!names.length) {
+        setErr(zip, $('#apply-zip-error'), `Die PLZ ${zip.value} gibt es nicht.`, '4-stellige PLZ');
+        return;
+      }
+      const c = norm(city.value);
+      if (!names.some((n) => norm(n).startsWith(c) || c.startsWith(norm(n)))) {
+        setErr(city, $('#apply-city-error'), `${zip.value} gehört zu ${names.join(' / ')}.`, 'Bitte gib deinen Wohnort ein (ohne Zahlen).');
+        return;
+      }
+      if (street.dataset.verified === norm(`${street.value}|${zip.value}`)) return;
+      const hits = await geo(`${street.value} ${zip.value}`, 'address', 10);
+      const want = norm(street.value);
+      const found = hits.map((r) => parseAddr(r.label)).filter(Boolean)
+        .some((a) => a.zip === zip.value && (norm(a.street).startsWith(want) || want.startsWith(norm(a.street))));
+      if (!found) setErr(street, $('#apply-street-error'), `Diese Strasse finden wir in ${zip.value} ${names[0]} nicht – bitte aus den Vorschlägen wählen.`, 'Bitte gib deine Strasse ein.');
+      else street.dataset.verified = norm(`${street.value}|${zip.value}`);
+    } catch (err) { /* Dienst nicht erreichbar: nicht blockieren */ }
+  };
+  [zip, city].forEach((f) => f.addEventListener('change', () => checkAddress().then(() => {
+    [zip, city, street].forEach((x) => { if (x.value) x.classList.toggle('is-invalid', !x.checkValidity()); });
+  })));
+
+  // ── Schritt für Schritt: anfangs nur Schritt 1. "Weiter" prüft den aktuellen Schritt und
+  //    klappt den nächsten darunter auf (gleiche Seite); frühere Schritte bleiben offen.
+  const steps = [...form.querySelectorAll('.apply-section')];
+  const actions = document.getElementById('apply-actions');
+  const smooth = () => (reduceMotion.matches ? 'auto' : 'smooth');
+  let open = 1;                                            // so viele Schritte sind sichtbar
+  const setProgress = () => $('#apply-progress').text(open < steps.length ? `Schritt ${open} von ${steps.length}` : `Letzter Schritt`);
+  const reveal = (el) => {
+    el.hidden = false;
+    if (reduceMotion.matches || !el.animate) return;
+    const h = el.offsetHeight;                             // nach unten aufklappen, sanft einblenden
+    el.animate([{ height: '0px', opacity: 0, overflow: 'hidden' }, { height: `${h}px`, opacity: 1, overflow: 'hidden' }],
+      { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' });
+  };
+  const firstField = (el) => el.querySelector('input:not([type=hidden]):not([type=radio]), select, textarea, input[type=radio]:checked');
+  const goNext = async (n) => {                            // n = aktueller Schritt (1-basiert)
+    const cur = steps[n - 1];
+    closeList();
     checkCv();
+    if (cur.contains(street)) await checkAddress();
+    const bad = [...cur.querySelectorAll('input, select, textarea')].filter((f) => !f.checkValidity());
+    if (bad.length) {                                      // Fehler nur in diesem Schritt zeigen
+      cur.classList.add('was-validated');
+      bad[0].focus();
+      return;
+    }
+    cur.classList.remove('was-validated');
+    const nextWrap = cur.querySelector('.apply-next');
+    if (nextWrap) nextWrap.hidden = true;
+    const next = steps[n];
+    if (!next) return;
+    if (next.hidden) {
+      reveal(next);
+      open = Math.max(open, n + 1);
+      $(cur).find('.apply-next-btn').attr('aria-expanded', 'true');
+      if (n + 1 === steps.length) reveal(actions);         // Senden erst beim letzten Schritt
+      setProgress();
+    }
+    setTimeout(() => {
+      next.scrollIntoView({ behavior: smooth(), block: 'start' });
+      const f = firstField(next);
+      if (f) f.focus({ preventScroll: true });
+    }, 80);
+  };
+  $form.on('click', '.apply-next-btn', function () { goNext(Number($(this).data('next')) - 1); });
+  // Enter in einem Feld = "Weiter" (nicht gleich alles absenden); im letzten Schritt = Senden
+  $form.on('keydown', 'input, select', function (e) {
+    if (e.key !== 'Enter' || this.type === 'file') return;
+    const n = Number(this.closest('.apply-section').dataset.step);
+    const nextWrap = steps[n - 1].querySelector('.apply-next');
+    if (nextWrap && !nextWrap.hidden) { e.preventDefault(); goNext(n); }
+    else if (open < steps.length) { e.preventDefault(); goNext(open); }
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (open < steps.length) { goNext(open); return; }     // noch nicht alle Schritte offen
+    checkCv();
+    await checkAddress();
     form.classList.add('was-validated');
     if (!form.checkValidity()) {
       const bad = form.querySelector(':invalid');
@@ -2230,8 +2400,23 @@ function initApplyForm() {
   });
   form.addEventListener('reset', () => {
     form.classList.remove('was-validated');
+    // zurück zu Schritt 1
+    steps.forEach((el, i) => {
+      el.classList.remove('was-validated');
+      if (i) el.hidden = true;
+      const w = el.querySelector('.apply-next');
+      if (w) w.hidden = false;
+      $(el).find('.apply-next-btn').attr('aria-expanded', 'false');
+    });
+    actions.hidden = true;
+    open = 1;
+    setProgress();
+    steps[0].scrollIntoView({ behavior: smooth(), block: 'start' });
     form.querySelectorAll('.is-invalid').forEach((f) => f.classList.remove('is-invalid'));
     cv.setCustomValidity('');
+    [zip, city, street, text].forEach((f) => f.setCustomValidity(''));
+    delete street.dataset.verified;
+    closeList();
     $('#apply-status').text('').removeAttr('data-state');
     setTimeout(count, 0);
   });

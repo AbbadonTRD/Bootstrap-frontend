@@ -25,7 +25,8 @@ A live data dashboard built with plain HTML, Bootstrap 5.3 and jQuery. It combin
 - **Live data from public APIs.** None of them needs an API key.
 - **Swiss public transport.** A departures and arrivals board styled as a PowerShell terminal, plus an SBB-style platform display.
 - **Google-Maps-style map layers.** Six map types, seven overlays and a 3D view with terrain and buildings.
-- **Polished UI.** Liquid glass surfaces, a split-flap hero board, dark and light themes, a command palette and a responsive layout from phone to desktop.
+- **Polished UI.** Liquid glass surfaces, a split-flap hero board, a live sky in the weather card, dark and light themes, a command palette and a responsive layout from phone to desktop.
+- **Haptic feedback.** Taps on buttons and toggles give a system tick on iPhone and a short vibration on Android, and scrubbing a chart ticks evenly along the line.
 
 ## Features
 
@@ -36,8 +37,12 @@ A live data dashboard built with plain HTML, Bootstrap 5.3 and jQuery. It combin
 | ![Random cat card](docs/screenshots/cat.webp) | ![Bitcoin price card](docs/screenshots/bitcoin.webp) | ![Weather card](docs/screenshots/weather.webp) |
 
 - **Random cat:** loads a random image from The Cat API, shows its resolution and keeps a history of the last four images. The "Google-Bilder" button opens a Google image search for cats in a new window.
-- **Bitcoin price:** shows the current price in USD and CHF, the 24-hour change and a price chart with ranges from one hour to one year. The chart is green above the current price and red below it, and marks the high and low.
-- **Weather:** current conditions from the MeteoSwiss ICON-CH2 model, for Zurich by default. The search button next to the city name switches to any Swiss town or postcode, with quick picks such as Bern, Basel and Geneva, and remembers the choice. A swipeable hourly chart shows temperature and rain; the hour under its center pointer drives the header and a live sky. With the Live switch on, the chart stays locked to the current time and the day buttons show that same hour on other days; with it off, you can swipe freely through all five days. That sky (clear, clouds, fog, rain, thunder, snow, day and night) fills the card and is mirrored subtly in the page background. Rain and snow fall from the clouds themselves, low cloud settles into the Alps, and the mountains change with the scene and temperature. A five-day forecast below the chart jumps to noon of the chosen day. The arrow next to it opens detail tiles for the hour under the pointer: wind with a compass, humidity and dew point, precipitation and its probability, feels-like temperature, UV index, sunrise and sunset, pressure trend and visibility.
+- **Bitcoin price:** shows the current price in USD and CHF, the 24-hour change and a price chart with ranges from one hour to one year. The chart is green above the current price and red below it, and marks the high and low. Scrubbing the chart shows the price at that moment. On phones, a switch shows or hides the chart.
+- **Weather:** current conditions from the MeteoSwiss ICON-CH2 model, for Zurich by default. The search button next to the city name switches to any Swiss town or postcode, with quick picks such as Bern, Basel and Geneva, and remembers the choice.
+  - **Hourly chart:** temperature and rain for five days. The hour under its center pointer drives the header, the live sky and the detail tiles. You can swipe freely through all five days; the Live switch locks the chart to the current time instead, and swiping turns it off again.
+  - **Live sky:** clear, clouds, fog, rain, thunder and snow, day and night, rendered on canvas. Rain and snow fall from the clouds themselves, low cloud settles into the Alps, and the mountains change with the scene and the temperature. The page background follows the sky subtly.
+  - **Five-day forecast:** day icons are based on cloud cover and weather codes. Tapping a day jumps to noon of that day, or to the current hour while Live is on.
+  - **Detail tiles:** the arrow next to the forecast opens bento tiles for the hour under the pointer: wind with a compass, humidity and dew point, precipitation and its probability, feels-like temperature, UV index, pressure trend, visibility and the sun. The sun tile shows a realistic sun at its real height for that time, on a path with hour marks whose height follows the season, plus a sunrise-to-sunset timeline.
 
 ### EV charging stations and map
 
@@ -50,7 +55,7 @@ A live data dashboard built with plain HTML, Bootstrap 5.3 and jQuery. It combin
 - **Layer picker:** works like the one in Google Maps.
   - Map types: Monochrome, Dark, National Map (grey), National Map, Terrain and Aerial.
   - Overlays: charging stations, public transport stops, rail network, cycling routes, mountain bike routes, hiking trails and relief shading.
-  - The choice is remembered between visits.
+  - The choice is remembered between visits. Switching between dark and light mode also swaps the Dark and Monochrome map types.
 - **3D view:** drapes any map type over real terrain and adds extruded buildings. It runs on MapLibre GL, which is loaded only when 3D is first opened.
 
 ### Public transport
@@ -77,6 +82,8 @@ Selecting a train opens a platform display modelled on the SBB screens:
 | ![Command palette with search results](docs/screenshots/command-palette.webp) | ![Mobile layout](docs/screenshots/mobile.webp) |
 
 The command palette (`Ctrl+K`) jumps to any section, runs actions such as reloading the weather, and searches places on the map or departures from a stop. The layout adapts down to phone width, with full-width cards and a compact header.
+
+The theme follows the system or the toggle in the header. In light mode the hero board, the Bitcoin card and the terminal switch to light versions, and the weather card uses a lighter sky with dark text.
 
 ## Assignment coverage
 
@@ -154,15 +161,16 @@ bootstrap-frontend/
 ├── wireframe.drawio      Initial wireframe
 ├── docs/
 │   └── screenshots/      Images used in this README
+├── img/
+│   └── sun-surface.jpg   Sun texture for the weather detail view
 └── README.md
 ```
 
 ## Known limitations
 
-- **Haptics on iPhone:** since iOS 26.5, websites can no longer trigger haptics from code. The page places an invisible native switch inside tappable elements, so a real tap still produces the system tick. For ticks while scrubbing a chart, a switch covers each chart and is moved to the other side of the finger whenever a tick is due, so the next finger movement flips it (technique from [haptick](https://github.com/jcruzfff/haptick), MIT). Open the page with `?haptics=test` to check a device.
-- **Liquid glass in Safari:** Safari does not render SVG filters in `backdrop-filter` yet ([WebKit bug 245510](https://bugs.webkit.org/show_bug.cgi?id=245510)), so it shows a drawn glass look (rim light, sheen, color fringe) instead of real refraction.
-
-- **Liquid glass:** shows the full refraction effect only in Chromium-based browsers. Other browsers get a simpler frosted look.
+- **Haptics on iPhone:** since iOS 26.5, websites can no longer trigger haptics from code. The page places an invisible native switch inside tappable elements, so a real tap still produces the system tick. For ticks while scrubbing a chart, a switch covers each chart and is moved to the other side of the finger whenever a tick is due, so the next finger movement flips it. The first fraction of a second of a swipe cannot tick, and the glide after lifting the finger has no ticks. Open the page with `?haptics=test` to check a device.
+- **Liquid glass outside Chromium:** Safari does not render SVG filters in `backdrop-filter` yet ([WebKit bug 245510](https://bugs.webkit.org/show_bug.cgi?id=245510)), so Safari and Firefox show a drawn glass look (blur, rim light, sheen) instead of real refraction.
+- **Screenshots:** the images in this README were taken before the latest weather and light-mode changes.
 - **Train formation:** the free timetable APIs do not include car order, so the sector bar is schematic. It is based on the train type and number, and the display labels it that way.
 - **CoinGecko rate limits:** the free CoinGecko API limits requests. Rapid repeated clicks can briefly return no data.
 - **3D view:** needs WebGL.
@@ -170,6 +178,7 @@ bootstrap-frontend/
 ## Credits
 
 - **Sun in the detail view:** based on the sun by [reyrojo2 on uiverse.io](https://uiverse.io/reyrojo2/afraid-horse-8) (MIT, also credited to Lakshay-art).
+- **iPhone haptics:** switch technique from [@haptics](https://github.com/howdoiusekeyboard/haptics) (taps) and [haptick](https://github.com/jcruzfff/haptick) (chart scrubbing), both MIT.
 - **Terminal windows:** based on components by [mihocsaszilard on uiverse.io](https://uiverse.io/mihocsaszilard) (MIT).
 - **Hero board and content card:** inspired by [Aceternity UI](https://ui.aceternity.com/).
 - **Liquid glass parameters:** based on the [Liquid Glass CSS Generator](https://hiredigital.com/tools/liquid-glass-css-generator) by Hire Digital.

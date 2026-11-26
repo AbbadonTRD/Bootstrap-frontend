@@ -2333,7 +2333,11 @@ function initApplyForm() {
   const actions = document.getElementById('apply-actions');
   const smooth = () => (reduceMotion.matches ? 'auto' : 'smooth');
   let open = 1;                                            // so viele Schritte sind sichtbar
-  const setProgress = () => $('#apply-progress').text(open < steps.length ? `Schritt ${open} von ${steps.length}` : `Letzter Schritt`);
+  // Fortschritt: schlichte Segmente (für Screenreader als "Schritt n von 5")
+  const setProgress = () => {
+    $('#apply-progress').attr({ 'aria-valuenow': open, 'aria-valuetext': `Schritt ${open} von ${steps.length}` })
+      .children('i').each(function (i) { $(this).toggleClass('is-on', i < open); });
+  };
   const reveal = (el) => {
     el.hidden = false;
     if (reduceMotion.matches || !el.animate) return;

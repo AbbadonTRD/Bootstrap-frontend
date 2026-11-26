@@ -85,7 +85,7 @@ A Bootstrap form for internship applications in a calm settings-style layout (in
 - **Application:** cover letter with a character counter, CV as a PDF upload (max. 5 MB) and an optional portfolio link.
 - **Privacy:** a required consent checkbox with a link to an external privacy policy.
 
-The form opens step by step so it never shows everything at once: only the first section is visible at first, and "Weiter" checks the current section and expands the next one below it on the same page (Enter works too). A badge shows the current step, and the send button appears with the last step.
+The form opens step by step so it never shows everything at once: only the first section is visible at first, and "Weiter" checks the current section and expands the next one below it on the same page (Enter works too). Five thin segments in the card header show the progress, and the send button appears with the last step.
 
 Every field is also checked for plausibility: names and towns without digits, email addresses with a real domain ending, portfolio links as full web addresses, and a cover letter of real sentences (at least 150 characters and 25 words). Fields and buttons use the site's liquid glass look.
 

@@ -27,7 +27,7 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
 
-  <link rel="stylesheet" href="styles.css?v=2026-11-26l" />
+  <link rel="stylesheet" href="styles.css?v=2026-11-26n" />
 </head>
 <body>
   <!-- Icons: Streamline Core Solid (CC BY 4.0, streamlinehq.com) als SVG-Sprite -->
@@ -556,7 +556,7 @@
               <h2 id="apply-title" class="ui-card-title">Bewerbung für ein Praktikum</h2>
               <p class="ui-card-description">Fülle das Formular Schritt für Schritt aus, wir melden uns innert einer Woche.</p>
             </div>
-            <span id="apply-progress" class="ui-badge ui-badge-secondary" aria-live="polite">Schritt 1 von 5</span>
+            <div id="apply-progress" class="apply-progress" role="progressbar" aria-label="Fortschritt" aria-valuemin="1" aria-valuemax="5" aria-valuenow="1" aria-valuetext="Schritt 1 von 5"><i class="is-on"></i><i></i><i></i><i></i><i></i></div>
           </div>
           <div class="ui-card-content">
             <form id="apply-form" class="apply-form needs-validation" action="#" method="post" enctype="multipart/form-data" novalidate>
@@ -865,6 +865,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 
-  <script src="app.js?v=2026-11-26l"></script>
+  <script src="app.js?v=2026-11-26n"></script>
 </body>
 </html>

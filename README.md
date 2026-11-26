@@ -75,6 +75,18 @@ Selecting a train opens a platform display modelled on the SBB screens:
 - the next stops and the platform
 - a sector bar that shows where first class and the dining car stop
 
+### Internship application form
+
+A Bootstrap form for internship applications in a calm settings-style layout (inspired by a shadcn form layout): each section has its title and a short description on the left and its fields on the right, and every field has a label and a short help text.
+
+- **Personal details:** first name, last name, gender (select) and date of birth.
+- **Address:** street and number, postcode and town.
+- **Contact:** email, Swiss mobile number and the preferred way to be contacted (radio group).
+- **Application:** cover letter with a character counter, CV as a PDF upload (max. 5 MB) and an optional portfolio link.
+- **Privacy:** a required consent checkbox with a link to an external privacy policy.
+
+Fields are checked with HTML5 validation and Bootstrap's validation classes; only errors are highlighted, with short German messages. The send button carries a mail icon. The form is prepared for sending to an endpoint (`multipart/form-data`); until that exists, it confirms locally.
+
 ### Command palette and mobile layout
 
 | Command palette | Mobile |
@@ -96,6 +108,7 @@ The theme follows the system or the toggle in the header. In light mode the hero
 | e | Map section with place search | Leaflet, swisstopo |
 | f | Button that opens a Google image search for your favourite animal in a new window | "Google-Bilder" button in the cat card (`window.open`, query "Katzen", image search) |
 | Advanced | Clicking a charging station centers the map | Done, with marker and popup |
+| Form 1 | Internship application form with Bootstrap form elements, headings and labels | "Bewerbung für ein Praktikum" card: five sections (personal details, address, contact, application, privacy), PDF upload, consent checkbox and a send button with mail icon |
 | Extras | Beyond the assignment | Public transport board, map layers and 3D view, command palette, scroll animations |
 
 ## Tech stack
@@ -170,7 +183,6 @@ bootstrap-frontend/
 
 - **Haptics on iPhone:** since iOS 26.5, websites can no longer trigger haptics from code. The page places an invisible native switch inside tappable elements, so a real tap still produces the system tick. For ticks while scrubbing a chart, a switch covers each chart and is moved to the other side of the finger whenever a tick is due, so the next finger movement flips it. The first fraction of a second of a swipe cannot tick, and the glide after lifting the finger has no ticks. Open the page with `?haptics=test` to check a device.
 - **Liquid glass outside Chromium:** Safari does not render SVG filters in `backdrop-filter` yet ([WebKit bug 245510](https://bugs.webkit.org/show_bug.cgi?id=245510)), so Safari and Firefox show a drawn glass look (blur, rim light, sheen) instead of real refraction.
-- **Screenshots:** the images in this README were taken before the latest weather and light-mode changes.
 - **Train formation:** the free timetable APIs do not include car order, so the sector bar is schematic. It is based on the train type and number, and the display labels it that way.
 - **CoinGecko rate limits:** the free CoinGecko API limits requests. Rapid repeated clicks can briefly return no data.
 - **3D view:** needs WebGL.

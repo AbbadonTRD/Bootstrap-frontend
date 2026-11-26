@@ -2171,6 +2171,73 @@ function weatherTooltip() {
   };
 }
 
+// ── g) Bewerbungsformular Praktikum ──────────────────────────────────────────
+// Bootstrap-Validierung (was-validated) + eigene Prüfungen: PDF max. 5 MB, Mindestalter 14
+// und ein Zeichenzähler fürs Motivationsschreiben.
+// Senden an den Endpoint folgt später – bis dahin wird nur lokal bestätigt.
+const APPLY_MAX_PDF = 5 * 1024 * 1024;
+const APPLY_MIN_TEXT = 150;
+function initApplyForm() {
+  const form = document.getElementById('apply-form');
+  if (!form) return;
+  const $form = $(form);
+  // Geburtsdatum: mindestens 14 Jahre alt (max = heute minus 14 Jahre)
+  const max = new Date(); max.setFullYear(max.getFullYear() - 14);
+  $('#apply-birthdate').attr('max', max.toISOString().slice(0, 10));
+
+  // Lebenslauf: nur PDF, höchstens 5 MB (eigene Fehlermeldung über setCustomValidity)
+  const cv = document.getElementById('apply-cv');
+  const checkCv = () => {
+    const f = cv.files && cv.files[0];
+    let msg = '';
+    if (f && !/\.pdf$/i.test(f.name) && f.type !== 'application/pdf') msg = 'Bitte lade eine PDF-Datei hoch.';
+    else if (f && f.size > APPLY_MAX_PDF) msg = `Die Datei ist ${(f.size / 1048576).toFixed(1)} MB gross – höchstens 5 MB.`;
+    cv.setCustomValidity(msg);
+    $('#apply-cv-error').text(msg || 'Bitte lade deinen Lebenslauf als PDF hoch (max. 5 MB).');
+  };
+  cv.addEventListener('change', checkCv);
+
+  // Motivationsschreiben: Zähler bis zur Mindestlänge
+  const text = document.getElementById('apply-motivation');
+  const count = () => {
+    const n = text.value.trim().length;
+    $('#apply-motivation-count')
+      .text(n === 0 ? `Mindestens ${APPLY_MIN_TEXT} Zeichen` : n < APPLY_MIN_TEXT ? `Noch ${APPLY_MIN_TEXT - n} Zeichen` : `${n} Zeichen`)
+      .toggleClass('is-ok', n >= APPLY_MIN_TEXT);
+  };
+  text.addEventListener('input', count);
+
+  // Live-Rückmeldung pro Feld, sobald man es verlassen hat (nicht schon beim ersten Tippen)
+  $form.on('blur change', 'input, textarea, select', function () {
+    if (this.type !== 'radio' && this.type !== 'checkbox' && this.value) this.classList.toggle('is-invalid', !this.checkValidity());
+    if (this.classList.contains('is-invalid') && this.checkValidity()) this.classList.remove('is-invalid');
+  });
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    checkCv();
+    form.classList.add('was-validated');
+    if (!form.checkValidity()) {
+      const bad = form.querySelector(':invalid');
+      if (bad) { bad.scrollIntoView({ behavior: reduceMotion.matches ? 'auto' : 'smooth', block: 'center' }); bad.focus({ preventScroll: true }); }
+      $('#apply-status').text('Bitte prüfe die markierten Felder.').attr('data-state', 'error');
+      return;
+    }
+    // Daten sind gültig und als FormData bereit – Übermittlung an den Endpoint folgt
+    const data = new FormData(form);
+    const name = `${data.get('vorname')} ${data.get('name')}`;
+    $('#apply-status').text(`Danke, ${name}! Deine Bewerbung ist vollständig. (Senden an den Server folgt.)`).attr('data-state', 'ok');
+  });
+  form.addEventListener('reset', () => {
+    form.classList.remove('was-validated');
+    form.querySelectorAll('.is-invalid').forEach((f) => f.classList.remove('is-invalid'));
+    cv.setCustomValidity('');
+    $('#apply-status').text('').removeAttr('data-state');
+    setTimeout(count, 0);
+  });
+  count();
+}
+
 // ── d) Die 5 nächstgelegenen Strom-Tankstellen ───────────────────────────────
 let evStations = null; // Cache: Datei ist ~1 MB, nur einmal laden
 
@@ -2759,6 +2826,7 @@ $(function () {
 
   $('#btn-cat').on('click', loadCat);
   $('#btn-google-cats').on('click', openAnimalImageSearch);
+  initApplyForm();
   $('#cat-history').on('click', '.cat-thumb:not(.is-empty)', function () { showCatFromHistory($(this).data('cat')); });
   $('#btn-btc').on('click', loadBitcoin);
   $('.wallet-range').on('click', function () { haptics.tick(); loadBtcChart(String($(this).data('range'))); });
@@ -3862,6 +3930,7 @@ const CMDK_STATIC = [
   { group: 'Springen zu', icon: 'ev', label: 'Ladestationen', keys: 'laden strom tankstelle ev auto', run: () => goToCard('card-ev') },
   { group: 'Springen zu', icon: 'map', label: 'Karte', keys: 'karte map ort', run: () => goToCard('card-map') },
   { group: 'Springen zu', icon: 'train', label: 'Abfahrten', keys: 'öv sbb zug tram bus abfahrt', run: () => goToCard('card-sbb') },
+  { group: 'Springen zu', icon: 'mail', label: 'Bewerbung Praktikum', keys: 'bewerbung praktikum formular job', run: () => goToCard('card-apply') },
   { group: 'Aktionen', icon: 'reload', label: 'Neues Katzenbild laden', keys: 'katze cat', run: () => { goToCard('card-cat'); loadCat(); } },
   { group: 'Aktionen', icon: 'search', label: 'Katzenbilder bei Google suchen', keys: 'katze google bilder suche', run: openAnimalImageSearch },
   { group: 'Aktionen', icon: 'reload', label: 'Bitcoin-Preis abrufen', keys: 'btc preis', run: () => { goToCard('card-btc'); loadBitcoin(); } },

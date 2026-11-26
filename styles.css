@@ -3556,3 +3556,121 @@ html[data-mode="light"] #card-weather #wd-sun-mark { background: #f5a623; box-sh
 #card-cat .ui-card-footer { flex-wrap: wrap; }
 #card-cat #btn-cat { flex: 1 1 200px; width: auto; }
 .cat-google-btn { flex: 1 1 140px; white-space: nowrap; }
+
+/* ═════════════════════════════════════════════════════════════════════════════
+   Bewerbungsformular (Praktikum) – ruhiges Settings-Layout im shadcn-Stil:
+   links Titel + Beschreibung, rechts die Felder; Bootstrap-Felder mit unseren Tokens
+   ═════════════════════════════════════════════════════════════════════════════ */
+.apply .ui-card-content { padding-top: 8px; }
+.apply-section {
+  display: grid; grid-template-columns: 1fr; gap: 4px 32px;
+  margin: 0; padding: 28px 0; border: 0; border-top: 1px solid var(--border); min-width: 0;
+}
+.apply-section:first-of-type { padding-top: 24px; }
+.apply .ui-card-header { padding-bottom: 4px; }
+@media (min-width: 992px) {
+  .apply-section { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); grid-template-rows: auto 1fr; }
+  .apply-fields { grid-column: 2; grid-row: 1 / span 2; }
+}
+/* float: left = keine "gerenderte" Legende auf der Rahmenlinie, sondern ein normales Grid-Element links */
+.apply-legend { float: left; width: 100%; margin: 0; padding: 0; font-size: 14px; font-weight: 600; line-height: 1.4; }
+.apply-desc { margin: 0 0 12px; font-size: 13px; line-height: 1.5; color: var(--muted-foreground); }
+@media (min-width: 992px) { .apply-desc { margin: 0; max-width: 260px; } }
+.apply-optional { margin-left: 4px; font-size: 12px; font-weight: 400; color: var(--muted-foreground); }
+
+/* Felder */
+.apply .form-label { margin-bottom: 6px; font-size: 14px; font-weight: 500; line-height: 1.2; color: var(--foreground); }
+.apply .form-control, .apply .form-select {
+  height: 36px; padding: 6px 12px; border-radius: var(--radius); font-size: 14px;
+  color: var(--foreground); background-color: var(--background); border: 1px solid var(--input);
+  box-shadow: 0 1px 2px rgba(0,0,0,.05); transition: border-color 150ms, box-shadow 150ms;
+}
+.apply textarea.form-control { height: auto; min-height: 112px; resize: vertical; line-height: 1.5; padding-top: 8px; }
+.apply .form-control::placeholder { color: var(--muted-foreground); opacity: 1; }
+.apply .form-control:focus, .apply .form-select:focus {
+  border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent);
+}
+.apply .form-select { padding-right: 32px; background-position: right 10px center; background-size: 14px 10px; }
+html[data-mode="dark"] .apply .form-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a8a8b0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+.apply .form-select option { color: initial; }
+.apply .form-control[type="file"] { padding: 0; line-height: 34px; }
+.apply .form-control::file-selector-button {
+  height: 34px; margin: 0 12px 0 0; padding: 0 12px; border: 0; border-right: 1px solid var(--input);
+  background: var(--muted); color: var(--foreground); font-size: 13px; font-weight: 500;
+}
+html[data-mode="dark"] .apply input[type="date"] { color-scheme: dark; }
+.apply .form-text { margin-top: 6px; font-size: 12px; line-height: 1.4; color: var(--muted-foreground); }
+.apply .form-text a { color: var(--foreground); font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
+
+/* Icon im Feld (rechts, wie im Vorbild) */
+.apply-icon-field { position: relative; }
+.apply-icon-field .form-control { padding-right: 36px; }
+.apply-icon-field > .ic { position: absolute; right: 12px; top: 18px; transform: translateY(-50%); width: 14px; height: 14px; color: var(--muted-foreground); pointer-events: none; }
+
+/* Radios + Checkbox im shadcn-Stil */
+.apply .form-check { display: flex; align-items: flex-start; gap: 8px; min-height: 0; margin: 0; padding: 0; }
+.apply .form-check-input {
+  float: none; flex: none; width: 16px; height: 16px; margin: 1px 0 0;
+  background-color: var(--background); border: 1px solid var(--input); box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+.apply .form-check-input:focus { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ring) 30%, transparent); }
+.apply .form-check-input:checked { background-color: var(--foreground); border-color: var(--foreground); }
+html[data-mode="dark"] .apply .form-check-input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23111' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+}
+.apply .form-check-input[type="radio"]:checked {
+  background-color: var(--background); background-image: none;
+  box-shadow: inset 0 0 0 3px var(--background), inset 0 0 0 8px var(--foreground);
+}
+.apply .form-check-label { font-size: 14px; line-height: 1.3; }
+.apply-radios { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+.apply-consent { flex-wrap: wrap; }
+.apply-consent .form-check-label { flex: 1 1 0; min-width: 0; font-weight: 500; }   /* bleibt neben der Checkbox */
+.apply-consent .form-text, .apply-consent .invalid-feedback { flex-basis: 100%; margin: 2px 0 0 24px; }
+
+/* Validierung: nur Fehler zeigen (rot), gültige Felder bleiben ruhig – ohne Häkchen-Icons */
+.apply .was-validated .form-control:valid, .apply .form-control.is-valid,
+.apply .was-validated .form-select:valid, .apply .form-select.is-valid {
+  border-color: var(--input); background-image: none; padding-right: 12px;
+}
+.apply .was-validated .apply-icon-field .form-control:valid { padding-right: 36px; }
+.apply .was-validated .form-select:valid { padding-right: 32px; }
+html[data-mode="dark"] .apply .was-validated .form-select:valid {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23a8a8b0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+.apply .was-validated .form-check-input:valid ~ .form-check-label { color: inherit; }
+.apply .was-validated .form-check-input:valid { border-color: var(--input); }
+.apply .was-validated .form-check-input:valid:checked { border-color: var(--foreground); background-color: var(--foreground); }
+.apply .was-validated .form-check-input[type="radio"]:valid:checked { background-color: var(--background); }
+.apply .was-validated .form-control:invalid, .apply .form-control.is-invalid,
+.apply .was-validated .form-select:invalid {
+  border-color: var(--destructive); background-image: none; padding-right: 12px;
+}
+.apply .was-validated .apply-icon-field .form-control:invalid { padding-right: 36px; }
+.apply .was-validated .form-control:invalid:focus, .apply .was-validated .form-select:invalid:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--destructive) 22%, transparent);
+}
+.apply .was-validated .form-check-input:invalid { border-color: var(--destructive); }
+.apply .was-validated .form-check-input:invalid ~ .form-check-label { color: inherit; }
+.apply .invalid-feedback { margin-top: 6px; font-size: 12px; color: var(--destructive); }
+/* Ist ein Fehler sichtbar, den Hilfetext darunter ausblenden */
+.apply .was-validated .form-control:invalid ~ .form-text,
+.apply .was-validated .apply-icon-field:has(:invalid) ~ .form-text,
+.apply .was-validated .form-select:invalid ~ .form-text { display: none; }
+
+/* Aktionen rechts unten: ruhiger Zurücksetzen-Knopf + dunkler Hauptknopf */
+.apply-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; padding-top: 20px; border-top: 1px solid var(--border); }
+.apply-status { margin: 0 auto 0 0; font-size: 13px; color: var(--muted-foreground); }
+.apply-status[data-state="ok"] { color: var(--foreground); }
+.apply-status[data-state="error"] { color: var(--destructive); }
+.apply-reset, .apply-submit { height: 36px; padding: 0 16px; font-size: 14px; }
+.apply-submit { background: var(--foreground); color: var(--background); border: 0; }
+.apply-submit:hover { background: color-mix(in srgb, var(--foreground) 88%, var(--background)); }
+.apply-submit .ic { width: 14px; height: 14px; }
+.apply-submit:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+@media (max-width: 575px) {
+  .apply-status { flex-basis: 100%; }
+  .apply-reset, .apply-submit { flex: 1 1 0; }
+}
